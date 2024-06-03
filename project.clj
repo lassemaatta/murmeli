@@ -1,8 +1,8 @@
 (defproject murmeli "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
-  :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
-            :url  "https://www.eclipse.org/legal/epl-2.0/"}
+  :description "A simple clojure wrapper for the MongoDB Java driver"
+  :url "https://github.com/lassemaatta/murmeli"
+  :license {:name "European Union Public Licence v. 1.2"
+            :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.11.3"]
                  [org.clojure/tools.logging "1.3.0"]
                  [org.mongodb/mongodb-driver-sync "5.1.0"]]
