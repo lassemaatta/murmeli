@@ -1,0 +1,9 @@
+{:show-docs-arity-on-same-line? true
+ :clean                         {:ns-inner-blocks-indentation   :same-line
+                                 :ns-import-classes-indentation :same-line
+                                 :sort                          {:ns      true
+                                                                 :require true
+                                                                 :import  true
+                                                                 :refer   {:max-line-length 120}}}
+ :dependency-scheme             "jar"
+ :java                          {:decompile-jar-as-project? false}}
