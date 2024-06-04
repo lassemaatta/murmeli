@@ -14,7 +14,7 @@
                                     ;; Testcontainers for mongodb
                                     [clj-test-containers "0.7.4"]
                                     ;; Logging
-                                    [org.slf4j/slf4j-api "2.0.4"]
-                                    [ch.qos.logback/logback-classic "1.3.5"]]
+                                    [org.slf4j/slf4j-api "2.0.13"]
+                                    [ch.qos.logback/logback-classic "1.5.6"]]
                    :resource-paths ["test-resources"]
                    :jvm-opts       ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}})
