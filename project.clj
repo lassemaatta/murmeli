@@ -7,8 +7,10 @@
                  [org.clojure/tools.logging "1.3.0"]
                  [org.mongodb/mongodb-driver-sync "5.1.0"]]
   :target-path "target/%s"
-  :profiles {:dev {:dependencies   [;; Sources
+  :profiles {:dev {:dependencies   [;; Sources (incl. deps)
                                     [org.mongodb/mongodb-driver-sync "5.1.0" :classifier "sources"]
+                                    [org.mongodb/bson "5.1.0" :classifier "sources"]
+                                    [org.mongodb/mongodb-driver-core "5.1.0" :classifier "sources"]
                                     ;; Testcontainers for mongodb
                                     [clj-test-containers "0.7.4"]
                                     ;; Logging
