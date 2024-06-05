@@ -43,6 +43,7 @@
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
 (defn make-client-session-options
+  ^ClientSessionOptions
   [{:keys [causally-consistent?
            snapshot?
            read-preference
@@ -82,27 +83,37 @@
                                       .build))
       .build))
 
+(defn with-client-session-options
+  [db-spec
+   options]
+  (assoc db-spec ::session-options (make-client-session-options options)))
+
 (defn start-session!
+  ^ClientSession
   [{::keys [^MongoClient client]}
    session-opts]
   {:pre [client session-opts]}
   (.startSession client session-opts))
 
-(def ^:dynamic ^ClientSession *session* nil)
-
 (defmacro with-session
-  [db-spec opts & body]
-  `(let [session-opts# (make-client-session-options ~opts)
-         session#      (start-session! ~db-spec session-opts#)]
-     (try
-       (.startTransaction session#)
-       (binding [*session* session#]
+  [bindings & body]
+  {:pre [(vector? bindings)
+         (= 2 (count bindings))
+         (simple-symbol? (first bindings))]}
+  (let [db-spec-sym (first bindings)
+        db-spec     (second bindings)]
+    `(let [db-spec#      ~db-spec
+           session-opts# (::session-options db-spec#)
+           session#      (start-session! db-spec# session-opts#)
+           ~db-spec-sym  (assoc db-spec# ::session session#)]
+       (try
+         (.startTransaction session#)
          (let [result# (do ~@body)]
            (.commitTransaction session#)
-           result#))
-       (catch Exception e#
-         (.abortTransaction session#)
-         (throw e#)))))
+           result#)
+         (catch Exception e#
+           (.abortTransaction session#)
+           (throw e#))))))
 
 (defn disconnect!
   [{::keys [^MongoClient client]
@@ -111,21 +122,26 @@
   (dissoc db-spec ::client ::database))
 
 (defn- get-collection
-  ^MongoCollection [{::keys [^MongoDatabase db]} collection]
+  ^MongoCollection
+  [{::keys [^MongoDatabase db]} collection]
   {:pre [db collection]}
   (.getCollection db (name collection) BsonDocument))
 
 (defn insert-one
-  [db-spec collection doc]
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   doc]
   {:pre [collection doc]}
   (let [bson   (c/to-bson doc)
         coll   (get-collection db-spec collection)
-        result (if *session*
-                 (.insertOne coll *session* bson)
+        result (if session
+                 (.insertOne coll session bson)
                  (.insertOne coll bson))]
     (.. result getInsertedId asObjectId getValue toHexString)))
 
 (defn count-collection
-  [db-spec collection]
+  [{::keys [^ClientSession session] :as db-spec} collection]
   (let [coll (get-collection db-spec collection)]
-    (.countDocuments coll)))
+    (if session
+      (.countDocuments coll session)
+      (.countDocuments coll))))

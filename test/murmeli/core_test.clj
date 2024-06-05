@@ -3,6 +3,8 @@
             [murmeli.core :as m]
             [murmeli.test.utils :as test-utils]))
 
+(set! *warn-on-reflection* true)
+
 (test/use-fixtures :once (test/join-fixtures
                            [test-utils/container-fixture
                             test-utils/db-fixture]))
@@ -20,7 +22,7 @@
           db-spec (test-utils/get-db-spec)]
       (is (zero? (m/count-collection db-spec coll)))
       (try
-        (m/with-session db-spec {}
+        (m/with-session [db-spec (m/with-client-session-options db-spec {})]
           (m/insert-one db-spec coll {:foo 123})
           (throw (ex-info "foo" {})))
         (catch Exception e
