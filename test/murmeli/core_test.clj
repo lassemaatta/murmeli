@@ -9,20 +9,20 @@
 
 (deftest simple-insert-test
   (testing "inserting document"
-    (let [conn (test-utils/get-conn)]
-      (is (string? (m/insert-one conn :coll {:foo 123})))
-      (is (= 1 (m/count-collection conn :coll))))))
+    (let [db-spec (test-utils/get-db-spec)]
+      (is (string? (m/insert-one db-spec :coll {:foo 123})))
+      (is (= 1 (m/count-collection db-spec :coll))))))
 
 
 (deftest transaction-test
   (testing "exception in transaction"
-    (let [coll (keyword (str "coll-" (gensym)))
-          conn (test-utils/get-conn)]
-      (is (zero? (m/count-collection conn coll)))
+    (let [coll    (keyword (str "coll-" (gensym)))
+          db-spec (test-utils/get-db-spec)]
+      (is (zero? (m/count-collection db-spec coll)))
       (try
-        (m/with-session conn {}
-          (m/insert-one conn coll {:foo 123})
+        (m/with-session db-spec {}
+          (m/insert-one db-spec coll {:foo 123})
           (throw (ex-info "foo" {})))
         (catch Exception e
           (is (= "foo" (.getMessage e)))))
-      (is (zero? (m/count-collection conn coll))))))
+      (is (zero? (m/count-collection db-spec coll))))))

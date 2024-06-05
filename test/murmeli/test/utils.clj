@@ -32,20 +32,20 @@
   (let [port (get-mongo-port)]
     (format "mongodb://localhost:%d" port)))
 
-(def ^:dynamic *conn* nil)
+(def ^:dynamic *db-spec* nil)
 
 (defn db-fixture
   [test-fn]
-  (binding [*conn* (-> {:uri      (get-mongo-uri)
-                        :database "test-db"}
-                       m/connect-client!
-                       m/connect-db!)]
+  (binding [*db-spec* (-> {:uri      (get-mongo-uri)
+                           :database "test-db"}
+                          m/connect-client!
+                          m/connect-db!)]
     (try
       (test-fn)
       (finally
-        (m/disconnect! *conn*)))))
+        (m/disconnect! *db-spec*)))))
 
-(defn get-conn
+(defn get-db-spec
   []
-  (or *conn*
+  (or *db-spec*
       (throw (ex-info "Mongo DB connection not running" {}))))

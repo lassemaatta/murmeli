@@ -23,7 +23,7 @@
 
 (defn connect-client!
   [{:keys [^String uri]
-    :as   ^MongoClients ctx}]
+    :as   db-spec}]
   {:pre [uri]}
   (let [server-api (-> (ServerApi/builder)
                        (.version api-version)
@@ -32,14 +32,14 @@
                        (.applyConnectionString (ConnectionString. uri))
                        (.serverApi server-api)
                        .build)]
-    (assoc ctx ::client (MongoClients/create settings))))
+    (assoc db-spec ::client (MongoClients/create settings))))
 
 (defn connect-db!
   [{:keys  [^String database]
     ::keys [^MongoClient client]
-    :as    ctx}]
+    :as    db-spec}]
   {:pre [client database]}
-  (assoc ctx ::db (.getDatabase client database)))
+  (assoc db-spec ::db (.getDatabase client database)))
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
 (defn make-client-session-options
@@ -91,9 +91,9 @@
 (def ^:dynamic ^ClientSession *session* nil)
 
 (defmacro with-session
-  [ctx opts & body]
+  [db-spec opts & body]
   `(let [session-opts# (make-client-session-options ~opts)
-         session#      (start-session! ~ctx session-opts#)]
+         session#      (start-session! ~db-spec session-opts#)]
      (try
        (.startTransaction session#)
        (binding [*session* session#]
@@ -105,9 +105,10 @@
          (throw e#)))))
 
 (defn disconnect!
-  [{::keys [^MongoClient client] :as ctx}]
+  [{::keys [^MongoClient client]
+    :as    db-spec}]
   (.close client)
-  (dissoc ctx ::client ::database))
+  (dissoc db-spec ::client ::database))
 
 (defn- get-collection
   ^MongoCollection [{::keys [^MongoDatabase db]} collection]
@@ -115,16 +116,16 @@
   (.getCollection db (name collection) BsonDocument))
 
 (defn insert-one
-  [ctx collection doc]
+  [db-spec collection doc]
   {:pre [collection doc]}
   (let [bson   (c/to-bson doc)
-        coll   (get-collection ctx collection)
+        coll   (get-collection db-spec collection)
         result (if *session*
                  (.insertOne coll *session* bson)
                  (.insertOne coll bson))]
     (.. result getInsertedId asObjectId getValue toHexString)))
 
 (defn count-collection
-  [ctx collection]
-  (let [coll (get-collection ctx collection)]
+  [db-spec collection]
+  (let [coll (get-collection db-spec collection)]
     (.countDocuments coll)))
