@@ -18,7 +18,8 @@
                      BsonInt32
                      BsonInt64
                      BsonNull
-                     BsonString]
+                     BsonString
+                     BsonValue]
            [org.bson.types Decimal128]))
 
 (set! *warn-on-reflection* true)
@@ -114,7 +115,7 @@
 
 (defn to-bson
   "Convert value to BSON"
-  [object]
+  ^BsonValue [object]
   (if (some? object)
     (-to-bson object)
     BsonNull/VALUE))
