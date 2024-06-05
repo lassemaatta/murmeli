@@ -13,6 +13,7 @@
                                     [org.mongodb/mongodb-driver-core "5.1.0" :classifier "sources"]
                                     ;; Testcontainers for mongodb
                                     [clj-test-containers "0.7.4"]
+                                    [org.testcontainers/mongodb "1.17.6"]
                                     ;; Logging
                                     [org.slf4j/slf4j-api "2.0.13"]
                                     [ch.qos.logback/logback-classic "1.5.6"]]
