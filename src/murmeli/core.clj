@@ -1,11 +1,17 @@
 (ns murmeli.core
+  "https://www.mongodb.com/docs/drivers/java/sync/current/"
   (:require [murmeli.convert :as c])
   (:import [com.mongodb ClientSessionOptions
                         ConnectionString
                         MongoClientSettings
+                        ReadConcern
+                        ReadPreference
                         ServerApi
-                        ServerApiVersion]
-           [com.mongodb.client MongoClient
+                        ServerApiVersion
+                        TransactionOptions
+                        WriteConcern]
+           [com.mongodb.client ClientSession
+                               MongoClient
                                MongoClients
                                MongoCollection
                                MongoDatabase]
@@ -36,24 +42,67 @@
   (assoc ctx ::db (.getDatabase client database)))
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
-(def default-client-session-options
+(defn make-client-session-options
+  [{:keys [causally-consistent?
+           snapshot?
+           read-preference
+           read-concern
+           write-concern]
+    :or   {causally-consistent? false
+           snapshot?            false}}]
   (-> (ClientSessionOptions/builder)
-      (.causallyConsistent false)
+      (.causallyConsistent causally-consistent?)
       ;; https://www.mongodb.com/docs/manual/reference/read-concern-snapshot/
-      (.snapshot false)
+      (.snapshot snapshot?)
+      (.defaultTransactionOptions (-> (TransactionOptions/builder)
+                                      (.readPreference (case read-preference
+                                                         :nearest             (ReadPreference/nearest)
+                                                         :primary             (ReadPreference/primary)
+                                                         :secondary           (ReadPreference/secondary)
+                                                         :primary-preferred   (ReadPreference/primaryPreferred)
+                                                         :secondary-preferred (ReadPreference/secondaryPreferred)
+                                                         nil))
+                                      (.readConcern (case read-concern
+                                                      :available    ReadConcern/AVAILABLE
+                                                      :local        ReadConcern/LOCAL
+                                                      :linearizable ReadConcern/LINEARIZABLE
+                                                      :snapshot     ReadConcern/SNAPSHOT
+                                                      :majority     ReadConcern/MAJORITY
+                                                      :default      ReadConcern/DEFAULT
+                                                      nil))
+                                      (.writeConcern (case write-concern
+                                                       :w1             WriteConcern/W1
+                                                       :w2             WriteConcern/W2
+                                                       :w3             WriteConcern/W3
+                                                       :majority       WriteConcern/MAJORITY
+                                                       :journaled      WriteConcern/JOURNALED
+                                                       :acknowledged   WriteConcern/ACKNOWLEDGED
+                                                       :unacknowledged WriteConcern/UNACKNOWLEDGED
+                                                       nil))
+                                      .build))
       .build))
 
-;; TODO: implement
+(defn start-session!
+  [{::keys [^MongoClient client]}
+   session-opts]
+  {:pre [client session-opts]}
+  (.startSession client session-opts))
+
+(def ^:dynamic ^ClientSession *session* nil)
+
 (defmacro with-session
-  [ctx & body]
-  `(let []
+  [ctx opts & body]
+  `(let [session-opts# (make-client-session-options ~opts)
+         session#      (start-session! ~ctx session-opts#)]
      (try
-       (do
-         ~@body)
+       (.startTransaction session#)
+       (binding [*session* session#]
+         (let [result# (do ~@body)]
+           (.commitTransaction session#)
+           result#))
        (catch Exception e#
-         (throw e#))
-       (finally
-         (.end s#)))))
+         (.abortTransaction session#)
+         (throw e#)))))
 
 (defn disconnect!
   [{::keys [^MongoClient client] :as ctx}]
@@ -70,7 +119,9 @@
   {:pre [collection doc]}
   (let [bson   (c/to-bson doc)
         coll   (get-collection ctx collection)
-        result (.insertOne coll bson)]
+        result (if *session*
+                 (.insertOne coll *session* bson)
+                 (.insertOne coll bson))]
     (.. result getInsertedId asObjectId getValue toHexString)))
 
 (defn count-collection

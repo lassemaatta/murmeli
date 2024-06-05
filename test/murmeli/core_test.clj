@@ -7,8 +7,22 @@
                            [test-utils/container-fixture
                             test-utils/db-fixture]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
+(deftest simple-insert-test
+  (testing "inserting document"
     (let [conn (test-utils/get-conn)]
       (is (string? (m/insert-one conn :coll {:foo 123})))
       (is (= 1 (m/count-collection conn :coll))))))
+
+
+(deftest transaction-test
+  (testing "exception in transaction"
+    (let [coll (keyword (str "coll-" (gensym)))
+          conn (test-utils/get-conn)]
+      (is (zero? (m/count-collection conn coll)))
+      (try
+        (m/with-session conn {}
+          (m/insert-one conn coll {:foo 123})
+          (throw (ex-info "foo" {})))
+        (catch Exception e
+          (is (= "foo" (.getMessage e)))))
+      (is (zero? (m/count-collection conn coll))))))
