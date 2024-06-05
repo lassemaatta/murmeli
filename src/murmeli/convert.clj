@@ -18,6 +18,7 @@
                      BsonInt32
                      BsonInt64
                      BsonNull
+                     BsonObjectId
                      BsonString
                      BsonValue]
            [org.bson.types Decimal128]))
@@ -119,3 +120,56 @@
   (if (some? object)
     (-to-bson object)
     BsonNull/VALUE))
+
+(declare from-bson)
+
+(defprotocol FromBSON
+  (-from-bson [this opts] "Convert BSON to value"))
+
+(extend-protocol FromBSON
+  ;; Scalars
+  BsonNull
+  (-from-bson [_ _]
+    nil)
+  BsonObjectId
+  (-from-bson [this _]
+    (.toHexString (.getValue this)))
+  BsonBoolean
+  (-from-bson [this _]
+    (.getValue this))
+  BsonInt32
+  (-from-bson [this _]
+    (.getValue this))
+  BsonInt64
+  (-from-bson [this _]
+    (.getValue this))
+  BsonDouble
+  (-from-bson [this _]
+    (.getValue this))
+  BsonDecimal128
+  (-from-bson [this _]
+    (.bigDecimalValue (.getValue this)))
+  BsonString
+  (-from-bson [this _]
+    (.getValue this))
+  BsonDateTime
+  (-from-bson [this _]
+    (Date. (.getValue this)))
+  ;; Collections
+  BsonArray
+  (-from-bson [this opts]
+    (->> (.getValues this)
+         (mapv (partial from-bson opts))))
+  BsonDocument
+  (-from-bson [this {:keys [keywords?] :as opts}]
+    (->> (.entrySet this)
+         (map (fn [[k v]]
+                [(if keywords? (keyword k) k)
+                 (from-bson opts v)]))
+         (into {}))))
+
+(defn from-bson
+  ([bson]
+   (from-bson {} bson))
+  ([opts ^BsonValue bson]
+   (-from-bson bson opts)))

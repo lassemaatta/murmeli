@@ -9,16 +9,20 @@
                            [test-utils/container-fixture
                             test-utils/db-fixture]))
 
+(defn get-coll
+  []
+  (keyword (str "coll-" (gensym))))
+
 (deftest simple-insert-test
   (testing "inserting document"
-    (let [db-spec (test-utils/get-db-spec)]
-      (is (string? (m/insert-one db-spec :coll {:foo 123})))
-      (is (= 1 (m/count-collection db-spec :coll))))))
-
+    (let [db-spec (test-utils/get-db-spec)
+          coll    (get-coll)]
+      (is (string? (m/insert-one db-spec coll {:foo 123})))
+      (is (= 1 (m/count-collection db-spec coll))))))
 
 (deftest transaction-test
   (testing "exception in transaction"
-    (let [coll    (keyword (str "coll-" (gensym)))
+    (let [coll    (get-coll)
           db-spec (test-utils/get-db-spec)]
       (is (zero? (m/count-collection db-spec coll)))
       (try
@@ -28,3 +32,14 @@
         (catch Exception e
           (is (= "foo" (.getMessage e)))))
       (is (zero? (m/count-collection db-spec coll))))))
+
+(deftest find-all-test
+  (testing "find all"
+    (let [coll    (get-coll)
+          db-spec (test-utils/get-db-spec)
+          id      (m/insert-one db-spec coll {:foo 123})
+          results (m/find-all db-spec coll)]
+      (is (string? id))
+      (is (= [{:_id id
+               :foo 123}]
+             results)))))

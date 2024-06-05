@@ -1,5 +1,5 @@
 (ns murmeli.convert-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is are]]
             [murmeli.convert :as c])
   (:import [org.bson BsonArray
                      BsonBoolean
@@ -40,3 +40,23 @@
   (is (thrown-with-msg? RuntimeException
                         #"Not a valid BSON map key"
                         (c/to-bson {[1] :a-vector}))))
+
+(def roundtrip (comp c/from-bson c/to-bson))
+
+(deftest simple-roundtrip-test
+  (are [value] (= value (roundtrip value))
+    nil
+    true
+    false
+    "a string"
+    (long 123)
+    (int 123)
+    (double 1.23)
+    (bigdec 1.23)
+    #inst "2024-06-01"
+    (list 1 2 3)
+    [1 2 3]
+    {"a" "v"
+     "b" [1 2 3]
+     "c" 1
+     "d" {"a" 1}}))

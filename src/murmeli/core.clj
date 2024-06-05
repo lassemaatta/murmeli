@@ -1,6 +1,7 @@
 (ns murmeli.core
   "https://www.mongodb.com/docs/drivers/java/sync/current/"
-  (:require [murmeli.convert :as c])
+  (:require [murmeli.convert :as c]
+            [murmeli.cursor])
   (:import [com.mongodb ClientSessionOptions
                         ConnectionString
                         MongoClientSettings
@@ -11,6 +12,7 @@
                         TransactionOptions
                         WriteConcern]
            [com.mongodb.client ClientSession
+                               FindIterable
                                MongoClient
                                MongoClients
                                MongoCollection
@@ -140,8 +142,31 @@
     (.. result getInsertedId asObjectId getValue toHexString)))
 
 (defn count-collection
-  [{::keys [^ClientSession session] :as db-spec} collection]
+  [{::keys [^ClientSession session] :as db-spec}
+   collection]
   (let [coll (get-collection db-spec collection)]
     (if session
       (.countDocuments coll session)
       (.countDocuments coll))))
+
+(defn find-all
+  ([db-spec collection]
+   (find-all db-spec collection {}))
+  ([{::keys [^ClientSession session]
+     :as    db-spec}
+    collection
+    {:keys [limit
+            skip
+            batch-size
+            keywords?]
+     :or   {keywords? true}}]
+   (let [xform (map (partial c/from-bson {:keywords? keywords?}))
+         coll  (get-collection db-spec collection)
+         it    ^FindIterable (if session
+                               (.find coll session)
+                               (.find coll))]
+     (when limit (.limit it (int limit)))
+     (when skip (.skip it (int skip)))
+     (when batch-size (.batchSize it (int batch-size)))
+     ;; Eagerly consume the results, but without chunking
+     (transduce xform conj it))))
