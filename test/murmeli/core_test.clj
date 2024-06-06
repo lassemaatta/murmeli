@@ -18,14 +18,14 @@
   (testing "inserting document"
     (let [db-spec (test-utils/get-db-spec)
           coll    (get-coll)]
-      (is (string? (m/insert-one db-spec coll {:foo 123})))
+      (is (string? (m/insert-one! db-spec coll {:foo 123})))
       (is (= 1 (m/count-collection db-spec coll))))))
 
 (deftest count-with-query-test
   (testing "count with query"
     (let [db-spec (test-utils/get-db-spec)
           coll    (get-coll)]
-      (is (string? (m/insert-one db-spec coll {:foo 123})))
+      (is (string? (m/insert-one! db-spec coll {:foo 123})))
       (is (= 1 (m/count-collection db-spec coll)))
       (is (= 0 (m/count-collection db-spec coll {:foo {$lt 100}})))
       (is (= 1 (m/count-collection db-spec coll {:foo {$lt 200}}))))))
@@ -37,7 +37,7 @@
       (is (zero? (m/count-collection db-spec coll)))
       (try
         (m/with-session [db-spec (m/with-client-session-options db-spec {})]
-          (m/insert-one db-spec coll {:foo 123})
+          (m/insert-one! db-spec coll {:foo 123})
           (throw (ex-info "foo" {})))
         (catch Exception e
           (is (= "foo" (.getMessage e)))))
@@ -47,7 +47,7 @@
   (testing "find all"
     (let [coll    (get-coll)
           db-spec (test-utils/get-db-spec)
-          id      (m/insert-one db-spec coll {:foo 123})
+          id      (m/insert-one! db-spec coll {:foo 123})
           results (m/find-all db-spec coll)]
       (is (string? id))
       (is (= [{:_id id

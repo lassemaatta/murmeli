@@ -129,7 +129,7 @@
   {:pre [db collection]}
   (.getCollection db (name collection) BsonDocument))
 
-(defn insert-one
+(defn insert-one!
   [{::keys [^ClientSession session] :as db-spec}
    collection
    doc]
