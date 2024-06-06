@@ -21,6 +21,7 @@
                      BsonObjectId
                      BsonString
                      BsonValue]
+           [org.bson.conversions Bson]
            [org.bson.types Decimal128]))
 
 (set! *warn-on-reflection* true)
@@ -120,6 +121,16 @@
   (if (some? object)
     (-to-bson object)
     BsonNull/VALUE))
+
+(defn map->bson
+  "Convert a map to a `Bson`, which can produce a `BsonDocument`."
+  ^Bson [m]
+  {:pre [(map? m)]}
+  (reify Bson
+    (toBsonDocument [_this _documentClass _codecRegistry]
+      ;; BsonDocument instances are mutable so always return a fresh
+      ;; pristine instance in case the caller modifies it
+      (to-bson m))))
 
 (declare from-bson)
 

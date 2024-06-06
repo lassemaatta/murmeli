@@ -1,6 +1,7 @@
 (ns murmeli.core-test
   (:require [clojure.test :as test :refer [deftest is testing]]
             [murmeli.core :as m]
+            [murmeli.operators :refer [$lt]]
             [murmeli.test.utils :as test-utils]))
 
 (set! *warn-on-reflection* true)
@@ -19,6 +20,15 @@
           coll    (get-coll)]
       (is (string? (m/insert-one db-spec coll {:foo 123})))
       (is (= 1 (m/count-collection db-spec coll))))))
+
+(deftest count-with-query-test
+  (testing "count with query"
+    (let [db-spec (test-utils/get-db-spec)
+          coll    (get-coll)]
+      (is (string? (m/insert-one db-spec coll {:foo 123})))
+      (is (= 1 (m/count-collection db-spec coll)))
+      (is (= 0 (m/count-collection db-spec coll {:foo {$lt 100}})))
+      (is (= 1 (m/count-collection db-spec coll {:foo {$lt 200}}))))))
 
 (deftest transaction-test
   (testing "exception in transaction"

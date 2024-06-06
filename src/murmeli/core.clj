@@ -44,7 +44,7 @@
   (assoc db-spec ::db (.getDatabase client database)))
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
-(defn make-client-session-options
+(defn- make-client-session-options
   ^ClientSessionOptions
   [{:keys [causally-consistent?
            snapshot?
@@ -142,12 +142,19 @@
     (.. result getInsertedId asObjectId getValue toHexString)))
 
 (defn count-collection
-  [{::keys [^ClientSession session] :as db-spec}
-   collection]
-  (let [coll (get-collection db-spec collection)]
-    (if session
-      (.countDocuments coll session)
-      (.countDocuments coll))))
+  ([db-spec
+    collection]
+   (count-collection db-spec collection {}))
+  ([{::keys [^ClientSession session] :as db-spec}
+    collection
+    query]
+   (let [coll   (get-collection db-spec collection)
+         filter (c/map->bson query)]
+     (cond
+       (and session filter) (.countDocuments coll session filter)
+       session              (.countDocuments coll session)
+       filter               (.countDocuments coll filter)
+       :else                (.countDocuments coll)))))
 
 (defn find-all
   ([db-spec collection]
