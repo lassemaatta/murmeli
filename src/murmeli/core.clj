@@ -13,11 +13,15 @@
                         WriteConcern]
            [com.mongodb.client ClientSession
                                FindIterable
+                               ListIndexesIterable
                                MongoClient
                                MongoClients
                                MongoCollection
                                MongoDatabase]
-           [org.bson BsonDocument]))
+           [com.mongodb.client.model IndexOptions Indexes]
+           [java.util List]
+           [org.bson BsonDocument]
+           [org.bson.conversions Bson]))
 
 (set! *warn-on-reflection* true)
 
@@ -128,6 +132,93 @@
   [{::keys [^MongoDatabase db]} collection]
   {:pre [db collection]}
   (.getCollection db (name collection) BsonDocument))
+
+;; Indexes
+
+(defn- make-index-options
+  ^IndexOptions
+  [{:keys [background
+           name
+           version
+           unique?
+           sparse?]}]
+  (cond-> (IndexOptions.)
+    background (.background background)
+    name       (.name name)
+    version    (.version version)
+    unique?    (.unique true)
+    sparse?    (.sparse true)))
+
+(defn- make-index-bson
+  ^Bson [index-keys]
+  (let [^List indexes (->> index-keys
+                           (mapv (fn [[field-name index-type]]
+                                   (let [^List field-names [(name field-name)]]
+                                     (case index-type
+                                       "2d"       (Indexes/geo2d field-names)
+                                       "2dsphere" (Indexes/geo2dsphere field-names)
+                                       "text"     (Indexes/text field-names)
+                                       1          (Indexes/ascending field-names)
+                                       -1         (Indexes/descending field-names))))))]
+    (if (= 1 (count indexes))
+      (first indexes)
+      (Indexes/compoundIndex indexes))))
+
+(defn create-index!
+  ([db-spec collection keys]
+   (create-index! db-spec collection keys nil))
+  ([{::keys [^ClientSession session] :as db-spec}
+    collection
+    keys
+    options]
+   (let [coll (get-collection db-spec collection)
+         keys (make-index-bson keys)
+         io   (when options
+                (make-index-options options))]
+     (cond
+       (and io session) (.createIndex coll session keys io)
+       session          (.createIndex coll session keys)
+       io               (.createIndex coll keys io)
+       :else            (.createIndex coll keys)))))
+
+(defn list-indexes
+  [{::keys [^ClientSession session] :as db-spec}
+   collection]
+  (let [coll                    (get-collection db-spec collection)
+        xform                   (map (partial c/from-bson {:keywords? true?}))
+        ^ListIndexesIterable it (if session
+                                  (.listIndexes coll session BsonDocument)
+                                  (.listIndexes coll BsonDocument))]
+    (transduce xform conj it)))
+
+(defn drop-all-indexes!
+  [{::keys [^ClientSession session] :as db-spec}
+   collection]
+  (let [coll (get-collection db-spec collection)]
+    (if session
+      (.dropIndexes coll session)
+      (.dropIndexes coll))))
+
+(defn drop-index!
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   keys]
+  (let [coll (get-collection db-spec collection)
+        keys (make-index-bson keys)]
+    (cond
+      session (.dropIndex coll session keys)
+      :else   (.dropIndex coll keys))))
+
+(defn drop-index-by-name!
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   ^String index-name]
+  (let [coll (get-collection db-spec collection)]
+    (cond
+      session (.dropIndex coll session index-name)
+      :else   (.dropIndex coll index-name))))
+
+;; Insertion
 
 (defn insert-one!
   [{::keys [^ClientSession session] :as db-spec}
