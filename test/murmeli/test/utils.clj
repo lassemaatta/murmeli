@@ -1,5 +1,6 @@
 (ns murmeli.test.utils
   (:require [clj-test-containers.core :as tc]
+            [clojure.spec.test.alpha :as stest]
             [clojure.tools.logging :as log]
             [murmeli.core :as m])
   (:import [org.testcontainers.containers MongoDBContainer]))
@@ -7,6 +8,8 @@
 (set! *warn-on-reflection* true)
 
 (def ^:dynamic *container* nil)
+
+(stest/instrument `tc/init)
 
 (def config (tc/init {:container     (MongoDBContainer. "mongo:7.0.11")
                       :exposed-ports [27017]
