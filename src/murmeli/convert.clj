@@ -8,8 +8,10 @@
            [java.util Date
                       List
                       Map
-                      Set]
+                      Set
+                      UUID]
            [org.bson BsonArray
+                     BsonBinary
                      BsonBoolean
                      BsonDateTime
                      BsonDecimal128
@@ -65,6 +67,9 @@
   BigDecimal
   (-to-bson [this]
     (BsonDecimal128. (Decimal128. this)))
+  Character
+  (-to-bson [this]
+    (to-bson (str this)))
   String
   (-to-bson [this]
     (BsonString. this))
@@ -74,6 +79,9 @@
   Instant
   (-to-bson [this]
     (BsonDateTime. (.toEpochMilli this)))
+  UUID
+  (-to-bson [this]
+    (BsonBinary. this))
 
   ;; java.util collections
   List
