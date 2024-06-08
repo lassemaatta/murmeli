@@ -9,7 +9,8 @@
 (def ^:dynamic *container* nil)
 
 (def config (tc/init {:container     (MongoDBContainer. "mongo:7.0.11")
-                      :exposed-ports [27017]}))
+                      :exposed-ports [27017]
+                      :wait-for      {:wait-strategy :port}}))
 
 (defn container-fixture
   [test-fn]
