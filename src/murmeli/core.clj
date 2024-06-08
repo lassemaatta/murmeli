@@ -263,7 +263,7 @@
 
 (defn find-all
   ([db-spec collection]
-   (find-all db-spec collection nil))
+   (find-all db-spec collection {}))
   ([db-spec collection query]
    (find-all db-spec collection query {}))
   ([{::keys [^ClientSession session]

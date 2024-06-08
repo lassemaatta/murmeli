@@ -1,11 +1,15 @@
 (ns murmeli.core-test
-  (:require [clojure.test :as test :refer [deftest is testing]]
+  (:require [clojure.spec.test.alpha :as stest]
+            [clojure.test :as test :refer [deftest is testing]]
             [murmeli.core :as m]
             [murmeli.operators :refer [$exists $gt $lt]]
+            [murmeli.specs]
             [murmeli.test.utils :as test-utils])
   (:import [com.mongodb MongoCommandException]))
 
 (set! *warn-on-reflection* true)
+
+(stest/instrument)
 
 (test/use-fixtures :once (test/join-fixtures
                            [test-utils/container-fixture
