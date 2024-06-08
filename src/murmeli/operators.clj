@@ -58,7 +58,6 @@
 ;;; Projection Operators
 
 (def ^:const $ "Projects the first element in an array that matches the query condition." "$")
-(def ^:const $elemMatch "Projects the first element in an array that matches the specified $elemMatch condition." "$elemMatch")
 (def ^:const $meta "Projects the document's score assigned during $text operation." "$meta")
 (def ^:const $slice "Limits the number of elements projected from an array. Supports skip and limit slices." "$slice")
 
