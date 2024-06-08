@@ -1,0 +1,44 @@
+{:tasks
+ {:requires ([babashka.fs :as fs]
+             [babashka.process :as p])
+
+  classpath-str
+  {:doc  "Return the lein classpath as a string"
+   :task (->> (shell {:out :string} "lein classpath")
+              (p/check)
+              (:out)
+              (drop-last)
+              (clojure.string/join ""))}
+
+  clean-kondo!
+  {:doc  "Clear the clj-kondo cache"
+   :task (do
+           (println "Clearing the clj-kondo .cache")
+           (fs/delete-tree ".clj-kondo/.cache"))}
+
+  init-kondo-cmd
+  {:doc     "Construct the command for initializing clj-kondo"
+   :depends [classpath-str]
+   :task    (format "clj-kondo --lint \"%s\" --dependencies --parallel --copy-configs"
+                    classpath-str)}
+
+  init-kondo!
+  {:doc     "Rebuild the clj-kondo cache"
+   :depends [clean-kondo! init-kondo-cmd]
+   :task    (do
+              (println "Creating the initial clj-kondo .cache")
+              (shell init-kondo-cmd))}
+
+  lint
+  {:doc  "Lint project with clj-kondo"
+   :task (do
+           (println "Linting project..")
+           (shell "clj-kondo --parallel --lint src --lint test"))}
+
+  repl
+  {:doc  "Start a headless REPL in port 43000"
+   :task (do
+           (println "Starting REPL...")
+           (shell {:inherit true}
+                  "nice lein trampoline with-profile +local-dev repl :headless :port 43000"))}
+  }}
