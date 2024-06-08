@@ -28,6 +28,10 @@
 
 (def ^:private api-version ServerApiVersion/V1)
 
+(def bson->clj-xform
+  "Transforms BSON documents to clojure maps, with map keys as keywords"
+  (map (partial c/from-bson {:keywords? true})))
+
 ;; Connect and disconnect
 
 (defn connect-client!
@@ -61,11 +65,10 @@
 (defn list-dbs
   [{::keys [^MongoClient client
             ^ClientSession session]}]
-  (let [xform (map (partial c/from-bson {:keywords? true}))
-        it    (cond
-                session (.listDatabases client session BsonDocument)
-                :else   (.listDatabases client BsonDocument))]
-    (transduce xform conj it)))
+  (let [it (cond
+             session (.listDatabases client session BsonDocument)
+             :else   (.listDatabases client BsonDocument))]
+    (transduce bson->clj-xform conj it)))
 
 ;; Collections
 
@@ -213,11 +216,10 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection]
   (let [coll                    (get-collection db-spec collection)
-        xform                   (map (partial c/from-bson {:keywords? true?}))
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session BsonDocument)
                                   (.listIndexes coll BsonDocument))]
-    (transduce xform conj it)))
+    (transduce bson->clj-xform conj it)))
 
 (defn drop-all-indexes!
   [{::keys [^ClientSession session] :as db-spec}
