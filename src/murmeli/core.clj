@@ -55,12 +55,18 @@
 
 ;; Databases
 
+(defn- get-database
+  ^MongoDatabase
+  [{::keys [^MongoClient client]}
+   database-name]
+  {:pre [client database-name]}
+  (.getDatabase client database-name))
+
 (defn connect-db!
-  [{:keys  [^String database]
-    ::keys [^MongoClient client]
-    :as    db-spec}]
-  {:pre [client database]}
-  (assoc db-spec ::db (.getDatabase client database)))
+  [{:keys [^String database-name]
+    :as   db-spec}]
+  {:pre [database-name]}
+  (assoc db-spec ::db (get-database db-spec database-name)))
 
 (defn list-dbs
   [{::keys [^MongoClient client
@@ -69,6 +75,15 @@
              session (.listDatabases client session BsonDocument)
              :else   (.listDatabases client BsonDocument))]
     (transduce bson->clj-xform conj it)))
+
+(defn drop-db!
+  [{::keys [^ClientSession session]
+    :as    db-spec}
+   database-name]
+  (let [db (get-database db-spec database-name)]
+    (if session
+      (.drop db session)
+      (.drop db))))
 
 ;; Collections
 

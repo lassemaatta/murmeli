@@ -40,8 +40,8 @@
 
 (defn db-fixture
   [test-fn]
-  (binding [*db-spec* (-> {:uri      (get-mongo-uri)
-                           :database "test-db"}
+  (binding [*db-spec* (-> {:uri           (get-mongo-uri)
+                           :database-name "test-db"}
                           m/connect-client!
                           m/connect-db!)]
     (try

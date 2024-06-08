@@ -4,14 +4,40 @@
             [clojure.string :as str]
             [murmeli.convert :as mc]
             [murmeli.core :as m])
-  (:import [com.mongodb ClientSessionOptions]
+  (:import [com.mongodb ClientSessionOptions MongoNamespace]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
            [org.bson BsonValue]
            [org.bson.conversions Bson]))
 
+(set! *warn-on-reflection* true)
+
 (s/def ::non-blank-str (s/and string?
                               (complement str/blank?)))
 (s/def ::uri ::non-blank-str)
+
+(defn valid-db-name?
+  [db-name]
+  (try
+    (MongoNamespace/checkDatabaseNameValidity db-name)
+    true
+    (catch IllegalArgumentException e
+      false)))
+
+(s/def ::database-name (s/and ::non-blank-str
+                              valid-db-name?))
+
+(defn valid-collection-name?
+  [collection-name]
+  (try
+    (MongoNamespace/checkCollectionNameValidity collection-name)
+    true
+    (catch IllegalArgumentException e
+      false)))
+
+(s/def ::collection (s/or :kw (s/and simple-keyword?
+                                     (comp valid-collection-name? name))
+                          :str (s/and ::non-blank-str
+                                      valid-collection-name?)))
 
 (defn db? [instance] (instance? MongoDatabase instance))
 (s/def ::m/db db?)
@@ -25,15 +51,16 @@
 (defn session? [instance] (instance? ClientSession instance))
 (s/def ::m/session session?)
 
-(s/def ::db-spec-disconnected (s/keys :req-un [::uri]))
+(s/def ::db-spec-disconnected (s/keys :req-un [::uri
+                                               ::database-name]))
 
 (s/def ::db-spec-with-client (s/merge ::db-spec-disconnected
-                                      (s/keys :req [::m/client])))
+                                      (s/keys :req [::m/client]
+                                              :opt [::m/session-options
+                                                    ::m/session])))
 
 (s/def ::db-spec-with-db (s/merge ::db-spec-with-client
-                                  (s/keys :req [::m/db]
-                                          :opt [::m/session-options
-                                                ::m/session])))
+                                  (s/keys :req [::m/db])))
 
 (s/fdef m/connect-client!
   :args (s/cat :db-spec ::db-spec-disconnected)
@@ -44,8 +71,15 @@
   :ret ::db-spec-with-db)
 
 (s/fdef m/disconnect
-  :args (s/cat :db-spec ::db-spec-with-db)
+  :args (s/cat :db-spec ::db-spec-with-client)
   :ret ::db-spec-disconnected)
+
+(s/fdef m/list-dbs
+  :args (s/cat :db-spec ::db-spec-with-client))
+
+(s/fdef m/drop-db!
+  :args (s/cat :db-spec ::db-spec-with-client
+               :database-name ::database-name))
 
 (s/def ::read-preference #{:nearest
                            :primary
@@ -78,12 +112,12 @@
                                           ::snapshot?]))
 
 (s/fdef m/with-client-session-options
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :db-spec ::db-spec-with-client
                :options ::session-options)
-  :ret ::db-spec-with-db)
+  :ret ::db-spec-with-client)
 
 (s/fdef m/start-session!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :db-spec ::db-spec-with-client
                :session-opts ::m/session-options))
 
 (s/def ::with-session-bindings (s/tuple simple-symbol?
@@ -92,9 +126,6 @@
 (s/fdef m/with-session
   :args (s/cat :bindings ::with-session-bindings
                :body (s/* any?)))
-
-(s/def ::collection (s/or :kw simple-keyword?
-                          :str ::non-blank-str))
 
 (s/def ::index-type #{"2d"
                       "2dsphere"
