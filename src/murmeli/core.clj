@@ -62,11 +62,14 @@
   {:pre [client database-name]}
   (.getDatabase client database-name))
 
-(defn connect-db!
-  [{:keys [^String database-name]
-    :as   db-spec}]
-  {:pre [database-name]}
-  (assoc db-spec ::db (get-database db-spec database-name)))
+(defn with-db
+  ([{:keys [database-name]
+     :as   db-spec}]
+   (with-db db-spec database-name))
+  ([db-spec
+    database-name]
+   {:pre [database-name]}
+   (assoc db-spec ::db (get-database db-spec database-name))))
 
 (defn list-dbs
   [{::keys [^MongoClient client

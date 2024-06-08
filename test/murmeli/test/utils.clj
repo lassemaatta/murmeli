@@ -43,7 +43,7 @@
   (binding [*db-spec* (-> {:uri           (get-mongo-uri)
                            :database-name "test-db"}
                           m/connect-client!
-                          m/connect-db!)]
+                          m/with-db)]
     (try
       (test-fn)
       (finally
