@@ -50,10 +50,20 @@
     false
     "a string"
     (long 123)
+    Long/MIN_VALUE
+    Long/MAX_VALUE
     (int 123)
+    (int Integer/MIN_VALUE)
+    (int Integer/MAX_VALUE)
     (double 1.23)
+    (double Double/MIN_VALUE)
+    (double Double/MAX_VALUE)
     (bigdec 1.23)
+    (bigdec Long/MAX_VALUE)
+    (bigdec Long/MIN_VALUE)
+    #inst "0000-01-01"
     #inst "2024-06-01"
+    #inst "9999-12-31"
     (list 1 2 3)
     [1 2 3]
     {"a" "v"
