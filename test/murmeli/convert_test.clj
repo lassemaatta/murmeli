@@ -1,6 +1,10 @@
 (ns murmeli.convert-test
-  (:require [clojure.test :refer [deftest is are]]
-            [murmeli.convert :as c])
+  (:require [clojure.test :refer [are deftest is]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
+            [murmeli.convert :as c]
+            [murmeli.specs])
   (:import [org.bson BsonArray
                      BsonBoolean
                      BsonDateTime
@@ -70,3 +74,24 @@
      "b" [1 2 3]
      "c" 1
      "d" {"a" 1}}))
+
+#_{:clj-kondo/ignore [:unresolved-symbol]}
+(defspec to-bson-props 100
+  (prop/for-all [v gen/any]
+    (try
+      (c/to-bson v)
+      (catch Exception e
+        (let [msg (.getMessage e)]
+          (when-not (or (re-matches #"Conversion to Decimal128 would require inexact rounding of.*" msg)
+                        (re-matches #"Not a valid BSON map key.*" msg))
+            (throw e))
+          true)))))
+
+#_{:clj-kondo/ignore [:unresolved-symbol]}
+(defspec map->bson-props 100
+  (prop/for-all [m (gen/map (gen/one-of
+                              [gen/string-ascii
+                               gen/symbol
+                               gen/keyword])
+                            gen/any)]
+    (c/map->bson m)))

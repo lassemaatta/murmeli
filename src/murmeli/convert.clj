@@ -66,6 +66,7 @@
     (BsonDouble. this))
   BigDecimal
   (-to-bson [this]
+    ;; Throws if value cannot be represented as Decimal128
     (BsonDecimal128. (Decimal128. this)))
   Character
   (-to-bson [this]

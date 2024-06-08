@@ -1,10 +1,13 @@
 (ns murmeli.specs
-  "Optional `clojure.spec`'s for `murmeli.core`."
+  "Optional `clojure.spec`'s for `murmeli.*`."
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as str]
+            [murmeli.convert :as mc]
             [murmeli.core :as m])
   (:import [com.mongodb ClientSessionOptions]
-           [com.mongodb.client ClientSession MongoClient MongoDatabase]))
+           [com.mongodb.client ClientSession MongoClient MongoDatabase]
+           [org.bson BsonValue]
+           [org.bson.conversions Bson]))
 
 (s/def ::non-blank-str (s/and string?
                               (complement str/blank?)))
@@ -177,3 +180,21 @@
                :collection ::collection
                :query (s/? ::document)
                :options (s/? ::find-one-options)))
+
+;; murmeli.convert
+
+(defn bson-value?
+  [object]
+  (instance? BsonValue object))
+
+(s/fdef mc/to-bson
+  :args (s/cat :object any?)
+  :ret bson-value?)
+
+(defn bson?
+  [object]
+  (instance? Bson object))
+
+(s/fdef mc/map->bson
+  :args (s/cat :m map?)
+  :ret bson?)
