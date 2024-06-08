@@ -27,6 +27,8 @@
 
 (def ^:private api-version ServerApiVersion/V1)
 
+;; Connect and disconnect
+
 (defn connect-client!
   [{:keys [^String uri]
     :as   db-spec}]
@@ -46,6 +48,20 @@
     :as    db-spec}]
   {:pre [client database]}
   (assoc db-spec ::db (.getDatabase client database)))
+
+(defn disconnect!
+  [{::keys [^MongoClient client]
+    :as    db-spec}]
+  (.close client)
+  (dissoc db-spec ::client ::database))
+
+(defn- get-collection
+  ^MongoCollection
+  [{::keys [^MongoDatabase db]} collection]
+  {:pre [db collection]}
+  (.getCollection db (name collection) BsonDocument))
+
+;; Transactions / Sessions
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
 (defn- make-client-session-options
@@ -120,18 +136,6 @@
          (catch Exception e#
            (.abortTransaction session#)
            (throw e#))))))
-
-(defn disconnect!
-  [{::keys [^MongoClient client]
-    :as    db-spec}]
-  (.close client)
-  (dissoc db-spec ::client ::database))
-
-(defn- get-collection
-  ^MongoCollection
-  [{::keys [^MongoDatabase db]} collection]
-  {:pre [db collection]}
-  (.getCollection db (name collection) BsonDocument))
 
 ;; Indexes
 
@@ -231,6 +235,8 @@
                  (.insertOne coll session bson)
                  (.insertOne coll bson))]
     (.. result getInsertedId asObjectId getValue toHexString)))
+
+;; Queries
 
 (defn count-collection
   ([db-spec
