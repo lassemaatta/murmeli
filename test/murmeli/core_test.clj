@@ -1,7 +1,7 @@
 (ns murmeli.core-test
   (:require [clojure.test :as test :refer [deftest is testing]]
             [murmeli.core :as m]
-            [murmeli.operators :refer [$lt]]
+            [murmeli.operators :refer [$exists $gt $lt]]
             [murmeli.test.utils :as test-utils])
   (:import [com.mongodb MongoCommandException]))
 
@@ -29,7 +29,8 @@
       (is (string? (m/insert-one! db-spec coll {:foo 123})))
       (is (= 1 (m/count-collection db-spec coll)))
       (is (= 0 (m/count-collection db-spec coll {:foo {$lt 100}})))
-      (is (= 1 (m/count-collection db-spec coll {:foo {$lt 200}}))))))
+      (is (= 1 (m/count-collection db-spec coll {:foo {$lt 200}})))
+      (is (= 1 (m/estimated-count-collection db-spec coll))))))
 
 (deftest transaction-test
   (testing "exception in transaction"
@@ -44,16 +45,34 @@
           (is (= "foo" (.getMessage e)))))
       (is (zero? (m/count-collection db-spec coll))))))
 
-(deftest find-all-test
-  (testing "find all"
-    (let [coll    (get-coll)
-          db-spec (test-utils/get-db-spec)
-          id      (m/insert-one! db-spec coll {:foo 123})
-          results (m/find-all db-spec coll)]
-      (is (string? id))
-      (is (= [{:_id id
-               :foo 123}]
-             results)))))
+(deftest find-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)
+        id      (m/insert-one! db-spec coll {:foo 123})
+        id-2    (m/insert-one! db-spec coll {:bar "quuz"})
+        item-1  {:_id id
+                 :foo 123}
+        item-2  {:_id id-2
+                 :bar "quuz"}]
+    (is (string? id))
+    (is (string? id-2))
+    (testing "find all"
+      (let [results (m/find-all db-spec coll)]
+        (is (= [item-1 item-2]
+               results))))
+    (testing "find all by query"
+      (is (empty? (m/find-all db-spec coll {:foo {$gt 1000}})))
+      (let [results (m/find-all db-spec coll {:foo {$gt 5}})]
+        (is (= [item-1]
+               results))))
+    (testing "find one by query"
+      (is (nil? (m/find-one db-spec coll {:foo {$gt 1000}})))
+      (let [results (m/find-one db-spec coll {:foo {$gt 5}})]
+        (is (= item-1 results)))
+      (testing "find-one throws on multiple hits"
+        (is (thrown-with-msg? RuntimeException
+                              #"find-one found multiple results"
+                              (m/find-one db-spec coll {:_id {$exists 1}})))))))
 
 (deftest index-test
   (let [coll     (get-coll)

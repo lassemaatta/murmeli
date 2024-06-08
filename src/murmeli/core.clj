@@ -1,6 +1,7 @@
 (ns murmeli.core
   "https://www.mongodb.com/docs/drivers/java/sync/current/"
-  (:require [murmeli.convert :as c]
+  (:require [clojure.tools.logging :as log]
+            [murmeli.convert :as c]
             [murmeli.cursor])
   (:import [com.mongodb ClientSessionOptions
                         ConnectionString
@@ -253,12 +254,22 @@
        filter               (.countDocuments coll filter)
        :else                (.countDocuments coll)))))
 
+(defn estimated-count-collection
+  "Gets an estimate of the count of documents in a collection using collection metadata."
+  [db-spec
+   collection]
+  (-> (get-collection db-spec collection)
+      .estimatedDocumentCount))
+
 (defn find-all
   ([db-spec collection]
-   (find-all db-spec collection {}))
+   (find-all db-spec collection nil))
+  ([db-spec collection query]
+   (find-all db-spec collection query {}))
   ([{::keys [^ClientSession session]
      :as    db-spec}
     collection
+    query
     {:keys [limit
             skip
             batch-size
@@ -266,11 +277,35 @@
      :or   {keywords? true}}]
    (let [xform (map (partial c/from-bson {:keywords? keywords?}))
          coll  (get-collection db-spec collection)
-         it    ^FindIterable (if session
-                               (.find coll session)
-                               (.find coll))]
+         query (when (seq query)
+                 (c/map->bson query))
+         it    ^FindIterable (cond
+                               (and query session) (.find coll session query)
+                               session             (.find coll session)
+                               query               (.find coll query)
+                               :else               (.find coll))]
      (when limit (.limit it (int limit)))
      (when skip (.skip it (int skip)))
      (when batch-size (.batchSize it (int batch-size)))
      ;; Eagerly consume the results, but without chunking
      (transduce xform conj it))))
+
+(defn find-one
+  ([db-spec collection query]
+   (find-one db-spec collection query {}))
+  ([db-spec
+    collection
+    query
+    {:keys [warn-on-multiple?
+            throw-on-multiple?]
+     :or   {warn-on-multiple?  true
+            throw-on-multiple? true}
+     :as   options}]
+   (let [options   (assoc options :limit 2 :batch-size 2)
+         results   (find-all db-spec collection query options)
+         multiple? (< 1 (count results))]
+     (when (and multiple? warn-on-multiple?)
+       (log/warn "find-one found multiple results"))
+     (when (and multiple? throw-on-multiple?)
+       (throw (ex-info "find-one found multiple results" {:collection collection})))
+     (first results))))
