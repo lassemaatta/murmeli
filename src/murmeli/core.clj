@@ -43,6 +43,14 @@
                        .build)]
     (assoc db-spec ::client (MongoClients/create settings))))
 
+(defn disconnect!
+  [{::keys [^MongoClient client]
+    :as    db-spec}]
+  (.close client)
+  (select-keys db-spec [:uri]))
+
+;; Databases
+
 (defn connect-db!
   [{:keys  [^String database]
     ::keys [^MongoClient client]
@@ -50,11 +58,26 @@
   {:pre [client database]}
   (assoc db-spec ::db (.getDatabase client database)))
 
-(defn disconnect!
-  [{::keys [^MongoClient client]
-    :as    db-spec}]
-  (.close client)
-  (dissoc db-spec ::client ::database))
+(defn list-dbs
+  [{::keys [^MongoClient client
+            ^ClientSession session]}]
+  (let [xform (map (partial c/from-bson {:keywords? true}))
+        it    (cond
+                session (.listDatabases client session BsonDocument)
+                :else   (.listDatabases client BsonDocument))]
+    (transduce xform conj it)))
+
+;; Collections
+
+(defn create-collection
+  [{::keys [^MongoDatabase db
+            ^ClientSession session]
+    :as    db-spec}
+   collection]
+  ;; TODO: Add support for `CreateCollectionOptions`
+  (cond
+    session (.createCollection db session (name collection))
+    :else   (.createCollection db (name collection))))
 
 (defn- get-collection
   ^MongoCollection

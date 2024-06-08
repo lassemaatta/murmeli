@@ -19,6 +19,14 @@
   []
   (keyword (str "coll-" (gensym))))
 
+(deftest db-test
+  (testing "list databases "
+    (let [db-spec (test-utils/get-db-spec)]
+      (doseq [{:keys [name sizeOnDisk empty]} (m/list-dbs db-spec)]
+        (is (string? name))
+        (is (int? sizeOnDisk))
+        (is (not empty))))))
+
 (deftest simple-insert-test
   (testing "inserting document"
     (let [db-spec (test-utils/get-db-spec)
