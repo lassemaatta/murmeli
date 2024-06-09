@@ -155,7 +155,7 @@
    options]
   (assoc db-spec ::session-options (make-client-session-options options)))
 
-(defn start-session!
+(defn- start-session!
   ^ClientSession
   [{::keys [^MongoClient client]}
    session-opts]
@@ -171,7 +171,7 @@
         db-spec     (second bindings)]
     `(let [db-spec#      ~db-spec
            session-opts# (::session-options db-spec#)
-           session#      (start-session! db-spec# session-opts#)
+           session#      (#'start-session! db-spec# session-opts#)
            ~db-spec-sym  (assoc db-spec# ::session session#)]
        (try
          (.startTransaction session#)
