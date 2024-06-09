@@ -35,6 +35,7 @@
 ;; Connect and disconnect
 
 (defn connect-client!
+  "Connect to a Mongo instance and construct a Client"
   [{:keys [^String uri]
     :as   db-spec}]
   {:pre [uri]}
@@ -48,6 +49,7 @@
     (assoc db-spec ::client (MongoClients/create settings))))
 
 (defn disconnect!
+  "Disconnect the Client and discard any related state"
   [{::keys [^MongoClient client]
     :as    db-spec}]
   (.close client)
@@ -56,6 +58,7 @@
 ;; Databases
 
 (defn- get-database
+  "Find a database by name"
   ^MongoDatabase
   [{::keys [^MongoClient client]}
    database-name]
@@ -63,6 +66,7 @@
   (.getDatabase client database-name))
 
 (defn with-db
+  "Find a database and store it in `db-spec`."
   ([{:keys [database-name]
      :as   db-spec}]
    (with-db db-spec database-name))
@@ -72,6 +76,7 @@
    (assoc db-spec ::db (get-database db-spec database-name))))
 
 (defn list-dbs
+  "List all databases"
   [{::keys [^MongoClient client
             ^ClientSession session]}]
   (let [it (cond
@@ -80,6 +85,7 @@
     (transduce bson->clj-xform conj it)))
 
 (defn drop-db!
+  "Drop a database"
   [{::keys [^ClientSession session]
     :as    db-spec}
    database-name]
@@ -91,6 +97,7 @@
 ;; Collections
 
 (defn create-collection
+  "Creates a collection"
   [{::keys [^MongoDatabase db
             ^ClientSession session]
     :as    db-spec}
@@ -151,6 +158,7 @@
       .build))
 
 (defn with-client-session-options
+  "Store session options into `db-spec`, read by `with-session`"
   [db-spec
    options]
   (assoc db-spec ::session-options (make-client-session-options options)))
