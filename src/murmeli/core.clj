@@ -155,6 +155,12 @@
    options]
   (assoc db-spec ::session-options (make-client-session-options options)))
 
+(defn- get-session-options
+  [db-spec]
+  (or (::session-options db-spec)
+      (throw (ex-info "No session options specified, call `with-client-session-options`"
+                      {}))))
+
 (defn- start-session!
   ^ClientSession
   [{::keys [^MongoClient client]}
@@ -163,24 +169,27 @@
   (.startSession client session-opts))
 
 (defmacro with-session
-  [bindings & body]
+  "Run `body` in a session/transaction
+
+  Gets the session options (as set by `with-client-session-options`), starts a session and stores it
+  in `db-spec` and binds the result to `sym`. The session/transaction is either committed or aborted
+  depending on whether `body` throws or not."
+  [[sym db-spec :as bindings] & body]
   {:pre [(vector? bindings)
          (= 2 (count bindings))
-         (simple-symbol? (first bindings))]}
-  (let [db-spec-sym (first bindings)
-        db-spec     (second bindings)]
-    `(let [db-spec#      ~db-spec
-           session-opts# (::session-options db-spec#)
-           session#      (#'start-session! db-spec# session-opts#)
-           ~db-spec-sym  (assoc db-spec# ::session session#)]
-       (try
-         (.startTransaction session#)
-         (let [result# (do ~@body)]
-           (.commitTransaction session#)
-           result#)
-         (catch Exception e#
-           (.abortTransaction session#)
-           (throw e#))))))
+         (simple-symbol? sym)]}
+  `(let [db-spec#                ~db-spec
+         session-opts#           (#'get-session-options db-spec#)
+         ^ClientSession session# (#'start-session! db-spec# session-opts#)
+         ~sym                    (assoc db-spec# ::session session#)]
+     (try
+       (.startTransaction session#)
+       (let [result# (do ~@body)]
+         (.commitTransaction session#)
+         result#)
+       (catch Exception e#
+         (.abortTransaction session#)
+         (throw e#)))))
 
 ;; Indexes
 
