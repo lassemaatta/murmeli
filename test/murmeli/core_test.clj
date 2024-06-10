@@ -2,9 +2,11 @@
   (:require [clojure.spec.test.alpha :as stest]
             [clojure.test :as test :refer [deftest is testing]]
             [murmeli.core :as m]
-            [murmeli.operators :refer [$exists $gt $lt]]
+            [murmeli.operators :refer [$exists $gt $jsonSchema $lt]]
             [murmeli.specs]
-            [murmeli.test.utils :as test-utils])
+            [murmeli.test.utils :as test-utils]
+            [murmeli.validators.schema :as vs]
+            [schema.core :as s])
   (:import [com.mongodb MongoCommandException]))
 
 (set! *warn-on-reflection* true)
@@ -156,3 +158,52 @@
         (m/drop-all-indexes! db-spec coll)
         (is (= [id-index]
                (m/list-indexes db-spec coll)))))))
+
+(deftest schema-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)
+        id-0    (m/insert-one! db-spec coll {})
+        id-1    (m/insert-one! db-spec coll {:foo "just foo"})
+        id-2    (m/insert-one! db-spec coll {:foo "foo and a timestamp"
+                                             :bar #inst "2024-06-01"})
+        id-3    (m/insert-one! db-spec coll {:bar #inst "2024-06-02"})]
+
+    (testing "one required field"
+      (let [schema (vs/schema->json-schema
+                     {:foo s/Str})]
+        (is (= {:_id id-1
+                :foo "just foo"}
+               (m/find-one db-spec coll {$jsonSchema schema})))))
+
+    (testing "two required fields"
+      (let [schema (vs/schema->json-schema
+                     {:foo s/Str
+                      :bar s/Inst})]
+        (is (= {:_id id-2
+                :foo "foo and a timestamp"
+                :bar #inst "2024-06-01"}
+               (m/find-one db-spec coll {$jsonSchema schema})))))
+
+    (testing "one optional, one required"
+      (let [schema (vs/schema->json-schema
+                     {(s/optional-key :foo) s/Str
+                      :bar                  s/Inst})]
+        (is (= [{:_id id-2
+                 :foo "foo and a timestamp"
+                 :bar #inst "2024-06-01"}
+                {:_id id-3
+                 :bar #inst "2024-06-02"}]
+               (m/find-all db-spec coll {$jsonSchema schema})))))
+
+    (testing "open schema"
+      (let [schema (vs/schema->json-schema
+                     {s/Keyword s/Any})]
+        (is (= [{:_id id-0}
+                {:_id id-1
+                 :foo "just foo"}
+                {:_id id-2
+                 :foo "foo and a timestamp"
+                 :bar #inst "2024-06-01"}
+                {:_id id-3
+                 :bar #inst "2024-06-02"}]
+               (m/find-all db-spec coll {$jsonSchema schema})))))))
