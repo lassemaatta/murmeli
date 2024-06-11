@@ -69,18 +69,22 @@
   Cons
   (-to-schema [this _]
     (case (first this)
-      enum     {:enum (->> (rest this)
-                           (map (fn [x]
-                                  (if (keyword? x)
-                                    (name x)
-                                    x)))
-                           distinct
-                           (sort-by str)
-                           (into []))}
+      enum        {:enum (->> (rest this)
+                              (map (fn [x]
+                                     (if (keyword? x)
+                                       (name x)
+                                       x)))
+                              distinct
+                              (sort-by str)
+                              (into []))}
       ;; cond-pre lists a bunch of disjoint schemas, we must match one of them
-      cond-pre {:anyOf (->> (rest this)
-                            (mapv (fn [schema]
-                                    (to-schema schema))))}))
+      cond-pre    {:anyOf (->> (rest this)
+                               (mapv to-schema))}
+      ;; conditional has pairs of predicate + schema. We can't really represent the
+      ;; predicates, but at least we can try to check if one of the schemas matches
+      conditional {:anyOf (->> (rest this)
+                               (partition 2)
+                               (mapv (comp to-schema second)))}))
   IPersistentVector
   (-to-schema [this _]
     {:bsonType :array
@@ -93,6 +97,7 @@
   IPersistentList
   (-to-schema [[wrapper-type schema & args] _]
     (case wrapper-type
+      eq          {:enum [schema]}
       maybe       (to-schema schema {:null? true})
       named       (to-schema schema {:description (first args)})
       constrained (to-schema schema {:description (when (string? (first args))

@@ -75,6 +75,15 @@
          (validator/schema->json-schema
            {:a (s/enum 1 2 3 "a" "b" "c" :a :b :xyz)}))))
 
+(deftest eq-test
+  (is (= {:bsonType             :object
+          :required             ["_id" "a"]
+          :properties           {"_id" {:bsonType :objectId}
+                                 "a"   {:enum [1337]}}
+          :additionalProperties false}
+         (validator/schema->json-schema
+           {:a (s/eq 1337)}))))
+
 (deftest optional-keys-test
   (is (= {:bsonType             :object
           :required             ["_id" "a" "b"]
@@ -170,4 +179,23 @@
                  {s/Int s/Keyword}
                  s/Str
                  s/Int
-                 s/Uuid)}))))
+                 s/Uuid)})))
+  (is (= {:bsonType             :object
+          :required             ["_id" "a"]
+          :properties           {"_id" {:bsonType :objectId}
+                                 "a"   {:anyOf [{:bsonType :array
+                                                 :items    {:bsonType :string}}
+                                                {:bsonType             :object
+                                                 :additionalProperties true}
+                                                {:bsonType :string}
+                                                {:bsonType :long}
+                                                {:bsonType :string
+                                                 :format   :uuid}]}}
+          :additionalProperties false}
+         (validator/schema->json-schema
+           {:a (s/conditional
+                 :foo [s/Str]
+                 :bar {s/Int s/Keyword}
+                 :baz s/Str
+                 :quuz s/Int
+                 :flor s/Uuid)}))))
