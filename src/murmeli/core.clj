@@ -326,23 +326,31 @@
     :as    db-spec}
    collection
    & {:keys [query
+             projection
              limit
              skip
              batch-size
              keywords?]
       :or   {keywords? true}}]
-  (let [xform (map (partial c/from-bson {:keywords? keywords?}))
-        coll  (get-collection db-spec collection)
-        query (when (seq query)
-                (c/map->bson query))
-        it    ^FindIterable (cond
-                              (and query session) (.find coll session query)
-                              session             (.find coll session)
-                              query               (.find coll query)
-                              :else               (.find coll))]
+  (let [xform      (map (partial c/from-bson {:keywords? keywords?}))
+        coll       (get-collection db-spec collection)
+        query      (when (seq query)
+                     (c/map->bson query))
+        projection (when (seq projection)
+                     (->> projection
+                          (mapcat (fn [field-name]
+                                    [field-name 1]))
+                          (apply array-map)
+                          c/map->bson))
+        it         ^FindIterable (cond
+                                   (and query session) (.find coll session query)
+                                   session             (.find coll session)
+                                   query               (.find coll query)
+                                   :else               (.find coll))]
     (when limit (.limit it (int limit)))
     (when skip (.skip it (int skip)))
     (when batch-size (.batchSize it (int batch-size)))
+    (when projection (.projection it projection))
     ;; Eagerly consume the results, but without chunking
     (transduce xform conj it)))
 

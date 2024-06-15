@@ -187,12 +187,15 @@
                :collection ::collection))
 
 (s/def ::query ::document)
+(s/def ::projection (s/coll-of simple-keyword?
+                               :kind vector))
 (s/def ::limit int?)
 (s/def ::skip int?)
 (s/def ::batch-size int?)
 (s/def ::keywords? boolean?)
 
 (s/def ::find-all-options (s/keys* :opt-un [::query
+                                            ::projection
                                             ::limit
                                             ::skip
                                             ::batch-size
@@ -206,6 +209,7 @@
 (s/def ::warn-on-multiple? boolean?)
 (s/def ::throw-on-multiple? boolean?)
 (s/def ::find-one-options (s/keys* :opt-un [::query
+                                            ::projection
                                             ::keywords?
                                             ::warn-on-multiple?
                                             ::throw-on-multiple?]))

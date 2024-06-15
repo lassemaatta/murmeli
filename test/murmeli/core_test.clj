@@ -88,7 +88,14 @@
     (testing "find all"
       (let [results (m/find-all db-spec coll)]
         (is (= [item-1 item-2]
-               results))))
+               results)))
+      (testing "projection"
+        (let [results (m/find-all db-spec coll :projection [:_id])]
+          (is (= [{:_id id} {:_id id-2}]
+                 results)))
+        (let [results (m/find-all db-spec coll :projection [:foo])]
+          (is (= [{:_id id :foo 123} {:_id id-2}]
+                 results)))))
     (testing "find all by query"
       (is (empty? (m/find-all db-spec coll :query {:foo {$gt 1000}})))
       (let [results (m/find-all db-spec coll :query {:foo {$gt 5}})]
