@@ -186,31 +186,33 @@
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection))
 
+(s/def ::query ::document)
 (s/def ::limit int?)
 (s/def ::skip int?)
 (s/def ::batch-size int?)
 (s/def ::keywords? boolean?)
 
-(s/def ::find-all-options (s/keys :opt-un [::limit
-                                           ::skip
-                                           ::batch-size
-                                           ::keywords?]))
+(s/def ::find-all-options (s/keys* :opt-un [::query
+                                            ::limit
+                                            ::skip
+                                            ::batch-size
+                                            ::keywords?]))
 
 (s/fdef m/find-all
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
-               :query (s/? ::document)
                :options (s/? ::find-all-options)))
 
 (s/def ::warn-on-multiple? boolean?)
 (s/def ::throw-on-multiple? boolean?)
-(s/def ::find-one-options (s/keys :opt-un [::warn-on-multiple?
-                                           ::throw-on-multiple?]))
+(s/def ::find-one-options (s/keys* :opt-un [::query
+                                            ::keywords?
+                                            ::warn-on-multiple?
+                                            ::throw-on-multiple?]))
 
 (s/fdef m/find-one
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
-               :query (s/? ::document)
                :options (s/? ::find-one-options)))
 
 ;; murmeli.convert

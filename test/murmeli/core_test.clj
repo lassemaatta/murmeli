@@ -90,18 +90,18 @@
         (is (= [item-1 item-2]
                results))))
     (testing "find all by query"
-      (is (empty? (m/find-all db-spec coll {:foo {$gt 1000}})))
-      (let [results (m/find-all db-spec coll {:foo {$gt 5}})]
+      (is (empty? (m/find-all db-spec coll :query {:foo {$gt 1000}})))
+      (let [results (m/find-all db-spec coll :query {:foo {$gt 5}})]
         (is (= [item-1]
                results))))
     (testing "find one by query"
-      (is (nil? (m/find-one db-spec coll {:foo {$gt 1000}})))
-      (let [results (m/find-one db-spec coll {:foo {$gt 5}})]
+      (is (nil? (m/find-one db-spec coll :query {:foo {$gt 1000}})))
+      (let [results (m/find-one db-spec coll :query {:foo {$gt 5}})]
         (is (= item-1 results)))
       (testing "find-one throws on multiple hits"
         (is (thrown-with-msg? RuntimeException
                               #"find-one found multiple results"
-                              (m/find-one db-spec coll {:_id {$exists 1}})))))))
+                              (m/find-one db-spec coll :query {:_id {$exists 1}})))))))
 
 (deftest index-test
   (let [coll     (get-coll)
@@ -173,7 +173,7 @@
                      {:foo s/Str})]
         (is (= {:_id id-1
                 :foo "just foo"}
-               (m/find-one db-spec coll {$jsonSchema schema})))))
+               (m/find-one db-spec coll :query {$jsonSchema schema})))))
 
     (testing "two required fields"
       (let [schema (vs/schema->json-schema
@@ -182,7 +182,7 @@
         (is (= {:_id id-2
                 :foo "foo and a timestamp"
                 :bar #inst "2024-06-01"}
-               (m/find-one db-spec coll {$jsonSchema schema})))))
+               (m/find-one db-spec coll :query {$jsonSchema schema})))))
 
     (testing "one optional, one required"
       (let [schema (vs/schema->json-schema
@@ -193,7 +193,7 @@
                  :bar #inst "2024-06-01"}
                 {:_id id-3
                  :bar #inst "2024-06-02"}]
-               (m/find-all db-spec coll {$jsonSchema schema})))))
+               (m/find-all db-spec coll :query {$jsonSchema schema})))))
 
     (testing "open schema"
       (let [schema (vs/schema->json-schema
@@ -206,4 +206,4 @@
                  :bar #inst "2024-06-01"}
                 {:_id id-3
                  :bar #inst "2024-06-02"}]
-               (m/find-all db-spec coll {$jsonSchema schema})))))))
+               (m/find-all db-spec coll :query {$jsonSchema schema})))))))

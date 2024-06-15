@@ -322,60 +322,53 @@
       .estimatedDocumentCount))
 
 (defn find-all
-  ([db-spec collection]
-   (find-all db-spec collection {}))
-  ([db-spec collection query]
-   (find-all db-spec collection query {}))
-  ([{::keys [^ClientSession session]
-     :as    db-spec}
-    collection
-    query
-    {:keys [limit
-            skip
-            batch-size
-            keywords?]
-     :or   {keywords? true}}]
-   (let [xform (map (partial c/from-bson {:keywords? keywords?}))
-         coll  (get-collection db-spec collection)
-         query (when (seq query)
-                 (c/map->bson query))
-         it    ^FindIterable (cond
-                               (and query session) (.find coll session query)
-                               session             (.find coll session)
-                               query               (.find coll query)
-                               :else               (.find coll))]
-     (when limit (.limit it (int limit)))
-     (when skip (.skip it (int skip)))
-     (when batch-size (.batchSize it (int batch-size)))
-     ;; Eagerly consume the results, but without chunking
-     (transduce xform conj it))))
+  [{::keys [^ClientSession session]
+    :as    db-spec}
+   collection
+   & {:keys [query
+             limit
+             skip
+             batch-size
+             keywords?]
+      :or   {keywords? true}}]
+  (let [xform (map (partial c/from-bson {:keywords? keywords?}))
+        coll  (get-collection db-spec collection)
+        query (when (seq query)
+                (c/map->bson query))
+        it    ^FindIterable (cond
+                              (and query session) (.find coll session query)
+                              session             (.find coll session)
+                              query               (.find coll query)
+                              :else               (.find coll))]
+    (when limit (.limit it (int limit)))
+    (when skip (.skip it (int skip)))
+    (when batch-size (.batchSize it (int batch-size)))
+    ;; Eagerly consume the results, but without chunking
+    (transduce xform conj it)))
 
 (defn find-one
   "Like `find-all`, but fetches a single document
 
   By default will warn & throw if query produces more than
   one result."
-  ([db-spec collection query]
-   (find-one db-spec collection query {}))
-  ([db-spec
-    collection
-    query
-    {:keys [warn-on-multiple?
-            throw-on-multiple?]
-     :or   {warn-on-multiple?  true
-            throw-on-multiple? true}
-     :as   options}]
-   (let [;; "A negative limit is similar to a positive limit but closes the cursor after
-         ;; returning a single batch of results."
-         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
-         cnt       (if (or warn-on-multiple? throw-on-multiple?) -2 -1)
-         options   (assoc options :limit cnt :batch-size 2)
-         results   (find-all db-spec collection query options)
-         multiple? (< 1 (count results))]
-     ;; Check if the query really did produce a single result, or did we (accidentally?)
-     ;; match multiple documents?
-     (when (and multiple? warn-on-multiple?)
-       (log/warn "find-one found multiple results"))
-     (when (and multiple? throw-on-multiple?)
-       (throw (ex-info "find-one found multiple results" {:collection collection})))
-     (first results))))
+  [db-spec
+   collection
+   & {:keys [warn-on-multiple?
+             throw-on-multiple?]
+      :or   {warn-on-multiple?  true
+             throw-on-multiple? true}
+      :as   options}]
+  (let [;; "A negative limit is similar to a positive limit but closes the cursor after
+        ;; returning a single batch of results."
+        ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
+        cnt       (if (or warn-on-multiple? throw-on-multiple?) -2 -1)
+        options   (assoc options :limit cnt :batch-size 2)
+        results   (find-all db-spec collection options)
+        multiple? (< 1 (count results))]
+    ;; Check if the query really did produce a single result, or did we (accidentally?)
+    ;; match multiple documents?
+    (when (and multiple? warn-on-multiple?)
+      (log/warn "find-one found multiple results"))
+    (when (and multiple? throw-on-multiple?)
+      (throw (ex-info "find-one found multiple results" {:collection collection})))
+    (first results)))
