@@ -79,31 +79,46 @@
         db-spec (test-utils/get-db-spec)
         id      (m/insert-one! db-spec coll {:foo 123})
         id-2    (m/insert-one! db-spec coll {:bar "quuz"})
+        id-3    (m/insert-one! db-spec coll {:foo 200
+                                             :bar "aaaa"})
         item-1  {:_id id
                  :foo 123}
         item-2  {:_id id-2
-                 :bar "quuz"}]
+                 :bar "quuz"}
+        item-3  {:_id id-3
+                 :foo 200
+                 :bar "aaaa"}]
     (is (string? id))
     (is (string? id-2))
+    (is (string? id-3))
     (testing "find all"
       (let [results (m/find-all db-spec coll)]
-        (is (= [item-1 item-2]
+        (is (= [item-1 item-2 item-3]
                results)))
       (testing "projection"
         (let [results (m/find-all db-spec coll :projection [:_id])]
-          (is (= [{:_id id} {:_id id-2}]
+          (is (= [{:_id id} {:_id id-2} {:_id id-3}]
                  results)))
         (let [results (m/find-all db-spec coll :projection [:foo])]
-          (is (= [{:_id id :foo 123} {:_id id-2}]
+          (is (= [{:_id id :foo 123} {:_id id-2} {:_id id-3 :foo 200}]
+                 results))))
+      (testing "sorting"
+        (let [results (m/find-all db-spec coll :sort (array-map :foo 1))]
+          (is (= [item-2 item-1 item-3]
+                 results)))
+        (let [results (m/find-all db-spec coll :sort (array-map :foo -1))]
+          (is (= [item-3 item-1 item-2]
                  results)))))
     (testing "find all by query"
       (is (empty? (m/find-all db-spec coll :query {:foo {$gt 1000}})))
-      (let [results (m/find-all db-spec coll :query {:foo {$gt 5}})]
+      (let [results (m/find-all db-spec coll :query {:foo {$gt 5
+                                                           $lt 150}})]
         (is (= [item-1]
                results))))
     (testing "find one by query"
       (is (nil? (m/find-one db-spec coll :query {:foo {$gt 1000}})))
-      (let [results (m/find-one db-spec coll :query {:foo {$gt 5}})]
+      (let [results (m/find-one db-spec coll :query {:foo {$gt 5
+                                                           $lt 150}})]
         (is (= item-1 results)))
       (testing "find-one throws on multiple hits"
         (is (thrown-with-msg? RuntimeException

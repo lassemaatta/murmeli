@@ -327,6 +327,7 @@
    collection
    & {:keys [query
              projection
+             sort
              limit
              skip
              batch-size
@@ -342,6 +343,8 @@
                                     [field-name 1]))
                           (apply array-map)
                           c/map->bson))
+        sort       (when (seq sort)
+                     (c/map->bson sort))
         it         ^FindIterable (cond
                                    (and query session) (.find coll session query)
                                    session             (.find coll session)
@@ -351,6 +354,7 @@
     (when skip (.skip it (int skip)))
     (when batch-size (.batchSize it (int batch-size)))
     (when projection (.projection it projection))
+    (when sort (.sort it sort))
     ;; Eagerly consume the results, but without chunking
     (transduce xform conj it)))
 

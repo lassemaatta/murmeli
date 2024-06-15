@@ -189,6 +189,7 @@
 (s/def ::query ::document)
 (s/def ::projection (s/coll-of simple-keyword?
                                :kind vector))
+(s/def ::sort ::document)
 (s/def ::limit int?)
 (s/def ::skip int?)
 (s/def ::batch-size int?)
@@ -196,6 +197,7 @@
 
 (s/def ::find-all-options (s/keys* :opt-un [::query
                                             ::projection
+                                            ::sort
                                             ::limit
                                             ::skip
                                             ::batch-size
@@ -210,6 +212,7 @@
 (s/def ::throw-on-multiple? boolean?)
 (s/def ::find-one-options (s/keys* :opt-un [::query
                                             ::projection
+                                            ::sort
                                             ::keywords?
                                             ::warn-on-multiple?
                                             ::throw-on-multiple?]))
