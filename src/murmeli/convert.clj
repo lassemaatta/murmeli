@@ -24,7 +24,7 @@
                      BsonString
                      BsonValue]
            [org.bson.conversions Bson]
-           [org.bson.types Decimal128]))
+           [org.bson.types Decimal128 ObjectId]))
 
 (set! *warn-on-reflection* true)
 
@@ -52,6 +52,9 @@
 
 (extend-protocol ToBSON
   ;; Scalars
+  ObjectId
+  (-to-bson [this]
+    (BsonObjectId. this))
   Boolean
   (-to-bson [this]
     (if this BsonBoolean/TRUE BsonBoolean/FALSE))
@@ -115,7 +118,10 @@
   (-to-bson [this]
     (let [doc (BsonDocument. (count this))]
       (doseq [[k v] this]
-        (.put doc (-to-key k) (to-bson v)))
+        (let [k (-to-key k)]
+          (if (and (= "_id" k) (string? v))
+            (.put doc k (to-bson (ObjectId. ^String v)))
+            (.put doc k (to-bson v)))))
       doc))
 
   ;; Error otherwise

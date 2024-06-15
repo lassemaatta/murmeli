@@ -32,9 +32,13 @@
 (deftest simple-insert-test
   (testing "inserting document"
     (let [db-spec (test-utils/get-db-spec)
-          coll    (get-coll)]
-      (is (string? (m/insert-one! db-spec coll {:foo 123})))
-      (is (= 1 (m/count-collection db-spec coll))))))
+          coll    (get-coll)
+          id      (m/insert-one! db-spec coll {:foo 123})]
+      (is (string? id))
+      (is (= 1 (m/count-collection db-spec coll)))
+      (is (= {:_id id
+              :foo 123}
+             (m/find-one db-spec coll :query {:_id id}))))))
 
 (deftest count-with-query-test
   (testing "count with query"
