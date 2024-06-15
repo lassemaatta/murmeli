@@ -351,6 +351,10 @@
      (transduce xform conj it))))
 
 (defn find-one
+  "Like `find-all`, but fetches a single document
+
+  By default will warn & throw if query produces more than
+  one result."
   ([db-spec collection query]
    (find-one db-spec collection query {}))
   ([db-spec
@@ -361,9 +365,15 @@
      :or   {warn-on-multiple?  true
             throw-on-multiple? true}
      :as   options}]
-   (let [options   (assoc options :limit 2 :batch-size 2)
+   (let [;; "A negative limit is similar to a positive limit but closes the cursor after
+         ;; returning a single batch of results."
+         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
+         cnt       (if (or warn-on-multiple? throw-on-multiple?) -2 -1)
+         options   (assoc options :limit cnt :batch-size 2)
          results   (find-all db-spec collection query options)
          multiple? (< 1 (count results))]
+     ;; Check if the query really did produce a single result, or did we (accidentally?)
+     ;; match multiple documents?
      (when (and multiple? warn-on-multiple?)
        (log/warn "find-one found multiple results"))
      (when (and multiple? throw-on-multiple?)
