@@ -34,10 +34,8 @@
     (catch IllegalArgumentException e
       false)))
 
-(s/def ::collection (s/or :kw (s/and simple-keyword?
-                                     (comp valid-collection-name? name))
-                          :str (s/and ::non-blank-str
-                                      valid-collection-name?)))
+(s/def ::collection (s/and (s/nonconforming ::key)
+                           (comp valid-collection-name? name)))
 
 (defn db? [instance] (instance? MongoDatabase instance))
 (s/def ::m/db db?)
@@ -128,12 +126,15 @@
   :args (s/cat :bindings ::with-session-bindings
                :body (s/* any?)))
 
+
+(s/def ::key (s/or :kw simple-keyword? :str ::non-blank-str))
+
 (s/def ::index-type #{"2d"
                       "2dsphere"
                       "text"
                       1
                       -1})
-(s/def ::index-keys (s/map-of simple-keyword? ::index-type))
+(s/def ::index-keys (s/map-of ::key ::index-type))
 
 (s/def ::background ::non-blank-str)
 (s/def ::name ::non-blank-str)
@@ -170,7 +171,7 @@
                :collection ::collection
                :index-name ::name))
 
-(s/def ::document map?)
+(s/def ::document (s/map-of ::key any?))
 
 (s/fdef m/insert-one!
   :args (s/cat :db-spec ::db-spec-with-db
@@ -187,7 +188,7 @@
                :collection ::collection))
 
 (s/def ::query ::document)
-(s/def ::projection (s/coll-of simple-keyword?
+(s/def ::projection (s/coll-of ::key
                                :kind vector))
 (s/def ::sort ::document)
 (s/def ::limit int?)
