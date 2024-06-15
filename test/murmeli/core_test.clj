@@ -40,6 +40,23 @@
               :foo 123}
              (m/find-one db-spec coll :query {:_id id}))))))
 
+(deftest simple-insert-many-test
+  (testing "inserting documents"
+    (let [db-spec                  (test-utils/get-db-spec)
+          coll                     (get-coll)
+          [id-1 id-2 id-3 :as ids] (m/insert-many! db-spec coll [{:foo 1}
+                                                                 {:foo 2}
+                                                                 {:foo 3}])]
+      (is (every? string? ids))
+      (is (= 3 (count ids)))
+      (is (= 3 (m/count-collection db-spec coll)))
+      (is (= [{:_id id-1 :foo 1}
+              {:_id id-2 :foo 2}
+              {:_id id-3 :foo 3}] (m/find-all db-spec coll)))
+      (is (= {:_id id-1 :foo 1} (m/find-one db-spec coll :query {:_id id-1})))
+      (is (= {:_id id-2 :foo 2} (m/find-one db-spec coll :query {:_id id-2})))
+      (is (= {:_id id-3 :foo 3} (m/find-one db-spec coll :query {:_id id-3}))))))
+
 (deftest count-with-query-test
   (testing "count with query"
     (let [db-spec (test-utils/get-db-spec)

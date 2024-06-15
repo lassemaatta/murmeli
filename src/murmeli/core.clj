@@ -21,7 +21,7 @@
                                MongoDatabase]
            [com.mongodb.client.model IndexOptions Indexes]
            [java.util List]
-           [org.bson BsonDocument]
+           [org.bson BsonDocument BsonValue]
            [org.bson.conversions Bson]))
 
 (set! *warn-on-reflection* true)
@@ -285,6 +285,10 @@
 
 ;; Insertion
 
+(defn- bson-value->object-id
+  [^BsonValue v]
+  (.. v asObjectId getValue toHexString))
+
 (defn insert-one!
   [{::keys [^ClientSession session] :as db-spec}
    collection
@@ -295,7 +299,21 @@
         result (if session
                  (.insertOne coll session bson)
                  (.insertOne coll bson))]
-    (.. result getInsertedId asObjectId getValue toHexString)))
+    (bson-value->object-id (.getInsertedId result))))
+
+(defn insert-many!
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   docs]
+  {:pre [collection docs]}
+  (let [bsons  ^List (mapv c/to-bson docs)
+        coll   (get-collection db-spec collection)
+        result (if session
+                 (.insertMany coll session bsons)
+                 (.insertMany coll bsons))]
+    (->> (.getInsertedIds result)
+         (sort-by key)
+         (mapv (comp bson-value->object-id val)))))
 
 ;; Queries
 
