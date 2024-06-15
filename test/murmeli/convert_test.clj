@@ -70,10 +70,28 @@
     #inst "9999-12-31"
     (list 1 2 3)
     [1 2 3]
+    {"a" "b"}
     {"a" "v"
      "b" [1 2 3]
      "c" 1
      "d" {"a" 1}}))
+
+(deftest map-key-ordering-test
+  (let [input  (array-map "a" 1
+                          "b" 2
+                          "c" 3
+                          "d" 4
+                          "e" 5
+                          "f" 6
+                          "g" 7
+                          "h" 8
+                          "i" 9
+                          "j" 10
+                          "k" 11
+                          "l" 12)
+        output (roundtrip input)]
+    (is (= ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"]
+           (keys output)))))
 
 #_{:clj-kondo/ignore [:unresolved-symbol]}
 (defspec to-bson-props 100

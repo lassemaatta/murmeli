@@ -183,10 +183,12 @@
   BsonDocument
   (-from-bson [this {:keys [keywords?] :as opts}]
     (->> (.entrySet this)
-         (map (fn [[k v]]
-                [(if keywords? (keyword k) k)
-                 (from-bson opts v)]))
-         (into {}))))
+         (mapcat (fn [[k v]]
+                   [(if keywords? (keyword k) k)
+                    (from-bson opts v)]))
+         ;; BsonDocument contents are in a `java.util.LinkedHashMap`,
+         ;; which retains the insertion order. Try to maintain that.
+         (apply array-map))))
 
 (defn from-bson
   ([bson]
