@@ -8,17 +8,23 @@
                  [org.mongodb/mongodb-driver-sync "5.1.0"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
-  :profiles {:dev {:dependencies   [;; Sources (incl. deps)
-                                    [org.mongodb/mongodb-driver-sync "5.1.0" :classifier "sources"]
-                                    [org.mongodb/bson "5.1.0" :classifier "sources"]
-                                    [org.mongodb/mongodb-driver-core "5.1.0" :classifier "sources"]
-                                    ;; Testcontainers for mongodb
-                                    [clj-test-containers "0.7.4"]
-                                    [org.testcontainers/mongodb "1.17.6"]
-                                    ;; Generative testing with spec
-                                    [org.clojure/test.check "1.1.1"]
-                                    ;; Logging
-                                    [org.slf4j/slf4j-api "2.0.13"]
-                                    [ch.qos.logback/logback-classic "1.5.6"]]
-                   :resource-paths ["test-resources"]
-                   :jvm-opts       ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}})
+  :profiles {:dev           {:dependencies   [;; Sources (incl. deps)
+                                              [org.mongodb/mongodb-driver-sync "5.1.0" :classifier "sources"]
+                                              [org.mongodb/bson "5.1.0" :classifier "sources"]
+                                              [org.mongodb/mongodb-driver-core "5.1.0" :classifier "sources"]
+                                              ;; Testcontainers for mongodb
+                                              [clj-test-containers "0.7.4"]
+                                              [org.testcontainers/mongodb "1.17.6"]
+                                              ;; Generative testing with spec
+                                              [org.clojure/test.check "1.1.1"]
+                                              ;; Logging
+                                              [org.slf4j/slf4j-api "2.0.13"]
+                                              [ch.qos.logback/logback-classic "1.5.6"]]
+                             :resource-paths ["test-resources"]
+                             :jvm-opts       ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
+             :gen-doc-tests {:test-paths   ["target/test-doc-blocks/test"]
+                             :dependencies [[com.github.lread/test-doc-blocks "1.1.20"]]}}
+  :aliases  {"run-doc-tests" ^{:doc "Generate, then run, tests from doc code blocks"}
+             ["with-profile" "+gen-doc-tests" "do"
+              ["run" "-m" "lread.test-doc-blocks" "gen-tests" "--platform" "clj" "README.md"]
+              ["test"]]})
