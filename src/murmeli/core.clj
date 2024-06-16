@@ -28,9 +28,10 @@
 
 (def ^:private api-version ServerApiVersion/V1)
 
-(def bson->clj-xform
-  "Transforms BSON documents to clojure maps, with map keys as keywords"
-  (map (partial c/from-bson {:keywords? true})))
+(defn bson->clj-xform
+  "Transforms BSON documents to clojure maps, optionally with map keys as keywords"
+  [keywords?]
+  (map (partial c/from-bson {:keywords? keywords?})))
 
 ;; Connect and disconnect
 
@@ -82,7 +83,7 @@
   (let [it (cond
              session (.listDatabases client session BsonDocument)
              :else   (.listDatabases client BsonDocument))]
-    (transduce bson->clj-xform conj it)))
+    (transduce (bson->clj-xform true) conj it)))
 
 (defn drop-db!
   "Drop a database"
@@ -254,7 +255,7 @@
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session BsonDocument)
                                   (.listIndexes coll BsonDocument))]
-    (transduce bson->clj-xform conj it)))
+    (transduce (bson->clj-xform true) conj it)))
 
 (defn drop-all-indexes!
   [{::keys [^ClientSession session] :as db-spec}
@@ -351,7 +352,7 @@
              batch-size
              keywords?]
       :or   {keywords? true}}]
-  (let [xform      (map (partial c/from-bson {:keywords? keywords?}))
+  (let [xform      (bson->clj-xform keywords?)
         coll       (get-collection db-spec collection)
         query      (when (seq query)
                      (c/map->bson query))

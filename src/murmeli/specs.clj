@@ -240,3 +240,9 @@
 (s/fdef mc/map->bson
   :args (s/cat :m map?)
   :ret bson?)
+
+(s/def ::from-bson-options (s/keys :opt-un [::keywords?]))
+
+(s/fdef mc/from-bson
+  :args (s/cat :options (s/? ::from-bson-options)
+               :bson bson-value?))
