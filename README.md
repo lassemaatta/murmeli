@@ -55,8 +55,6 @@ Query options can be supplied as keyword arguments
 ```clojure
 (require '[murmeli.operators :refer [$exists $jsonSchema]])
 
-;; query options as kw-args
-
 (-> (m/find-all db-spec coll :query {:counter {$exists 1}} :projection [:name :counter] :limit 10)
     count)
 ;; => 3
