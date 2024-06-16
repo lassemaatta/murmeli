@@ -347,12 +347,14 @@
    & {:keys [query
              projection
              sort
+             xform
              limit
              skip
              batch-size
              keywords?]
       :or   {keywords? true}}]
-  (let [xform      (bson->clj-xform keywords?)
+  (let [xform-clj  (bson->clj-xform keywords?)
+        xform      (if xform (comp xform-clj xform) xform-clj)
         coll       (get-collection db-spec collection)
         query      (when (seq query)
                      (c/map->bson query))

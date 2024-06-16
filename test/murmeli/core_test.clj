@@ -6,7 +6,8 @@
             [murmeli.specs]
             [murmeli.test.utils :as test-utils]
             [murmeli.validators.schema :as vs]
-            [schema.core :as s])
+            [schema.coerce :as sc]
+            [schema.core :as s :refer [defschema]])
   (:import [com.mongodb MongoCommandException]))
 
 (set! *warn-on-reflection* true)
@@ -298,3 +299,49 @@
                 {:_id id-3
                  :bar #inst "2024-06-02"}]
                (m/find-all db-spec coll :query {$jsonSchema schema})))))))
+
+(defschema MyRecord
+  {(s/optional-key :_id) s/Str
+   :set                  #{s/Str}
+   :vec                  [s/Int]
+   :map                  {s/Keyword s/Keyword}})
+
+(def valid-my-record! (s/validator MyRecord))
+(def coerce-my-record! (sc/coercer! MyRecord sc/json-coercion-matcher))
+
+(deftest external-xform-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)
+        input   [{:set #{}
+                  :vec []
+                  :map {}}
+                 {:set #{"a" "b" "c"}
+                  :vec [1 2 3]
+                  :map {:a :x
+                        :b :y}}]]
+    (is (nil? (run! valid-my-record! input)))
+    (is (= 2 (count (m/insert-many! db-spec coll input))))
+    (testing "read out as-is"
+      (let [out-plain (m/find-all db-spec coll)]
+        (is (= [{:set []
+                 :vec []
+                 :map {}}
+                {:set ["a" "b" "c"]
+                 :vec [1 2 3]
+                 :map {:a "x"
+                       :b "y"}}]
+               (mapv #(dissoc % :_id) out-plain)))))
+    (testing "coerce using xform"
+      (let [out-plain (m/find-all db-spec coll :xform (map coerce-my-record!))]
+        (is (= input
+               (mapv #(dissoc % :_id) out-plain)))))
+    (testing "coerce, filter and alter using xform"
+      (let [out-plain (m/find-all db-spec coll :xform (comp (map coerce-my-record!)
+                                                            (filter (comp seq :set))
+                                                            (map #(update % :map assoc :k :v))))]
+        (is (= [{:set #{"a" "b" "c"}
+                 :vec [1 2 3]
+                 :map {:a :x
+                       :b :y
+                       :k :v}}]
+               (mapv #(dissoc % :_id) out-plain)))))))
