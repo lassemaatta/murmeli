@@ -52,6 +52,9 @@
 
 (extend-protocol ToBSON
   ;; Scalars
+  nil
+  (-to-bson [_]
+    BsonNull/VALUE)
   ObjectId
   (-to-bson [this]
     (BsonObjectId. this))
@@ -133,9 +136,7 @@
 (defn to-bson
   "Convert value to BSON"
   ^BsonValue [object]
-  (if (some? object)
-    (-to-bson object)
-    BsonNull/VALUE))
+  (-to-bson object))
 
 (defn map->bson
   "Convert a map to a `Bson`, which can produce a `BsonDocument`."
