@@ -8,6 +8,13 @@ Status: alpha
 
 Download from https://github.com/lassemaatta/murmeli.
 
+## TODO
+
+- Various connection options (SSL etc)
+- Update documents functionalityx
+- Strict / loose JSON schema construction (ie. whether to throw if schema can't be fully represented)
+- ...
+
 ## Examples
 
 ### Connecting
@@ -32,6 +39,25 @@ Download from https://github.com/lassemaatta/murmeli.
 (m/find-all db-spec :my-collection {:query      {:foo {$exists 1}}
                                     :projection [:foo :bar]
                                     :limit      10})
+```
+
+### Using `prismatic/schema` schemas for JSON schema validation / queries
+
+```clojure
+(require '[murmeli.operators :refer [$jsonSchema]])
+(require '[murmeli.validators.schema :as vs])
+(require '[schema.core :as s :refer [defschema]])
+
+(defschema MySchema
+  {:foo  s/Str
+   :bar  [s/Str]
+   :quuz (s/cond-pre
+           s/Str
+           [s/Int])})
+
+(def json-schema (vs/schema->json-schema MySchema))
+
+(m/find-one db-spec coll :query {$jsonSchema json-schema})
 ```
 
 ### Transactions
