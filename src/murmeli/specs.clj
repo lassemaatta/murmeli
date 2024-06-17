@@ -209,7 +209,7 @@
 (s/fdef m/find-all
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
-               :options (s/? ::find-all-options)))
+               :options ::find-all-options))
 
 (s/def ::warn-on-multiple? boolean?)
 (s/def ::throw-on-multiple? boolean?)
@@ -224,7 +224,7 @@
 (s/fdef m/find-one
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
-               :options (s/? ::find-one-options)))
+               :options ::find-one-options))
 
 ;; murmeli.convert
 
