@@ -210,7 +210,8 @@
                                               :unique? true
                                               :sparse? true})
       (m/create-index! db-spec coll {:foo.bar 1} {:name "my-index-2"})
-      (m/create-index! db-spec coll {:foo.quuz 1} {:name "my-index-3"})
+      (m/create-index! db-spec coll {:foo.quuz 1
+                                     :foo.quiz 1} {:name "my-index-3"})
       (is (= [id-index
               {:name   "my-index"
                :key    {:foo 1}
@@ -221,7 +222,8 @@
                :key  {:foo.bar 1}
                :v    2}
               {:name "my-index-3"
-               :key  {:foo.quuz 1}
+               :key  {:foo.quuz 1
+                      :foo.quiz 1}
                :v    2}]
              (m/list-indexes db-spec coll))))
     (testing "removing index"
@@ -236,14 +238,16 @@
                  :key  {:foo.bar 1}
                  :v    2}
                 {:name "my-index-3"
-                 :key  {:foo.quuz 1}
+                 :key  {:foo.quuz 1
+                        :foo.quiz 1}
                  :v    2}]
                (m/list-indexes db-spec coll))))
       (testing "removing with keys works"
         (m/drop-index! db-spec coll {:foo.bar 1})
         (is (= [id-index
                 {:name "my-index-3"
-                 :key  {:foo.quuz 1}
+                 :key  {:foo.quuz 1
+                        :foo.quiz 1}
                  :v    2}]
                (m/list-indexes db-spec coll))))
       (testing "removing all indexes works"
