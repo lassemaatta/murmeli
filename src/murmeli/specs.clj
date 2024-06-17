@@ -20,7 +20,7 @@
   (try
     (MongoNamespace/checkDatabaseNameValidity db-name)
     true
-    (catch IllegalArgumentException e
+    (catch IllegalArgumentException _
       false)))
 
 (s/def ::database-name (s/and ::non-blank-str
@@ -31,7 +31,7 @@
   (try
     (MongoNamespace/checkCollectionNameValidity collection-name)
     true
-    (catch IllegalArgumentException e
+    (catch IllegalArgumentException _
       false)))
 
 (s/def ::collection (s/and (s/nonconforming ::key)
