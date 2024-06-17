@@ -7,7 +7,7 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:dynamic *container* nil)
+(def *container (atom nil))
 
 (stest/instrument `tc/init)
 
@@ -17,19 +17,16 @@
 
 (defn container-fixture
   [test-fn]
-  (log/info "Starting container for tests")
-  (binding [*container* (tc/start! config)]
-    (try
-      (test-fn)
-      (finally
-        (log/info "Stopping container for tests")
-        (tc/stop! *container*)))))
+  (when (compare-and-set! *container nil (delay (tc/start! config)))
+    (log/info "Starting container for tests"))
+  (test-fn))
 
 (defn get-mongo-port
   []
-  (when-not *container*
-    (throw (ex-info "Container not running" {})))
-  (get-in *container* [:mapped-ports 27017]))
+  (let [container @*container]
+    (when-not container
+      (throw (ex-info "Container not running" {})))
+    (get-in @container [:mapped-ports 27017])))
 
 (defn get-mongo-uri
   []
