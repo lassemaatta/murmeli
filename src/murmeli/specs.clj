@@ -104,11 +104,11 @@
 (s/def ::causally-consistent? boolean?)
 (s/def ::snapshot? boolean?)
 
-(s/def ::session-options (s/keys :opt-un [::read-preference
-                                          ::read-concern
-                                          ::write-concern
-                                          ::causally-consistent?
-                                          ::snapshot?]))
+(s/def ::session-options (s/keys* :opt-un [::read-preference
+                                           ::read-concern
+                                           ::write-concern
+                                           ::causally-consistent?
+                                           ::snapshot?]))
 
 (s/fdef m/with-client-session-options
   :args (s/cat :db-spec ::db-spec-with-client

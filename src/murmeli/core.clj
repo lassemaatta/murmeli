@@ -158,10 +158,16 @@
                                       .build))
       .build))
 
+#_{:clj-kondo/ignore [:unused-binding]}
 (defn with-client-session-options
   "Store session options into `db-spec`, read by `with-session`"
   [db-spec
-   options]
+   & {:keys [causally-consistent?
+             snapshot?
+             read-preference
+             read-concern
+             write-concern]
+      :as   options}]
   (assoc db-spec ::session-options (make-client-session-options options)))
 
 (defn- get-session-options

@@ -74,7 +74,7 @@
           db-spec (test-utils/get-db-spec)]
       (is (zero? (m/count-collection db-spec coll)))
       (try
-        (m/with-session [db-spec (m/with-client-session-options db-spec {})]
+        (m/with-session [db-spec (m/with-client-session-options db-spec)]
           (m/insert-one! db-spec coll {:foo 123})
           (throw (ex-info "foo" {})))
         (catch Exception e
@@ -82,13 +82,13 @@
       (is (zero? (m/count-collection db-spec coll)))
 
       (testing "happy path"
-        (m/with-session [db-spec (m/with-client-session-options db-spec {})]
+        (m/with-session [db-spec (m/with-client-session-options db-spec)]
           (m/insert-one! db-spec coll {:foo 123})
           (is (= 1 (m/count-collection db-spec coll))))
         (is (= 1 (m/count-collection db-spec coll))))
 
       (testing "nested transactions"
-        (m/with-session [db-spec (m/with-client-session-options db-spec {})]
+        (m/with-session [db-spec (m/with-client-session-options db-spec)]
           (m/with-session [db-spec db-spec]
             (m/insert-one! db-spec coll {:foo 123})
             (is (= 2 (m/count-collection db-spec coll))))
