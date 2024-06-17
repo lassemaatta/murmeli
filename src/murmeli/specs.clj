@@ -141,17 +141,17 @@
 (s/def ::version ::non-blank-str)
 (s/def ::unique? boolean?)
 (s/def ::sparse? boolean?)
-(s/def ::create-index-options (s/keys :opt-un [::background
-                                               ::name
-                                               ::version
-                                               ::unique?
-                                               ::sparse?]))
+(s/def ::create-index-options (s/keys* :opt-un [::background
+                                                ::name
+                                                ::version
+                                                ::unique?
+                                                ::sparse?]))
 
 (s/fdef m/create-index!
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
                :keys ::index-keys
-               :options (s/? ::create-index-options)))
+               :options ::create-index-options))
 
 (s/fdef m/list-indexes
   :args (s/cat :db-spec ::db-spec-with-db

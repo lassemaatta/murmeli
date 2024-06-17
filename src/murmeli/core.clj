@@ -237,22 +237,26 @@
       (first indexes)
       (Indexes/compoundIndex indexes))))
 
+#_{:clj-kondo/ignore [:unused-binding]}
 (defn create-index!
-  ([db-spec collection keys]
-   (create-index! db-spec collection keys nil))
-  ([{::keys [^ClientSession session] :as db-spec}
-    collection
-    keys
-    options]
-   (let [coll (get-collection db-spec collection)
-         keys (make-index-bson keys)
-         io   (when options
-                (make-index-options options))]
-     (cond
-       (and io session) (.createIndex coll session keys io)
-       session          (.createIndex coll session keys)
-       io               (.createIndex coll keys io)
-       :else            (.createIndex coll keys)))))
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   keys
+   & {:keys [background
+             name
+             version
+             unique?
+             sparse?]
+      :as   options}]
+  (let [coll (get-collection db-spec collection)
+        keys (make-index-bson keys)
+        io   (when options
+               (make-index-options options))]
+    (cond
+      (and io session) (.createIndex coll session keys io)
+      session          (.createIndex coll session keys)
+      io               (.createIndex coll keys io)
+      :else            (.createIndex coll keys))))
 
 (defn list-indexes
   [{::keys [^ClientSession session] :as db-spec}
