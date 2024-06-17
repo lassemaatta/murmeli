@@ -28,7 +28,7 @@
 
 (def ^:private api-version ServerApiVersion/V1)
 
-(defn bson->clj-xform
+(defn- bson->clj-xform
   "Transforms BSON documents to clojure maps, optionally with map keys as keywords"
   [keywords?]
   (map (partial c/from-bson {:keywords? keywords?})))
