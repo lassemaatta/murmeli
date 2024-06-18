@@ -158,16 +158,17 @@
                                       .build))
       .build))
 
-#_{:clj-kondo/ignore [:unused-binding]}
 (defn with-client-session-options
   "Store session options into `db-spec`, read by `with-session`"
+  {:arglists '([db-spec & {:keys [causally-consistent?
+                                  snapshot?
+                                  read-preference
+                                  read-concern
+                                  write-concern]
+                           :or   {causally-consistent? false
+                                  snapshot?            false}}])}
   [db-spec
-   & {:keys [causally-consistent?
-             snapshot?
-             read-preference
-             read-concern
-             write-concern]
-      :as   options}]
+   & {:as options}]
   (assoc db-spec ::session-options (make-client-session-options options)))
 
 (defn- get-session-options
@@ -237,17 +238,20 @@
       (first indexes)
       (Indexes/compoundIndex indexes))))
 
-#_{:clj-kondo/ignore [:unused-binding]}
 (defn create-index!
+  "Create a new index"
+  {:arglists '([db-spec
+                collection
+                keys
+                & {:keys [background
+                          name
+                          version
+                          unique?
+                          sparse?]}])}
   [{::keys [^ClientSession session] :as db-spec}
    collection
    keys
-   & {:keys [background
-             name
-             version
-             unique?
-             sparse?]
-      :as   options}]
+   & {:as options}]
   (let [coll (get-collection db-spec collection)
         keys (make-index-bson keys)
         io   (when options
