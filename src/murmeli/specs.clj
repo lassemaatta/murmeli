@@ -273,7 +273,7 @@
   (instance? ReadPreference object))
 
 (s/fdef di/get-read-preference
-  :args (s/cat :choice (s/nilable ::read-preference))
+  :args (s/cat :choice ::read-preference)
   :ret (s/nilable read-preference?))
 
 (defn read-concern?
@@ -281,7 +281,7 @@
   (instance? ReadConcern object))
 
 (s/fdef di/get-read-concern
-  :args (s/cat :choice (s/nilable ::read-concern))
+  :args (s/cat :choice ::read-concern)
   :ret (s/nilable read-concern?))
 
 (defn write-concern?
@@ -289,7 +289,7 @@
   (instance? WriteConcern object))
 
 (s/fdef di/get-write-concern
-  :args (s/cat :choice (s/nilable ::write-concern))
+  :args (s/cat :choice ::write-concern)
   :ret (s/nilable write-concern?))
 
 (s/def ::retry-reads? boolean?)

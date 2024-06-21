@@ -24,8 +24,7 @@
     :primary             (ReadPreference/primary)
     :secondary           (ReadPreference/secondary)
     :primary-preferred   (ReadPreference/primaryPreferred)
-    :secondary-preferred (ReadPreference/secondaryPreferred)
-    nil))
+    :secondary-preferred (ReadPreference/secondaryPreferred)))
 
 (defn get-read-concern
   ^ReadConcern
@@ -36,8 +35,7 @@
     :linearizable ReadConcern/LINEARIZABLE
     :snapshot     ReadConcern/SNAPSHOT
     :majority     ReadConcern/MAJORITY
-    :default      ReadConcern/DEFAULT
-    nil))
+    :default      ReadConcern/DEFAULT))
 
 (defn get-write-concern
   ^WriteConcern
@@ -49,8 +47,7 @@
     :majority       WriteConcern/MAJORITY
     :journaled      WriteConcern/JOURNALED
     :acknowledged   WriteConcern/ACKNOWLEDGED
-    :unacknowledged WriteConcern/UNACKNOWLEDGED
-    nil))
+    :unacknowledged WriteConcern/UNACKNOWLEDGED))
 
 (defn- apply-block
   [f]
@@ -105,11 +102,11 @@
       (.causallyConsistent causally-consistent?)
       ;; https://www.mongodb.com/docs/manual/reference/read-concern-snapshot/
       (.snapshot snapshot?)
-      (.defaultTransactionOptions (-> (TransactionOptions/builder)
-                                      (.readPreference (get-read-preference read-preference))
-                                      (.readConcern (get-read-concern read-concern))
-                                      (.writeConcern (get-write-concern write-concern))
-                                      .build))
+      (.defaultTransactionOptions (cond-> (TransactionOptions/builder)
+                                    read-preference (.readPreference (get-read-preference read-preference))
+                                    read-concern    (.readConcern (get-read-concern read-concern))
+                                    write-concern   (.writeConcern (get-write-concern write-concern))
+                                    true            .build))
       .build))
 
 (defn make-index-options
