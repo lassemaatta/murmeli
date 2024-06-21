@@ -2,31 +2,19 @@
   "https://www.mongodb.com/docs/drivers/java/sync/current/"
   (:require [clojure.tools.logging :as log]
             [murmeli.convert :as c]
-            [murmeli.cursor])
-  (:import [com.mongodb ClientSessionOptions
-                        ConnectionString
-                        MongoClientSettings
-                        ReadConcern
-                        ReadPreference
-                        ServerApi
-                        ServerApiVersion
-                        TransactionOptions
-                        WriteConcern]
-           [com.mongodb.client ClientSession
+            [murmeli.cursor]
+            [murmeli.data-interop :as di])
+  (:import [com.mongodb.client ClientSession
                                FindIterable
                                ListIndexesIterable
                                MongoClient
                                MongoClients
                                MongoCollection
                                MongoDatabase]
-           [com.mongodb.client.model IndexOptions Indexes]
            [java.util List]
-           [org.bson BsonDocument BsonValue]
-           [org.bson.conversions Bson]))
+           [org.bson BsonDocument BsonValue]))
 
 (set! *warn-on-reflection* true)
-
-(def ^:private api-version ServerApiVersion/V1)
 
 (defn- bson->clj-xform
   "Transforms BSON documents to clojure maps, optionally with map keys as keywords"
@@ -37,16 +25,8 @@
 
 (defn connect-client!
   "Connect to a Mongo instance and construct a Client"
-  [{:keys [^String uri]
-    :as   db-spec}]
-  {:pre [uri]}
-  (let [server-api (-> (ServerApi/builder)
-                       (.version api-version)
-                       .build)
-        settings   (-> (MongoClientSettings/builder)
-                       (.applyConnectionString (ConnectionString. uri))
-                       (.serverApi server-api)
-                       .build)]
+  [db-spec]
+  (let [settings (di/make-client-settings db-spec)]
     (assoc db-spec ::client (MongoClients/create settings))))
 
 (defn disconnect!
@@ -116,48 +96,6 @@
 
 ;; Transactions / Sessions
 
-;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
-(defn- make-client-session-options
-  ^ClientSessionOptions
-  [{:keys [causally-consistent?
-           snapshot?
-           read-preference
-           read-concern
-           write-concern]
-    :or   {causally-consistent? false
-           snapshot?            false}}]
-  (-> (ClientSessionOptions/builder)
-      (.causallyConsistent causally-consistent?)
-      ;; https://www.mongodb.com/docs/manual/reference/read-concern-snapshot/
-      (.snapshot snapshot?)
-      (.defaultTransactionOptions (-> (TransactionOptions/builder)
-                                      (.readPreference (case read-preference
-                                                         :nearest             (ReadPreference/nearest)
-                                                         :primary             (ReadPreference/primary)
-                                                         :secondary           (ReadPreference/secondary)
-                                                         :primary-preferred   (ReadPreference/primaryPreferred)
-                                                         :secondary-preferred (ReadPreference/secondaryPreferred)
-                                                         nil))
-                                      (.readConcern (case read-concern
-                                                      :available    ReadConcern/AVAILABLE
-                                                      :local        ReadConcern/LOCAL
-                                                      :linearizable ReadConcern/LINEARIZABLE
-                                                      :snapshot     ReadConcern/SNAPSHOT
-                                                      :majority     ReadConcern/MAJORITY
-                                                      :default      ReadConcern/DEFAULT
-                                                      nil))
-                                      (.writeConcern (case write-concern
-                                                       :w1             WriteConcern/W1
-                                                       :w2             WriteConcern/W2
-                                                       :w3             WriteConcern/W3
-                                                       :majority       WriteConcern/MAJORITY
-                                                       :journaled      WriteConcern/JOURNALED
-                                                       :acknowledged   WriteConcern/ACKNOWLEDGED
-                                                       :unacknowledged WriteConcern/UNACKNOWLEDGED
-                                                       nil))
-                                      .build))
-      .build))
-
 (defn with-client-session-options
   "Store session options into `db-spec`, read by `with-session`"
   {:arglists '([db-spec & {:keys [causally-consistent?
@@ -169,7 +107,7 @@
                                   snapshot?            false}}])}
   [db-spec
    & {:as options}]
-  (assoc db-spec ::session-options (make-client-session-options options)))
+  (assoc db-spec ::session-options (di/make-client-session-options (or options {}))))
 
 (defn- get-session-options
   [db-spec]
@@ -209,35 +147,6 @@
 
 ;; Indexes
 
-(defn- make-index-options
-  ^IndexOptions
-  [{:keys [background
-           name
-           version
-           unique?
-           sparse?]}]
-  (cond-> (IndexOptions.)
-    background (.background background)
-    name       (.name name)
-    version    (.version version)
-    unique?    (.unique true)
-    sparse?    (.sparse true)))
-
-(defn- make-index-bson
-  ^Bson [index-keys]
-  (let [^List indexes (->> index-keys
-                           (mapv (fn [[field-name index-type]]
-                                   (let [^List field-names [(name field-name)]]
-                                     (case index-type
-                                       "2d"       (Indexes/geo2d field-names)
-                                       "2dsphere" (Indexes/geo2dsphere field-names)
-                                       "text"     (Indexes/text field-names)
-                                       1          (Indexes/ascending field-names)
-                                       -1         (Indexes/descending field-names))))))]
-    (if (= 1 (count indexes))
-      (first indexes)
-      (Indexes/compoundIndex indexes))))
-
 (defn create-index!
   "Create a new index"
   {:arglists '([db-spec
@@ -253,9 +162,9 @@
    keys
    & {:as options}]
   (let [coll (get-collection db-spec collection)
-        keys (make-index-bson keys)
+        keys (di/make-index-bson keys)
         io   (when options
-               (make-index-options options))]
+               (di/make-index-options options))]
     (cond
       (and io session) (.createIndex coll session keys io)
       session          (.createIndex coll session keys)
@@ -284,7 +193,7 @@
    collection
    keys]
   (let [coll (get-collection db-spec collection)
-        keys (make-index-bson keys)]
+        keys (di/make-index-bson keys)]
     (cond
       session (.dropIndex coll session keys)
       :else   (.dropIndex coll keys))))

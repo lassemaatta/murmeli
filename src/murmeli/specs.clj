@@ -3,9 +3,17 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [murmeli.convert :as mc]
-            [murmeli.core :as m])
-  (:import [com.mongodb ClientSessionOptions MongoNamespace]
+            [murmeli.core :as m]
+            [murmeli.data-interop :as di])
+  (:import [com.mongodb ClientSessionOptions
+                        ConnectionString
+                        MongoClientSettings
+                        MongoNamespace
+                        ReadConcern
+                        ReadPreference
+                        WriteConcern]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
+           [com.mongodb.client.model IndexOptions]
            [org.bson BsonValue]
            [org.bson.conversions Bson]))
 
@@ -13,7 +21,15 @@
 
 (s/def ::non-blank-str (s/and string?
                               (complement str/blank?)))
-(s/def ::uri ::non-blank-str)
+(s/def ::integer (s/and integer?
+                        #(< Integer/MIN_VALUE % Integer/MAX_VALUE)))
+
+(s/def ::uri (s/and ::non-blank-str
+                    (fn [^String uri]
+                      (try
+                        (ConnectionString. uri)
+                        (catch Exception _
+                          false)))))
 
 (defn valid-db-name?
   [db-name]
@@ -136,12 +152,12 @@
                       -1})
 (s/def ::index-keys (s/map-of ::key ::index-type))
 
-(s/def ::background ::non-blank-str)
+(s/def ::background? boolean?)
 (s/def ::name ::non-blank-str)
-(s/def ::version ::non-blank-str)
+(s/def ::version ::integer)
 (s/def ::unique? boolean?)
 (s/def ::sparse? boolean?)
-(s/def ::create-index-options (s/keys* :opt-un [::background
+(s/def ::create-index-options (s/keys* :opt-un [::background?
                                                 ::name
                                                 ::version
                                                 ::unique?
@@ -249,3 +265,87 @@
 (s/fdef mc/from-bson
   :args (s/cat :options (s/? ::from-bson-options)
                :bson bson-value?))
+
+;; murmeli.data-interop
+
+(defn read-preference?
+  [object]
+  (instance? ReadPreference object))
+
+(s/fdef di/get-read-preference
+  :args (s/cat :choice (s/nilable ::read-preference))
+  :ret (s/nilable read-preference?))
+
+(defn read-concern?
+  [object]
+  (instance? ReadConcern object))
+
+(s/fdef di/get-read-concern
+  :args (s/cat :choice (s/nilable ::read-concern))
+  :ret (s/nilable read-concern?))
+
+(defn write-concern?
+  [object]
+  (instance? WriteConcern object))
+
+(s/fdef di/get-write-concern
+  :args (s/cat :choice (s/nilable ::write-concern))
+  :ret (s/nilable write-concern?))
+
+(s/def ::retry-reads? boolean?)
+(s/def ::retry-writes? boolean?)
+
+(s/def ::enabled? boolean?)
+(s/def ::invalid-hostname-allowed? boolean?)
+(s/def ::ssl-settings (s/keys :opt-un [::enabled?
+                                       ::invalid-hostname-allowed?]))
+
+(s/def ::client-settings-options (s/keys :req-un [::uri]
+                                         :opt-un [::read-concern
+                                                  ::write-concern
+                                                  ::read-preference
+                                                  ::retry-reads?
+                                                  ::retry-writes?
+                                                  ::ssl-settings]))
+
+(defn client-settings?
+  [object]
+  (instance? MongoClientSettings object))
+
+(s/fdef di/make-client-settings
+  :args (s/cat :options ::client-settings-options)
+  :ret client-settings?)
+
+(defn session-opts-valid?
+  [{:keys [causally-consistent? snapshot?]}]
+  ;; May not be both causally consistent and snapshot
+  (not (and causally-consistent? snapshot?)))
+
+(s/def ::client-session-options (s/and (s/keys :opt-un [::read-preference
+                                                        ::read-concern
+                                                        ::write-concern
+                                                        ::causally-consistent?
+                                                        ::snapshot?])
+                                       session-opts-valid?))
+
+(s/fdef di/make-client-session-options
+  :args (s/cat :options ::client-session-options)
+  :ret session-options?)
+
+(s/def ::make-index-options (s/keys :opt-un [::background?
+                                             ::name
+                                             ::version
+                                             ::unique?
+                                             ::sparse?]))
+
+(defn index-options?
+  [object]
+  (instance? IndexOptions object))
+
+(s/fdef di/make-index-options
+  :args (s/cat :options ::make-index-options)
+  :ret index-options?)
+
+(s/fdef di/make-index-bson
+  :args (s/cat :index-keys ::index-keys)
+  :ret bson?)

@@ -17,6 +17,8 @@
                                               [org.testcontainers/mongodb "1.17.6"]
                                               ;; Generative testing with spec
                                               [org.clojure/test.check "1.1.1"]
+                                              ;; Matcher for tests
+                                              [nubank/matcher-combinators "3.9.1"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.13"]
                                               [ch.qos.logback/logback-classic "1.5.6"]]
