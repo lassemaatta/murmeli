@@ -300,12 +300,22 @@
 (s/def ::ssl-settings (s/keys :opt-un [::enabled?
                                        ::invalid-hostname-allowed?]))
 
+(s/def ::host ::non-blank-str)
+(s/def ::port ::integer)
+(s/def ::host-entry (s/keys :req-un [::host]
+                            :opt-un [::port]))
+(s/def ::hosts (s/coll-of ::host-entry
+                          :kind vector?
+                          :min-count 1))
+(s/def ::cluster-settings (s/keys :opt-un [::hosts]))
+
 (s/def ::client-settings-options (s/keys :req-un [::uri]
                                          :opt-un [::read-concern
                                                   ::write-concern
                                                   ::read-preference
                                                   ::retry-reads?
                                                   ::retry-writes?
+                                                  ::cluster-settings
                                                   ::ssl-settings]))
 
 (defn client-settings?

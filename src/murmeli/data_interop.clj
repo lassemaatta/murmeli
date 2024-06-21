@@ -5,12 +5,13 @@
                         MongoClientSettings
                         ReadConcern
                         ReadPreference
+                        ServerAddress
                         ServerApi
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
            [com.mongodb.client.model IndexOptions Indexes]
-           [com.mongodb.connection SslSettings$Builder]
+           [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
            [java.util List]
            [org.bson.conversions Bson]))
 
@@ -58,10 +59,19 @@
 
 (def ^:private api-version ServerApiVersion/V1)
 
+(defn make-hosts
+  [hosts]
+  (->> hosts
+       (mapv (fn [{:keys [^String host ^Long port]}]
+               (if port
+                 (ServerAddress. host port)
+                 (ServerAddress. host))))))
+
 (defn make-client-settings
   ^MongoClientSettings
   [{:keys [^String uri
            ssl-settings
+           cluster-settings
            read-concern
            write-concern
            read-preference
@@ -78,14 +88,19 @@
     (when read-concern (.readConcern builder (get-read-concern read-concern)))
     (when write-concern (.writeConcern builder (get-write-concern write-concern)))
     (when read-preference (.readPreference builder (get-read-preference read-preference)))
+    (when cluster-settings
+      (.applyToClusterSettings builder (apply-block (fn [^ClusterSettings$Builder cluster-builder]
+                                                      (let [{:keys [hosts]} cluster-settings]
+                                                        (when (seq hosts)
+                                                          (.hosts cluster-builder (make-hosts hosts))))))))
     (when ssl-settings
-      (.applyToSslSettings builder (apply-block (fn [^SslSettings$Builder settings]
+      (.applyToSslSettings builder (apply-block (fn [^SslSettings$Builder ssl-builder]
                                                   (let [{:keys [enabled?
                                                                 invalid-hostname-allowed?]} ssl-settings]
                                                     (when (some? enabled?)
-                                                      (.enabled settings (boolean enabled?)))
+                                                      (.enabled ssl-builder (boolean enabled?)))
                                                     (when (some? invalid-hostname-allowed?)
-                                                      (.invalidHostNameAllowed settings (boolean invalid-hostname-allowed?))))))))
+                                                      (.invalidHostNameAllowed ssl-builder (boolean invalid-hostname-allowed?))))))))
     (.build builder)))
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
