@@ -80,8 +80,7 @@
 (defn create-collection
   "Creates a collection"
   [{::keys [^MongoDatabase db
-            ^ClientSession session]
-    :as    db-spec}
+            ^ClientSession session]}
    collection]
   ;; TODO: Add support for `CreateCollectionOptions`
   (cond
