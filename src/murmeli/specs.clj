@@ -309,12 +309,20 @@
                           :min-count 1))
 (s/def ::cluster-settings (s/keys :opt-un [::hosts]))
 
+(s/def ::username ::non-blank-str)
+(s/def ::password ::non-blank-str)
+(s/def ::auth-db ::database-name)
+(s/def ::credentials (s/keys :req-un [::username
+                                      ::password
+                                      ::auth-db]))
+
 (s/def ::client-settings-options (s/keys :req-un [::uri]
                                          :opt-un [::read-concern
                                                   ::write-concern
                                                   ::read-preference
                                                   ::retry-reads?
                                                   ::retry-writes?
+                                                  ::credentials
                                                   ::cluster-settings
                                                   ::ssl-settings]))
 

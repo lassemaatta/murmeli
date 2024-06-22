@@ -3,6 +3,7 @@
                         ClientSessionOptions
                         ConnectionString
                         MongoClientSettings
+                        MongoCredential
                         ReadConcern
                         ReadPreference
                         ServerAddress
@@ -70,6 +71,7 @@
 (defn make-client-settings
   ^MongoClientSettings
   [{:keys [^String uri
+           credentials
            ssl-settings
            cluster-settings
            read-concern
@@ -88,6 +90,9 @@
     (when read-concern (.readConcern builder (get-read-concern read-concern)))
     (when write-concern (.writeConcern builder (get-write-concern write-concern)))
     (when read-preference (.readPreference builder (get-read-preference read-preference)))
+    (when (seq credentials)
+      (let [{:keys [username auth-db ^String password]} credentials]
+        (.credential builder (MongoCredential/createScramSha256Credential username auth-db (.toCharArray password)))))
     (when cluster-settings
       (.applyToClusterSettings builder (apply-block (fn [^ClusterSettings$Builder cluster-builder]
                                                       (let [{:keys [hosts]} cluster-settings]
