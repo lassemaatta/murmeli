@@ -40,7 +40,9 @@
       false)))
 
 (s/def ::database-name (s/and ::non-blank-str
-                              valid-db-name?))
+                              valid-db-name?
+                              ;; "Database names cannot be empty and must be less than 64 bytes."
+                              (fn [s] (< (count s) 64))))
 
 (defn valid-collection-name?
   [collection-name]
@@ -50,8 +52,19 @@
     (catch IllegalArgumentException _
       false)))
 
-(s/def ::collection (s/and (s/nonconforming ::key)
-                           (comp valid-collection-name? name)))
+(def valid-collection? (every-pred valid-collection-name?
+                                   ;; "Collection names should begin with an underscore or a letter character, and cannot"
+                                   (fn [s] (re-matches #"[_a-zA-Z]+.*" s))
+                                   ;; "contain the `$`"
+                                   (fn [s] (not (str/includes? s "$")))
+                                   ;; "begin with the `system.` prefix"
+                                   (fn [s] (not (str/starts-with? s "system.")))))
+
+(s/def ::collection (s/and ::key
+                           (fn [[type value]]
+                             (cond-> value
+                               (= type :kw) name
+                               true         valid-collection?))))
 
 (defn db? [instance] (instance? MongoDatabase instance))
 (s/def ::m/db db?)
@@ -150,7 +163,10 @@
                       "text"
                       1
                       -1})
-(s/def ::index-keys (s/map-of ::key ::index-type))
+(s/def ::index-keys (s/map-of ::key ::index-type
+                              ;; "A single collection can have no more than 64 indexes."
+                              :min-count 1
+                              :max-count 64))
 
 (s/def ::background? boolean?)
 (s/def ::name ::non-blank-str)
@@ -206,7 +222,10 @@
 (s/def ::query ::document)
 (s/def ::projection (s/coll-of ::key
                                :kind vector))
-(s/def ::sort ::document)
+(s/def ::sort (s/map-of ::key any?
+                        ;; "You can sort on a maximum of 32 keys."
+                        :min-count 1
+                        :max-count 32))
 (s/def ::limit int?)
 (s/def ::skip int?)
 (s/def ::batch-size int?)
