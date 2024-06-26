@@ -2,7 +2,7 @@
   (:require [clojure.spec.test.alpha :as stest]
             [clojure.test :as test :refer [deftest is testing]]
             [murmeli.core :as m]
-            [murmeli.operators :refer [$exists $gt $jsonSchema $lt]]
+            [murmeli.operators :refer [$exists $gt $jsonSchema $lt $set]]
             [murmeli.specs]
             [murmeli.test.utils :as test-utils]
             [murmeli.validators.schema :as vs]
@@ -95,6 +95,51 @@
           (is (= 2 (m/count-collection db-spec coll)))
           (m/insert-one! db-spec coll {:foo 123}))
         (is (= 3 (m/count-collection db-spec coll)))))))
+
+(deftest update-one-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)
+        [id-1]  (m/insert-many! db-spec coll [{:foo 1}])]
+    (testing "update single document"
+      (is (= {:modified 1
+              :matched  1}
+             (m/update-one! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+    (testing "same update again -> no changes"
+      (is (= {:modified 0
+              :matched  1}
+             (m/update-one! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+    (testing "no match"
+      (is (= {:modified 0
+              :matched  0}
+             (m/update-one! db-spec coll {:quuz "kukka"} [{$set {:foo 10}}]))))))
+
+(deftest update-many-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)
+        [id-1]  (m/insert-many! db-spec coll [{:foo 1}
+                                              {:foo 2}
+                                              {:foo 3}])]
+    (testing "update single document"
+      (is (= {:modified 1
+              :matched  1}
+             (m/update-many! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+    (testing "same update again -> no changes"
+      (is (= {:modified 0
+              :matched  1}
+             (m/update-many! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+    (testing "no match"
+      (is (= {:modified 0
+              :matched  0}
+             (m/update-many! db-spec coll {:quuz "kukka"} [{$set {:foo 10}}]))))
+    (testing "update multiple documents"
+      (is (= {:modified 2 ; id-1 already has :foo as 10
+              :matched  3}
+             (m/update-many! db-spec coll {:foo {$exists true}} [{$set {:foo 10}}]))))
+    (testing "update multiple fields"
+      (is (= {:modified 3
+              :matched  3}
+             (m/update-many! db-spec coll {:foo {$exists true}} [{$set {:bar 1}}
+                                                                 {$set {:quuz 1}}]))))))
 
 (deftest find-test
   (let [coll    (get-coll)

@@ -238,6 +238,52 @@
          (sort-by key)
          (mapv (comp bson-value->object-id val)))))
 
+;; Updates
+
+(defn update-one!
+  "Find document(s) matching `query` and update the first one.
+  Returns a map describing if a match was found and if it was actually altered."
+  {:arglists '([db-spec collection query changes & {:keys [upsert?]}])}
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   query
+   changes
+   & {:as options}]
+  (let [coll    (get-collection db-spec collection)
+        filter  (c/map->bson query)
+        updates ^List (mapv c/map->bson changes)
+        options (di/make-update-options (or options {}))
+        result  (cond
+                  (and session options) (.updateOne coll session filter updates options)
+                  session               (.updateOne coll session filter updates)
+                  options               (.updateOne coll filter updates options)
+                  :else                 (.updateOne coll filter updates))]
+    ;; There doesn't seem to be a way to verify that the query would match
+    ;; just a single document because matched count is always either 0 or 1 :(
+    {:modified (.getModifiedCount result)
+     :matched  (.getMatchedCount result)}))
+
+(defn update-many!
+  "Find document(s) matching `query` and update them.
+  Returns the number of matched and updated documents."
+  {:arglists '([db-spec collection query changes & {:keys [upsert?]}])}
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   query
+   changes
+   & {:as options}]
+  (let [coll    (get-collection db-spec collection)
+        filter  (c/map->bson query)
+        updates ^List (mapv c/map->bson changes)
+        options (di/make-update-options (or options {}))
+        result  (cond
+                  (and session options) (.updateMany coll session filter updates options)
+                  session               (.updateMany coll session filter updates)
+                  options               (.updateMany coll filter updates options)
+                  :else                 (.updateMany coll filter updates))]
+    {:modified (.getModifiedCount result)
+     :matched  (.getMatchedCount result)}))
+
 ;; Queries
 
 (defn count-collection

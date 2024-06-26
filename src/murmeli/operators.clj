@@ -65,3 +65,32 @@
 
 (def ^:const $comment "Adds a comment to a query predicate." "$comment")
 (def ^:const $rand "Generates a random float between 0 and 1." "$rand")
+
+;;; Update Operators
+
+;; Fields
+
+(def ^:const $currentDate "Sets the value of a field to current date, either as a Date or a Timestamp." "$currentDate")
+(def ^:const $inc "Increments the value of the field by the specified amount." "$inc")
+(def ^:const $min "Only updates the field if the specified value is less than the existing field value." "$min")
+(def ^:const $max "Only updates the field if the specified value is greater than the existing field value." "$max")
+(def ^:const $mul "Multiplies the value of the field by the specified amount." "$mul")
+(def ^:const $rename "Renames a field." "$rename")
+(def ^:const $set "Sets the value of a field in a document." "$set")
+(def ^:const $setOnInsert "Sets the value of a field if an update results in an insert of a document. Has no effect on update operations that modify existing documents." "$setOnInsert")
+(def ^:const $unset "Removes the specified field from a document." "$unset")
+
+;; Array
+
+(def ^:const $addToSet "Adds elements to an array only if they do not already exist in the set." "$addToSet")
+(def ^:const $pop "Removes the first or last item of an array." "$pop")
+(def ^:const $pull "Removes all array elements that match a specified query." "$pull")
+(def ^:const $push "Adds an item to an array." "$push")
+(def ^:const $pullAll "Removes all matching values from an array." "$pullAll")
+
+;; Modifiers
+
+(def ^:const $each "Modifies the `$push` and `$addToSet` operators to append multiple items for array updates." "$each")
+(def ^:const $position "Modifies the `$push` operator to specify the position in the array to add elements." "$position")
+(def ^:const $sort "Modifies the $push operator to reorder documents stored in an array." "$sort")
+(def ^:const $bit "Performs bitwise AND, OR, and XOR updates of integer values." "$bit")

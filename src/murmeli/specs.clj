@@ -218,6 +218,22 @@
                :collection ::collection
                :docs ::documents))
 
+(s/def ::upsert? boolean?)
+(s/def ::update-options (s/keys* :opt-un [::upsert?]))
+
+(s/fdef m/update-one!
+  :args (s/cat :db-spec ::db-spec-with-db
+               :collection ::collection
+               :query ::document
+               :changes ::documents
+               :options ::update-options))
+
+(s/fdef m/update-many!
+  :args (s/cat :db-spec ::db-spec-with-db
+               :collection ::collection
+               :query ::document
+               :changes ::documents
+               :options ::update-options))
 
 (s/fdef m/count-collection
   :args (s/cat :db-spec ::db-spec-with-db

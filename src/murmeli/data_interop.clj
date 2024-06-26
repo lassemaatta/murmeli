@@ -11,7 +11,7 @@
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
-           [com.mongodb.client.model IndexOptions Indexes]
+           [com.mongodb.client.model IndexOptions Indexes UpdateOptions]
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
            [java.util List]
            [org.bson.conversions Bson]))
@@ -158,3 +158,11 @@
     (if (= 1 (count indexes))
       (first indexes)
       (Indexes/compoundIndex indexes))))
+
+(defn make-update-options
+  ^UpdateOptions
+  [{:keys [upsert?]}]
+  (when upsert?
+    (let [options (UpdateOptions.)]
+      (.upsert options true)
+      options)))
