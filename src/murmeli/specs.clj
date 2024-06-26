@@ -210,6 +210,15 @@
                :collection ::collection
                :doc ::document))
 
+(s/def ::documents (s/coll-of ::document
+                              :min-count 1))
+
+(s/fdef m/insert-many!
+  :args (s/cat :db-spec ::db-spec-with-db
+               :collection ::collection
+               :docs ::documents))
+
+
 (s/fdef m/count-collection
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
