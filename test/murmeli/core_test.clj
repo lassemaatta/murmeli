@@ -1,6 +1,7 @@
 (ns murmeli.core-test
   (:require [clojure.spec.test.alpha :as stest]
             [clojure.test :as test :refer [deftest is testing]]
+            [matcher-combinators.test]
             [murmeli.core :as m]
             [murmeli.operators :refer [$exists $gt $jsonSchema $lt $set]]
             [murmeli.specs]
@@ -22,6 +23,12 @@
   []
   (keyword (str "coll-" (gensym))))
 
+(deftest id-test
+  (is (not (m/id? nil)))
+  (is (not (m/id? "")))
+  (is (m/id? "667c471cea82561061cb1a96"))
+  (is (m/id? (m/create-id))))
+
 (deftest db-test
   (testing "list databases "
     (let [db-spec (test-utils/get-db-spec)]
@@ -35,7 +42,7 @@
     (let [db-spec (test-utils/get-db-spec)
           coll    (get-coll)
           id      (m/insert-one! db-spec coll {:foo 123})]
-      (is (string? id))
+      (is (m/id? id))
       (is (= 1 (m/count-collection db-spec coll)))
       (is (= {:_id id
               :foo 123}
@@ -48,7 +55,7 @@
           [id-1 id-2 id-3 :as ids] (m/insert-many! db-spec coll [{:foo 1}
                                                                  {:foo 2}
                                                                  {:foo 3}])]
-      (is (every? string? ids))
+      (is (every? m/id? ids))
       (is (= 3 (count ids)))
       (is (= 3 (m/count-collection db-spec coll)))
       (is (= [{:_id id-1 :foo 1}
@@ -62,7 +69,7 @@
   (testing "count with query"
     (let [db-spec (test-utils/get-db-spec)
           coll    (get-coll)]
-      (is (string? (m/insert-one! db-spec coll {:foo 123})))
+      (is (m/id? (m/insert-one! db-spec coll {:foo 123})))
       (is (= 1 (m/count-collection db-spec coll)))
       (is (= 0 (m/count-collection db-spec coll {:foo {$lt 100}})))
       (is (= 1 (m/count-collection db-spec coll {:foo {$lt 200}})))
@@ -155,9 +162,9 @@
         item-3  {:_id id-3
                  :foo 200
                  :bar "aaaa"}]
-    (is (string? id))
-    (is (string? id-2))
-    (is (string? id-3))
+    (is (m/id? id))
+    (is (m/id? id-2))
+    (is (m/id? id-3))
     (testing "find all"
       (let [results (m/find-all db-spec coll)]
         (is (= [item-1 item-2 item-3]
@@ -372,18 +379,28 @@
     (is (= 2 (count (m/insert-many! db-spec coll input))))
     (testing "read out as-is"
       (let [out-plain (m/find-all db-spec coll)]
-        (is (= [{:set []
-                 :vec []
-                 :map {}}
-                {:set ["a" "b" "c"]
-                 :vec [1 2 3]
-                 :map {:a "x"
-                       :b "y"}}]
-               (mapv #(dissoc % :_id) out-plain)))))
+        (is (match? [{:_id m/id?
+                      :set []
+                      :vec []
+                      :map {}}
+                     {:_id m/id?
+                      :set ["a" "b" "c"]
+                      :vec [1 2 3]
+                      :map {:a "x"
+                            :b "y"}}]
+                    out-plain))))
     (testing "coerce using xform"
       (let [out-plain (m/find-all db-spec coll :xform (map coerce-my-record!))]
-        (is (= input
-               (mapv #(dissoc % :_id) out-plain)))))
+        (is (match? [{:_id m/id?
+                      :set #{}
+                      :vec []
+                      :map {}}
+                     {:_id m/id?
+                      :set #{"a" "b" "c"}
+                      :vec [1 2 3]
+                      :map {:a :x
+                            :b :y}}]
+                    out-plain))))
     (testing "coerce, filter and alter using xform"
       (let [out-plain (m/find-all db-spec coll :xform (comp (map coerce-my-record!)
                                                             (filter (comp seq :set))

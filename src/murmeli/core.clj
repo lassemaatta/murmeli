@@ -12,7 +12,8 @@
                                MongoCollection
                                MongoDatabase]
            [java.util List]
-           [org.bson BsonDocument BsonValue]))
+           [org.bson BsonDocument BsonValue]
+           [org.bson.types ObjectId]))
 
 (set! *warn-on-reflection* true)
 
@@ -20,6 +21,18 @@
   "Transforms BSON documents to clojure maps, optionally with map keys as keywords"
   [keywords?]
   (map (partial c/from-bson {:keywords? keywords?})))
+
+;; Utilities
+
+(defn create-id
+  "Returns a new object-id"
+  []
+  (str (ObjectId/get)))
+
+(defn id?
+  "Return true if given string represents an object-id"
+  [^String id]
+  (boolean (and (string? id) (ObjectId/isValid id))))
 
 ;; Connect and disconnect
 
