@@ -38,6 +38,15 @@
 
 (defn connect-client!
   "Connect to a Mongo instance and construct a Client"
+  {:arglists '([{:keys [uri
+                        credentials
+                        ssl-settings
+                        cluster-settings
+                        read-concern
+                        write-concern
+                        read-preference
+                        retry-reads?
+                        retry-writes?]}])}
   [db-spec]
   (let [settings (di/make-client-settings db-spec)]
     (assoc db-spec ::client (MongoClients/create settings))))
@@ -114,9 +123,7 @@
                                   snapshot?
                                   read-preference
                                   read-concern
-                                  write-concern]
-                           :or   {causally-consistent? false
-                                  snapshot?            false}}])}
+                                  write-concern]}])}
   [db-spec
    & {:as options}]
   (assoc db-spec ::session-options (di/make-client-session-options (or options {}))))

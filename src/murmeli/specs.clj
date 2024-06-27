@@ -78,8 +78,8 @@
 (defn session? [instance] (instance? ClientSession instance))
 (s/def ::m/session session?)
 
-(s/def ::db-spec-disconnected (s/keys :req-un [::uri]
-                                      :opt-un [::database-name]))
+(s/def ::db-spec-disconnected (s/merge (s/keys :opt-un [::database-name])
+                                       ::client-settings-options))
 
 (s/def ::db-spec-with-client (s/merge ::db-spec-disconnected
                                       (s/keys :req [::m/client]
