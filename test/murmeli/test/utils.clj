@@ -11,7 +11,7 @@
 
 (stest/instrument `tc/init)
 
-(def config (tc/init {:container     (MongoDBContainer. "mongo:7.0.11")
+(def config (tc/init {:container     (MongoDBContainer. "mongo:7.0.14")
                       :exposed-ports [27017]
                       :wait-for      {:wait-strategy :port}}))
 

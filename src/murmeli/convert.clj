@@ -1,6 +1,5 @@
 (ns murmeli.convert
   (:import [clojure.lang BigInt
-                         IPersistentMap
                          Keyword
                          Ratio
                          Symbol]
@@ -101,7 +100,10 @@
   (-to-bson [this]
     (let [doc (BsonDocument. (count this))]
       (doseq [[k v] this]
-        (.put doc (-to-key k) (to-bson v)))
+        (let [k (-to-key k)]
+          (if (and (= "_id" k) (string? v))
+            (.put doc k (to-bson (ObjectId. ^String v)))
+            (.put doc k (to-bson v)))))
       doc))
 
   ;; Clojure stuff
@@ -117,15 +119,6 @@
   BigInt
   (-to-bson [this]
     (-to-bson (.toBigDecimal this)))
-  IPersistentMap
-  (-to-bson [this]
-    (let [doc (BsonDocument. (count this))]
-      (doseq [[k v] this]
-        (let [k (-to-key k)]
-          (if (and (= "_id" k) (string? v))
-            (.put doc k (to-bson (ObjectId. ^String v)))
-            (.put doc k (to-bson v)))))
-      doc))
 
   ;; Error otherwise
   Object
