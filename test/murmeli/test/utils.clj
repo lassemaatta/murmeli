@@ -11,15 +11,27 @@
 
 (stest/instrument `tc/init)
 
-(def config (tc/init {:container     (MongoDBContainer. "mongo:7.0.14")
-                      :exposed-ports [27017]
-                      :wait-for      {:wait-strategy :port}}))
+(def version-matrix ["mongo:6.0.18"
+                     "mongo:7.0.14"
+                     "mongo:8.0.1"])
+
+(defn config
+  [^String image]
+  (tc/init {:container     (MongoDBContainer. image)
+            :exposed-ports [27017]
+            :wait-for      {:wait-strategy :port}}))
 
 (defn container-fixture
   [test-fn]
-  (when (compare-and-set! *container nil (delay (tc/start! config)))
-    (log/info "Starting container for tests"))
-  (test-fn))
+  (doseq [image version-matrix]
+    (when (compare-and-set! *container nil (delay (tc/start! (config image))))
+      (log/infof "Starting container %s for tests" image))
+    (test-fn)
+    (let [c (deref *container)]
+      (when (realized? c)
+        (log/infof "Stopping container %s for tests" image)
+        (tc/stop! (force c))))
+    (reset! *container nil)))
 
 (defn get-mongo-port
   []
