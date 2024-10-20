@@ -360,8 +360,8 @@
                                       ::password
                                       ::auth-db]))
 
-(s/def ::client-settings-options (s/keys :req-un [::uri]
-                                         :opt-un [::read-concern
+(s/def ::client-settings-options (s/keys :opt-un [::uri
+                                                  ::read-concern
                                                   ::write-concern
                                                   ::read-preference
                                                   ::retry-reads?

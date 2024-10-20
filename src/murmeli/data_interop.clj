@@ -83,8 +83,8 @@
                        (.version api-version)
                        .build)
         builder    (-> (MongoClientSettings/builder)
-                       (.applyConnectionString (ConnectionString. uri))
                        (.serverApi server-api))]
+    (when (some? uri) (.applyConnectionString builder (ConnectionString. uri)))
     (when (some? retry-reads?) (.retryReads builder (boolean retry-reads?)))
     (when (some? retry-writes?) (.retryWrites builder (boolean retry-writes?)))
     (when read-concern (.readConcern builder (get-read-concern read-concern)))
