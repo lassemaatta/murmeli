@@ -39,3 +39,7 @@
 (deftest make-index-bson-test
   (is (match? passed
               (stest/check `di/make-index-bson))))
+
+(deftest make-update-options-test
+  (is (match? passed
+              (stest/check `di/make-update-options))))

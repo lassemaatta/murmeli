@@ -13,7 +13,7 @@
                         ReadPreference
                         WriteConcern]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
-           [com.mongodb.client.model IndexOptions]
+           [com.mongodb.client.model IndexOptions UpdateOptions]
            [org.bson BsonValue]
            [org.bson.conversions Bson]))
 
@@ -420,3 +420,13 @@
 (s/fdef di/make-index-bson
   :args (s/cat :index-keys ::index-keys)
   :ret bson?)
+
+(s/def ::make-update-options (s/keys :opt-un [::upsert?]))
+
+(defn update-options?
+  [object]
+  (instance? UpdateOptions object))
+
+(s/fdef di/make-update-options
+  :args (s/cat :options ::make-update-options)
+  :ret (s/nilable update-options?))
