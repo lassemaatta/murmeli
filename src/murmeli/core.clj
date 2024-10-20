@@ -178,7 +178,7 @@
   "Create a new index"
   {:arglists '([db-spec
                 collection
-                keys
+                index-keys
                 & {:keys [background
                           name
                           version
@@ -186,17 +186,18 @@
                           sparse?]}])}
   [{::keys [^ClientSession session] :as db-spec}
    collection
-   keys
+   index-keys
    & {:as options}]
-  (let [coll (get-collection db-spec collection)
-        keys (di/make-index-bson keys)
-        io   (when options
-               (di/make-index-options options))]
+  {:pre [db-spec collection (seq index-keys)]}
+  (let [coll       (get-collection db-spec collection)
+        index-keys (di/make-index-bson index-keys)
+        io         (when options
+                     (di/make-index-options options))]
     (cond
-      (and io session) (.createIndex coll session keys io)
-      session          (.createIndex coll session keys)
-      io               (.createIndex coll keys io)
-      :else            (.createIndex coll keys))))
+      (and io session) (.createIndex coll session index-keys io)
+      session          (.createIndex coll session index-keys)
+      io               (.createIndex coll index-keys io)
+      :else            (.createIndex coll index-keys))))
 
 (defn list-indexes
   [{::keys [^ClientSession session] :as db-spec}
@@ -218,12 +219,13 @@
 (defn drop-index!
   [{::keys [^ClientSession session] :as db-spec}
    collection
-   keys]
-  (let [coll (get-collection db-spec collection)
-        keys (di/make-index-bson keys)]
+   index-keys]
+  {:pre [db-spec collection (seq index-keys)]}
+  (let [coll       (get-collection db-spec collection)
+        index-keys (di/make-index-bson index-keys)]
     (cond
-      session (.dropIndex coll session keys)
-      :else   (.dropIndex coll keys))))
+      session (.dropIndex coll session index-keys)
+      :else   (.dropIndex coll index-keys))))
 
 (defn drop-index-by-name!
   [{::keys [^ClientSession session] :as db-spec}
