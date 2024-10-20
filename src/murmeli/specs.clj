@@ -31,6 +31,8 @@
                         (catch Exception _
                           false)))))
 
+(s/def ::id m/id?)
+
 (defn valid-db-name?
   [db-name]
   (try
@@ -283,6 +285,15 @@
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
                :options ::find-one-options))
+
+(s/def ::find-by-id-options (s/keys* :opt-un [::projection
+                                              ::keywords?]))
+
+(s/fdef m/find-by-id
+  :args (s/cat :db-spec ::db-spec-with-db
+               :collection ::collection
+               :id ::id
+               :options ::find-by-id-options))
 
 ;; murmeli.convert
 

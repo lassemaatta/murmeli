@@ -47,7 +47,8 @@
       (is (= 1 (m/count-collection db-spec coll)))
       (is (= {:_id id
               :foo 123}
-             (m/find-one db-spec coll :query {:_id id}))))))
+             (m/find-one db-spec coll :query {:_id id})
+             (m/find-by-id db-spec coll id))))))
 
 (deftest simple-insert-many-test
   (testing "inserting documents"

@@ -421,3 +421,11 @@
     (when (and multiple? throw-on-multiple?)
       (throw (ex-info "find-one found multiple results" {:collection collection})))
     (first results)))
+
+(defn find-by-id
+  "Like `find-one`, but fetches a single document by id."
+  {:arglists '([db-spec collection id & {:keys [projection
+                                                keywords?]}])}
+  [db-spec collection id & {:as options}]
+  {:pre [db-spec collection id]}
+  (find-one db-spec collection (assoc options :query {:_id id})))
