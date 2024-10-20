@@ -34,6 +34,10 @@
   [^String id]
   (boolean (and (string? id) (ObjectId/isValid id))))
 
+(defn object-id?
+  [id]
+  (instance? ObjectId id))
+
 ;; Connect and disconnect
 
 (defn connect-client!
@@ -50,6 +54,10 @@
   [db-spec]
   (let [settings (di/make-client-settings db-spec)]
     (assoc db-spec ::client (MongoClients/create settings))))
+
+(defn connected?
+  [{::keys [client]}]
+  (some? client))
 
 (defn disconnect!
   "Disconnect the Client and discard any related state"
