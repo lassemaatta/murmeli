@@ -20,6 +20,7 @@
                             test-utils/db-fixture]))
 
 (defn get-coll
+  "Return a random unique collection name for a test"
   []
   (keyword (str "coll-" (gensym))))
 

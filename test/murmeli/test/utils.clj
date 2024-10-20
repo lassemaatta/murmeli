@@ -59,6 +59,7 @@
         (m/disconnect! *db-spec*)))))
 
 (defn get-db-spec
+  "Get the `db-spec` for connecting to the current test database"
   []
   (or *db-spec*
       (throw (ex-info "Mongo DB connection not running" {}))))
