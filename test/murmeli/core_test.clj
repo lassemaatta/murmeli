@@ -413,3 +413,39 @@
                        :b :y
                        :k :v}}]
                (mapv #(dissoc % :_id) out-plain)))))))
+
+(deftest find-one-and-delete-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)]
+    (is (nil? (m/find-one-and-delete db-spec coll {:foo 1})))
+    (m/insert-many! db-spec coll [{:foo 1 :data "bar"}
+                                  {:foo 2 :data "quuz"}])
+    (is (= 2 (m/count-collection db-spec coll)))
+    (is (match? {:_id m/id? :foo 1 :data "bar"}
+                (m/find-one-and-delete db-spec coll {:foo 1})))
+    (is (= 1 (m/count-collection db-spec coll)))
+    (is (match? {:_id m/id? :foo 2 :data "quuz"}
+                (m/find-one-and-delete db-spec coll {:foo 2})))
+    (is (zero? (m/count-collection db-spec coll)))))
+
+(deftest find-one-and-replace-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)]
+    (is (nil? (m/find-one-and-replace db-spec coll {:foo 1} {:foo 4})))
+    (m/insert-many! db-spec coll [{:foo 1 :data "bar"}
+                                  {:foo 2 :data "quuz"}])
+    (is (= 2 (m/count-collection db-spec coll)))
+
+    (testing "replace document and return original"
+      (is (match? {:_id m/id? :foo 1 :data "bar"}
+                  (m/find-one-and-replace db-spec coll {:foo 1} {:foo 4 :data "bar 2"} :return :before)))
+      (is (match? {:_id m/id? :foo 4 :data "bar 2"}
+                  (m/find-one db-spec coll :query {:foo 4})))
+      (is (= 2 (m/count-collection db-spec coll))))
+
+    (testing "replace document and return new version"
+      (is (match? {:_id m/id? :foo 2 :data "quuz 2"}
+                  (m/find-one-and-replace db-spec coll {:foo 2} {:foo 2 :data "quuz 2"} :return :after)))
+      (is (match? {:_id m/id? :foo 2 :data "quuz 2"}
+                  (m/find-one db-spec coll :query {:foo 2})))
+      (is (= 2 (m/count-collection db-spec coll))))))

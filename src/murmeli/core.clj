@@ -347,6 +347,14 @@
   (-> (get-collection db-spec collection)
       .estimatedDocumentCount))
 
+(defn- projection-keys->bson
+  [projection]
+  (->> projection
+       (mapcat (fn [field-name]
+                 [field-name 1]))
+       (apply array-map)
+       c/map->bson))
+
 (defn find-all
   [{::keys [^ClientSession session]
     :as    db-spec}
@@ -367,11 +375,7 @@
         query      (when (seq query)
                      (c/map->bson query))
         projection (when (seq projection)
-                     (->> projection
-                          (mapcat (fn [field-name]
-                                    [field-name 1]))
-                          (apply array-map)
-                          c/map->bson))
+                     (projection-keys->bson projection))
         sort       (when (seq sort)
                      (c/map->bson sort))
         it         ^FindIterable (cond
@@ -429,3 +433,61 @@
   [db-spec collection id & {:as options}]
   {:pre [db-spec collection id]}
   (find-one db-spec collection (assoc options :query {:_id id})))
+
+;; Find one and - API
+
+(defn find-one-and-delete
+  "Find a document and remove it.
+  Returns the document, or ´nil´ if none found."
+  [{::keys [^ClientSession session]
+    :as    db-spec}
+   collection
+   query
+   & {:keys [projection sort keywords?]
+      :or   {keywords? true}}]
+  {:pre [db-spec collection (seq query)]}
+  (let [query   (c/map->bson query)
+        options (-> {:sort       (when (seq sort)
+                                   (c/map->bson sort))
+                     :projection (when (seq projection)
+                                   (projection-keys->bson projection))}
+                    di/make-find-one-and-delete-options)
+        coll    (get-collection db-spec collection)
+        result  (cond
+                  (and session options) (.findOneAndDelete coll session query options)
+                  session               (.findOneAndDelete coll session query)
+                  options               (.findOneAndDelete coll query options)
+                  :else                 (.findOneAndDelete coll query))]
+    (some->> result
+             (c/from-bson {:keywords? keywords?}))))
+
+(defn find-one-and-replace
+  "Find a document and replace it.
+  Returns the document, or ´nil´ if none found. The `return` argument controls
+  whether we return the document before or after the replacement."
+  [{::keys [^ClientSession session]
+    :as    db-spec}
+   collection
+   query
+   replacement
+   & {:keys [projection sort return upsert? keywords?]
+      :or   {keywords? true
+             return    :after}}]
+  {:pre [db-spec collection (seq replacement) (seq query)]}
+  (let [query       (c/map->bson query)
+        replacement (c/to-bson replacement)
+        options     (-> {:projection (when (seq projection)
+                                       (projection-keys->bson projection))
+                         :return     return
+                         :sort       (when (seq sort)
+                                       (c/map->bson sort))
+                         :upsert?    upsert?}
+                        di/make-find-one-and-replace-options)
+        coll        (get-collection db-spec collection)
+        result      (cond
+                      (and session options) (.findOneAndReplace coll session query replacement options)
+                      session               (.findOneAndReplace coll session query replacement)
+                      options               (.findOneAndReplace coll query replacement options)
+                      :else                 (.findOneAndReplace coll query replacement))]
+    (some->> result
+             (c/from-bson {:keywords? keywords?}))))

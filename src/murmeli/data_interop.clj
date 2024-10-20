@@ -11,7 +11,12 @@
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
-           [com.mongodb.client.model IndexOptions Indexes UpdateOptions]
+           [com.mongodb.client.model FindOneAndDeleteOptions
+                                     FindOneAndReplaceOptions
+                                     IndexOptions
+                                     Indexes
+                                     ReturnDocument
+                                     UpdateOptions]
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
            [java.util List]
            [org.bson.conversions Bson]))
@@ -166,3 +171,27 @@
     (let [options (UpdateOptions.)]
       (.upsert options true)
       options)))
+
+(defn make-find-one-and-delete-options
+  ^FindOneAndDeleteOptions
+  [{:keys [projection
+           sort]}]
+  (when (or projection sort)
+    (cond-> (FindOneAndDeleteOptions.)
+      projection (.projection projection)
+      sort       (.sort sort))))
+
+(defn make-find-one-and-replace-options
+  ^FindOneAndReplaceOptions
+  [{:keys [projection
+           sort
+           return
+           upsert?]}]
+  (when (or projection sort return (some? upsert?))
+    (cond-> (FindOneAndReplaceOptions.)
+      projection      (.projection projection)
+      sort            (.sort sort)
+      return          (.returnDocument (case return
+                                         :after  ReturnDocument/AFTER
+                                         :before ReturnDocument/BEFORE))
+      (some? upsert?) (.upsert upsert?))))
