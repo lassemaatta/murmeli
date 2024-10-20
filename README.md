@@ -12,8 +12,12 @@ Download from https://github.com/lassemaatta/murmeli.
 
 - Various connection options (SSL etc)
 - Update documents functionality
+ - replace
+ - find* methods
+- Aggregation
 - Strict / loose JSON schema construction (ie. whether to throw if schema can't be fully represented)
 - Support for specifying JSON schema validation for a collection
+- GridFS
 - ...
 
 ## Examples
