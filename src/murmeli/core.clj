@@ -380,6 +380,11 @@
 
   By default will warn & throw if query produces more than
   one result."
+  {:arglists '([db-spec collection & {:keys [query
+                                             projection
+                                             keywords?
+                                             warn-on-multiple?
+                                             throw-on-multiple?]}])}
   [db-spec
    collection
    & {:keys [warn-on-multiple?
@@ -391,7 +396,9 @@
         ;; returning a single batch of results."
         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
         cnt       (if (or warn-on-multiple? throw-on-multiple?) -2 -1)
-        options   (assoc options :limit cnt :batch-size 2)
+        options   (-> options
+                      (select-keys [:query :projection :keywords?])
+                      (assoc :limit cnt :batch-size 2))
         results   (find-all db-spec collection options)
         multiple? (< 1 (count results))]
     ;; Check if the query really did produce a single result, or did we (accidentally?)

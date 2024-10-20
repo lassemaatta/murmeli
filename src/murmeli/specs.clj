@@ -275,8 +275,6 @@
 (s/def ::throw-on-multiple? boolean?)
 (s/def ::find-one-options (s/keys* :opt-un [::query
                                             ::projection
-                                            ::sort
-                                            ::xform
                                             ::keywords?
                                             ::warn-on-multiple?
                                             ::throw-on-multiple?]))
