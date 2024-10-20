@@ -248,7 +248,7 @@
 
 (s/def ::query ::document)
 (s/def ::projection (s/coll-of ::key
-                               :kind vector))
+                               :kind vector?))
 (s/def ::sort (s/map-of ::key any?
                         ;; "You can sort on a maximum of 32 keys."
                         :min-count 1
