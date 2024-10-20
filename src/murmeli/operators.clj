@@ -1,5 +1,6 @@
 (ns murmeli.operators
-  "From https://www.mongodb.com/docs/manual/reference/operator/ (7.0)")
+  "From https://www.mongodb.com/docs/manual/reference/operator/ (7.0)"
+  (:require [clojure.string :as str]))
 
 ;;; Query and Projection Operators
 
@@ -94,3 +95,14 @@
 (def ^:const $position "Modifies the `$push` operator to specify the position in the array to add elements." "$position")
 (def ^:const $sort "Modifies the $push operator to reorder documents stored in an array." "$sort")
 (def ^:const $bit "Performs bitwise AND, OR, and XOR updates of integer values." "$bit")
+
+(def operators (->> 'murmeli.operators
+                    ns-publics
+                    keys
+                    (map name)
+                    (filter (fn [s] (str/starts-with? s "$")))
+                    set))
+
+(defn operator?
+  [s]
+  (contains? operators s))
