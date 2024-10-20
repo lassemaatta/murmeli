@@ -100,6 +100,7 @@
   [{::keys [^ClientSession session]
     :as    db-spec}
    database-name]
+  {:pre [db-spec database-name]}
   (let [db (get-database db-spec database-name)]
     (if session
       (.drop db session)
@@ -112,6 +113,7 @@
   [{::keys [^MongoDatabase db
             ^ClientSession session]}
    collection]
+  {:pre [db collection]}
   ;; TODO: Add support for `CreateCollectionOptions`
   (cond
     session (.createCollection db session (name collection))
@@ -202,6 +204,7 @@
 (defn list-indexes
   [{::keys [^ClientSession session] :as db-spec}
    collection]
+  {:pre [db-spec collection]}
   (let [coll                    (get-collection db-spec collection)
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session BsonDocument)
@@ -211,6 +214,7 @@
 (defn drop-all-indexes!
   [{::keys [^ClientSession session] :as db-spec}
    collection]
+  {:pre [db-spec collection]}
   (let [coll (get-collection db-spec collection)]
     (if session
       (.dropIndexes coll session)
@@ -231,6 +235,7 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    ^String index-name]
+  {:pre [db-spec collection index-name]}
   (let [coll (get-collection db-spec collection)]
     (cond
       session (.dropIndex coll session index-name)
@@ -246,7 +251,7 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    doc]
-  {:pre [collection doc]}
+  {:pre [db-spec collection doc]}
   (let [bson   (c/to-bson doc)
         coll   (get-collection db-spec collection)
         result (if session
@@ -258,7 +263,7 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    docs]
-  {:pre [collection docs]}
+  {:pre [db-spec collection docs]}
   (let [bsons  ^List (mapv c/to-bson docs)
         coll   (get-collection db-spec collection)
         result (if session
@@ -279,6 +284,7 @@
    query
    changes
    & {:as options}]
+  {:pre [db-spec collection query changes]}
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
         updates ^List (mapv c/map->bson changes)
@@ -302,6 +308,7 @@
    query
    changes
    & {:as options}]
+  {:pre [db-spec collection query changes]}
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
         updates ^List (mapv c/map->bson changes)
@@ -323,6 +330,7 @@
   ([{::keys [^ClientSession session] :as db-spec}
     collection
     query]
+   {:pre [db-spec collection query]}
    (let [coll   (get-collection db-spec collection)
          filter (c/map->bson query)]
      (cond
@@ -335,6 +343,7 @@
   "Gets an estimate of the count of documents in a collection using collection metadata."
   [db-spec
    collection]
+  {:pre [db-spec collection]}
   (-> (get-collection db-spec collection)
       .estimatedDocumentCount))
 
@@ -351,6 +360,7 @@
              batch-size
              keywords?]
       :or   {keywords? true}}]
+  {:pre [db-spec collection]}
   (let [xform-clj  (bson->clj-xform keywords?)
         xform      (if xform (comp xform-clj xform) xform-clj)
         coll       (get-collection db-spec collection)
@@ -394,6 +404,7 @@
       :or   {warn-on-multiple?  true
              throw-on-multiple? true}
       :as   options}]
+  {:pre [db-spec collection]}
   (let [;; "A negative limit is similar to a positive limit but closes the cursor after
         ;; returning a single batch of results."
         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
