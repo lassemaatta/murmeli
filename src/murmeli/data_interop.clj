@@ -1,4 +1,5 @@
 (ns murmeli.data-interop
+  (:require [murmeli.convert :as c])
   (:import [com.mongodb Block
                         ClientSessionOptions
                         ConnectionString
@@ -141,14 +142,16 @@
   [{:keys [background?
            name
            version
+           partial-filter-expression
            unique?
            sparse?]}]
   (cond-> (IndexOptions.)
-    background? (.background true)
-    name        (.name name)
-    version     (.version (int version))
-    unique?     (.unique true)
-    sparse?     (.sparse true)))
+    background?               (.background true)
+    name                      (.name name)
+    version                   (.version (int version))
+    partial-filter-expression (.partialFilterExpression (c/map->bson partial-filter-expression))
+    unique?                   (.unique true)
+    sparse?                   (.sparse true)))
 
 (defn make-index-bson
   ^Bson [index-keys]

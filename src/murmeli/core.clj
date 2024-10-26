@@ -194,6 +194,7 @@
                 & {:keys [background
                           name
                           version
+                          partial-filter-expression
                           unique?
                           sparse?]}])}
   [{::keys [^ClientSession session] :as db-spec}
