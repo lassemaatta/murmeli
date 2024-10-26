@@ -127,6 +127,14 @@
   {:pre [db collection]}
   (.getCollection db (name collection) BsonDocument))
 
+(defn drop-collection!
+  [{::keys [^ClientSession session] :as db-spec}
+   collection]
+  (let [coll (get-collection db-spec collection)]
+    (cond
+      session (.drop coll session)
+      :else   (.drop coll))))
+
 ;; Transactions / Sessions
 
 (defn with-client-session-options
