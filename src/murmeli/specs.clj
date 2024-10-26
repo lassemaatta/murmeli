@@ -242,10 +242,15 @@
                :changes ::documents
                :options ::update-options))
 
+(s/def ::count-options (s/keys* :opt-un [::query
+                                         ::limit
+                                         ::skip
+                                         ::max-time-ms]))
+
 (s/fdef m/count-collection
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
-               :query (s/? ::document)))
+               :count-options ::count-options))
 
 (s/fdef m/estimated-count-collection
   :args (s/cat :db-spec ::db-spec-with-db

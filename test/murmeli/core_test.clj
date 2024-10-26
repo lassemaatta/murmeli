@@ -75,8 +75,8 @@
           coll    (get-coll)]
       (is (m/id? (m/insert-one! db-spec coll {:foo 123})))
       (is (= 1 (m/count-collection db-spec coll)))
-      (is (= 0 (m/count-collection db-spec coll {:foo {$lt 100}})))
-      (is (= 1 (m/count-collection db-spec coll {:foo {$lt 200}})))
+      (is (= 0 (m/count-collection db-spec coll :query {:foo {$lt 100}})))
+      (is (= 1 (m/count-collection db-spec coll :query {:foo {$lt 200}})))
       (is (= 1 (m/estimated-count-collection db-spec coll))))))
 
 (deftest transaction-test

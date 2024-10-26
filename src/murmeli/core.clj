@@ -330,20 +330,21 @@
 ;; Queries
 
 (defn count-collection
-  ([db-spec
-    collection]
-   (count-collection db-spec collection {}))
-  ([{::keys [^ClientSession session] :as db-spec}
-    collection
-    query]
-   {:pre [db-spec collection query]}
-   (let [coll   (get-collection db-spec collection)
-         filter (c/map->bson query)]
-     (cond
-       (and session filter) (.countDocuments coll session filter)
-       session              (.countDocuments coll session)
-       filter               (.countDocuments coll filter)
-       :else                (.countDocuments coll)))))
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   & {:keys [query] :as options}]
+  {:pre [db-spec collection]}
+  (let [coll    (get-collection db-spec collection)
+        query   (when query
+                  (c/map->bson query))
+        options (di/make-count-options options)]
+    (cond
+      (and session query options) (.countDocuments coll session query options)
+      (and session query)         (.countDocuments coll session query)
+      session                     (.countDocuments coll session)
+      (and query options)         (.countDocuments coll query options)
+      query                       (.countDocuments coll query)
+      :else                       (.countDocuments coll))))
 
 (defn estimated-count-collection
   "Gets an estimate of the count of documents in a collection using collection metadata."

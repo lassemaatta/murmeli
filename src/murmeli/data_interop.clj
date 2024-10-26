@@ -11,7 +11,8 @@
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
-           [com.mongodb.client.model FindOneAndDeleteOptions
+           [com.mongodb.client.model CountOptions
+                                     FindOneAndDeleteOptions
                                      FindOneAndReplaceOptions
                                      IndexOptions
                                      Indexes
@@ -19,6 +20,7 @@
                                      UpdateOptions]
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
            [java.util List]
+           [java.util.concurrent TimeUnit]
            [org.bson.conversions Bson]))
 
 (set! *warn-on-reflection* true)
@@ -195,3 +197,14 @@
                                          :after  ReturnDocument/AFTER
                                          :before ReturnDocument/BEFORE))
       (some? upsert?) (.upsert upsert?))))
+
+(defn make-count-options
+  ^CountOptions
+  [{:keys [limit
+           skip
+           max-time-ms]}]
+  (when (or limit skip max-time-ms)
+    (cond-> (CountOptions.)
+      limit (.limit (int limit))
+      skip  (.skip (int skip))
+      max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))))
