@@ -15,6 +15,7 @@
            [com.mongodb.client.model CountOptions
                                      FindOneAndDeleteOptions
                                      FindOneAndReplaceOptions
+                                     FindOneAndUpdateOptions
                                      IndexOptions
                                      Indexes
                                      ReturnDocument
@@ -196,6 +197,23 @@
     (cond-> (FindOneAndReplaceOptions.)
       projection      (.projection projection)
       sort            (.sort sort)
+      return          (.returnDocument (case return
+                                         :after  ReturnDocument/AFTER
+                                         :before ReturnDocument/BEFORE))
+      (some? upsert?) (.upsert upsert?))))
+
+(defn make-find-one-and-update-options
+  ^FindOneAndUpdateOptions
+  [{:keys [projection
+           sort
+           return
+           max-time-ms
+           upsert?]}]
+  (when (or projection sort return (some? upsert?))
+    (cond-> (FindOneAndUpdateOptions.)
+      projection      (.projection projection)
+      sort            (.sort (c/map->bson sort))
+      max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
       return          (.returnDocument (case return
                                          :after  ReturnDocument/AFTER
                                          :before ReturnDocument/BEFORE))

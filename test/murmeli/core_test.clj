@@ -469,6 +469,28 @@
                   (m/find-one db-spec coll :query {:foo 2})))
       (is (= 2 (m/count-collection db-spec coll))))))
 
+(deftest find-one-and-update-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)]
+    (is (nil? (m/find-one-and-update! db-spec coll {:foo 1} [{$set {:bar 2}}])))
+    (m/insert-many! db-spec coll [{:foo 1 :data "bar"}
+                                  {:foo 2 :data "quuz"}])
+    (is (= 2 (m/count-collection db-spec coll)))
+
+    (testing "update document and return original"
+      (is (match? {:_id m/id? :foo 1 :data "bar"}
+                  (m/find-one-and-update! db-spec coll {:foo 1} [{$set {:bar 2}}] :return :before)))
+      (is (match? {:_id m/id? :foo 1 :data "bar" :bar 2}
+                  (m/find-one db-spec coll :query {:bar 2})))
+      (is (= 2 (m/count-collection db-spec coll))))
+
+    (testing "update document and return new version"
+      (is (match? {:_id m/id? :foo 2 :data "quuz" :quuz 4}
+                  (m/find-one-and-update! db-spec coll {:foo 2} [{$set {:quuz 4}}] :return :after)))
+      (is (match? {:_id m/id? :foo 2 :data "quuz" :quuz 4}
+                  (m/find-one db-spec coll :query {:foo 2})))
+      (is (= 2 (m/count-collection db-spec coll))))))
+
 (deftest find-distinct-test
   (let [coll    (get-coll)
         db-spec (test-utils/get-db-spec)]

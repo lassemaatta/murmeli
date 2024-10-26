@@ -582,6 +582,36 @@
     (some->> result
              (c/from-bson {:keywords? keywords?}))))
 
+(defn find-one-and-update!
+  "Find a document and update it.
+  Returns the document, or ´nil´ if none found. The `return` argument controls
+  whether we return the document before or after the replacement."
+  [{::keys [^ClientSession session]
+    :as    db-spec}
+   collection
+   query
+   updates
+   & {:keys [projection sort return upsert? keywords?]
+      :or   {keywords? true
+             return    :after}}]
+  {:pre [db-spec collection (seq updates) (seq query)]}
+  (let [query   (c/map->bson query)
+        updates ^List (mapv c/to-bson updates)
+        options (-> {:projection (when (seq projection)
+                                   (projection-keys->bson projection))
+                     :sort       sort
+                     :return     return
+                     :upsert?    upsert?}
+                    di/make-find-one-and-update-options)
+        coll    (get-collection db-spec collection)
+        result  (cond
+                  (and session options) (.findOneAndUpdate coll session query updates options)
+                  session               (.findOneAndUpdate coll session query updates)
+                  options               (.findOneAndUpdate coll query updates options)
+                  :else                 (.findOneAndUpdate coll query updates))]
+    (some->> result
+             (c/from-bson {:keywords? keywords?}))))
+
 ;; Aggregation
 
 (defn aggregate!
