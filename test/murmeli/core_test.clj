@@ -451,3 +451,15 @@
       (is (match? {:_id m/id? :foo 2 :data "quuz 2"}
                   (m/find-one db-spec coll :query {:foo 2})))
       (is (= 2 (m/count-collection db-spec coll))))))
+
+(deftest find-distinct-test
+  (let [coll    (get-coll)
+        db-spec (test-utils/get-db-spec)]
+    (m/insert-many! db-spec coll [{:foo 1 :data "bar" :bar {:key 1} :quuz "this"}
+                                  {:foo 2 :data "quuz" :bar {:key 2} :quuz "this"}])
+
+    (is (= #{} (m/find-distinct db-spec coll :i-dont-exist)))
+    (is (= #{1 2} (m/find-distinct db-spec coll :foo)))
+    (is (= #{"bar" "quuz"} (m/find-distinct db-spec coll :data)))
+    (is (= #{{:key 1} {:key 2}} (m/find-distinct db-spec coll :bar)))
+    (is (= #{"this"} (m/find-distinct db-spec coll :quuz)))))

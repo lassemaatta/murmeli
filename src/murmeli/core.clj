@@ -5,6 +5,7 @@
             [murmeli.cursor]
             [murmeli.data-interop :as di])
   (:import [com.mongodb.client ClientSession
+                               DistinctIterable
                                FindIterable
                                ListIndexesIterable
                                MongoClient
@@ -346,6 +347,32 @@
   {:pre [db-spec collection]}
   (-> (get-collection db-spec collection)
       .estimatedDocumentCount))
+
+(defn find-distinct
+  "Find all distinct value of a field in a collection. Returns a set."
+  [{::keys [^ClientSession session]
+    :as    db-spec}
+   collection
+   field
+   & {:keys [query
+             batch-size
+             xform
+             keywords?]
+      :or   {keywords? true}}]
+  {:pre [db-spec collection field]}
+  (let [xform-clj            (bson->clj-xform keywords?)
+        xform                (if xform (comp xform-clj xform) xform-clj)
+        coll                 (get-collection db-spec collection)
+        field-name           (name field)
+        query                (when (seq query)
+                               (c/map->bson query))
+        ^DistinctIterable it (cond
+                               (and session query) (.distinct coll session field-name query BsonValue)
+                               session             (.distinct coll session field-name BsonValue)
+                               query               (.distinct coll field-name query BsonValue)
+                               :else               (.distinct coll field-name BsonValue))]
+    (when batch-size (.batchSize it (int batch-size)))
+    (transduce xform conj #{} it)))
 
 (defn- projection-keys->bson
   [projection]
