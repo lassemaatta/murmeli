@@ -564,3 +564,29 @@
                       :else                 (.findOneAndReplace coll query replacement))]
     (some->> result
              (c/from-bson {:keywords? keywords?}))))
+
+;; Aggregation
+
+(defn aggregate!
+  [{::keys [^ClientSession session]
+    :as    db-spec}
+   collection
+   pipeline
+   & {:keys [xform
+             batch-size
+             max-time-ms
+             allow-disk-use?
+             keywords?]
+      :or   {keywords? true}}]
+  {:pre [db-spec collection (sequential? pipeline)]}
+  (let [coll      (get-collection db-spec collection)
+        pipeline  ^List (mapv c/map->bson pipeline)
+        it        (cond
+                    session (.aggregate coll session pipeline)
+                    :else   (.aggregate coll pipeline))
+        xform-clj (bson->clj-xform keywords?)
+        xform     (if xform (comp xform-clj xform) xform-clj)]
+    (when batch-size (.batchSize it (int batch-size)))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+    (when allow-disk-use? (.allowDiskUse it (boolean allow-disk-use?)))
+    (transduce xform conj it)))
