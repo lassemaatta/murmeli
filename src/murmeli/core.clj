@@ -335,6 +335,34 @@
     {:modified (.getModifiedCount result)
      :matched  (.getMatchedCount result)}))
 
+;; Deletes
+
+(defn delete-one!
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   & {:keys [query]}]
+  {:pre [db-spec collection query]}
+  (let [coll   (get-collection db-spec collection)
+        query  (c/map->bson query)
+        result (cond
+                 session (.deleteOne coll session query)
+                 :else   (.deleteOne coll query))]
+    {:acknowledged? (.wasAcknowledged result)
+     :count         (.getDeletedCount result)}))
+
+(defn delete-many!
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   & {:keys [query]}]
+  {:pre [db-spec collection query]}
+  (let [coll   (get-collection db-spec collection)
+        query  (c/map->bson query)
+        result (cond
+                 session (.deleteMany coll session query)
+                 :else   (.deleteMany coll query))]
+    {:acknowledged? (.wasAcknowledged result)
+     :count         (.getDeletedCount result)}))
+
 ;; Queries
 
 (defn count-collection
