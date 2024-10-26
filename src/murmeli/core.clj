@@ -13,6 +13,7 @@
                                MongoCollection
                                MongoDatabase]
            [java.util List]
+           [java.util.concurrent TimeUnit]
            [org.bson BsonDocument BsonValue]
            [org.bson.types ObjectId]))
 
@@ -204,12 +205,16 @@
 
 (defn list-indexes
   [{::keys [^ClientSession session] :as db-spec}
-   collection]
+   collection
+   & {:keys [batch-size
+             max-time-ms]}]
   {:pre [db-spec collection]}
   (let [coll                    (get-collection db-spec collection)
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session BsonDocument)
                                   (.listIndexes coll BsonDocument))]
+    (when batch-size (.batchSize it (int batch-size)))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     (transduce (bson->clj-xform true) conj it)))
 
 (defn drop-all-indexes!
@@ -357,6 +362,7 @@
    & {:keys [query
              batch-size
              xform
+             max-time-ms
              keywords?]
       :or   {keywords? true}}]
   {:pre [db-spec collection field]}
@@ -372,6 +378,7 @@
                                query               (.distinct coll field-name query BsonValue)
                                :else               (.distinct coll field-name BsonValue))]
     (when batch-size (.batchSize it (int batch-size)))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     (transduce xform conj #{} it)))
 
 (defn- projection-keys->bson
@@ -393,6 +400,7 @@
              limit
              skip
              batch-size
+             max-time-ms
              keywords?]
       :or   {keywords? true}}]
   {:pre [db-spec collection]}
@@ -415,6 +423,7 @@
     (when batch-size (.batchSize it (int batch-size)))
     (when projection (.projection it projection))
     (when sort (.sort it sort))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     ;; Eagerly consume the results, but without chunking
     (transduce xform conj it)))
 

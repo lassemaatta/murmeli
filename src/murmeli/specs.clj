@@ -188,9 +188,13 @@
                :keys ::index-keys
                :options ::create-index-options))
 
+(s/def ::list-indexes-options (s/keys* :opt-un [::batch-size
+                                                ::max-time-ms]))
+
 (s/fdef m/list-indexes
   :args (s/cat :db-spec ::db-spec-with-db
-               :collection ::collection))
+               :collection ::collection
+               :options ::list-indexes-options))
 
 (s/fdef m/drop-all-indexes!
   :args (s/cat :db-spec ::db-spec-with-db
@@ -257,6 +261,7 @@
 (s/def ::limit int?)
 (s/def ::skip int?)
 (s/def ::batch-size int?)
+(s/def ::max-time-ms int?)
 (s/def ::keywords? boolean?)
 (s/def ::xform fn?)
 
@@ -267,6 +272,7 @@
                                             ::limit
                                             ::skip
                                             ::batch-size
+                                            ::max-time-ms
                                             ::keywords?]))
 
 (s/fdef m/find-all
