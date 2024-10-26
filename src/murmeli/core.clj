@@ -110,7 +110,7 @@
 
 ;; Collections
 
-(defn create-collection
+(defn create-collection!
   "Creates a collection"
   [{::keys [^MongoDatabase db
             ^ClientSession session]}
@@ -509,7 +509,7 @@
 
 ;; Find one and - API
 
-(defn find-one-and-delete
+(defn find-one-and-delete!
   "Find a document and remove it.
   Returns the document, or ´nil´ if none found."
   [{::keys [^ClientSession session]
@@ -534,7 +534,7 @@
     (some->> result
              (c/from-bson {:keywords? keywords?}))))
 
-(defn find-one-and-replace
+(defn find-one-and-replace!
   "Find a document and replace it.
   Returns the document, or ´nil´ if none found. The `return` argument controls
   whether we return the document before or after the replacement."
