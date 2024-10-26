@@ -127,6 +127,22 @@
   {:pre [db collection]}
   (.getCollection db (name collection) BsonDocument))
 
+(defn list-collection-names
+  [{::keys [^MongoDatabase db
+            ^ClientSession session]
+    :as    db-spec}
+   & {:keys [batch-size
+             max-time-ms
+             keyword?]
+      :or   {keyword? true}}]
+  {:pre [db-spec]}
+  (let [it (cond
+             session (.listCollectionNames db session)
+             :else   (.listCollectionNames db))]
+    (when batch-size (.batchSize it (int batch-size)))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+    (into #{} (map (if keyword? keyword identity)) it)))
+
 (defn drop-collection!
   [{::keys [^ClientSession session] :as db-spec}
    collection]

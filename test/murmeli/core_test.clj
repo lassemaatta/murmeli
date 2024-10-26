@@ -39,6 +39,23 @@
         (is (int? sizeOnDisk))
         (is (not empty))))))
 
+(deftest coll-test
+  (let [db-spec (-> (test-utils/get-db-spec)
+                    ;; Use a separate db for this tests so that we don't
+                    ;; see collections created in other tests
+                    (m/with-db "coll-test-db"))
+        coll-1  (get-coll)
+        coll-2  (get-coll)]
+    (is (= #{} (m/list-collection-names db-spec)))
+    (m/create-collection! db-spec coll-1)
+    (is (= #{coll-1} (m/list-collection-names db-spec)))
+    (m/create-collection! db-spec coll-2)
+    (is (= #{coll-1 coll-2} (m/list-collection-names db-spec)))
+    (m/drop-collection! db-spec coll-1)
+    (is (= #{coll-2} (m/list-collection-names db-spec)))
+    (m/drop-collection! db-spec coll-2)
+    (is (= #{} (m/list-collection-names db-spec)))))
+
 (deftest simple-insert-test
   (testing "inserting document"
     (let [db-spec (test-utils/get-db-spec)
