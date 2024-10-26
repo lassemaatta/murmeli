@@ -9,7 +9,8 @@
             [murmeli.validators.schema :as vs]
             [schema.coerce :as sc]
             [schema.core :as s :refer [defschema]])
-  (:import [com.mongodb MongoCommandException]))
+  (:import [com.mongodb MongoCommandException]
+           [org.bson.types ObjectId]))
 
 (set! *warn-on-reflection* true)
 
@@ -48,7 +49,8 @@
       (is (= {:_id id
               :foo 123}
              (m/find-one db-spec coll :query {:_id id})
-             (m/find-by-id db-spec coll id))))))
+             (m/find-by-id db-spec coll id)
+             (m/find-by-id db-spec coll (ObjectId. (str id))))))))
 
 (deftest simple-insert-many-test
   (testing "inserting documents"

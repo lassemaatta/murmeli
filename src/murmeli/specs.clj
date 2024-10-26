@@ -31,7 +31,8 @@
                         (catch Exception _
                           false)))))
 
-(s/def ::id m/id?)
+(s/def ::id (s/or :str-id m/id?
+                  :object-id m/object-id?))
 
 (defn valid-db-name?
   [db-name]
