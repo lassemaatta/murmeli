@@ -233,14 +233,14 @@
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
                :query ::document
-               :changes ::documents
+               :changes ::document
                :options ::update-options))
 
 (s/fdef m/update-many!
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
                :query ::document
-               :changes ::documents
+               :changes ::document
                :options ::update-options))
 
 (s/def ::count-options (s/keys* :opt-un [::query

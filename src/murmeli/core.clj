@@ -318,7 +318,7 @@
   {:pre [db-spec collection query changes]}
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
-        updates ^List (mapv c/map->bson changes)
+        updates (c/map->bson changes)
         options (di/make-update-options (or options {}))
         result  (cond
                   (and session options) (.updateOne coll session filter updates options)
@@ -342,7 +342,7 @@
   {:pre [db-spec collection query changes]}
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
-        updates ^List (mapv c/map->bson changes)
+        updates (c/map->bson changes)
         options (di/make-update-options (or options {}))
         result  (cond
                   (and session options) (.updateMany coll session filter updates options)
@@ -596,7 +596,7 @@
              return    :after}}]
   {:pre [db-spec collection (seq updates) (seq query)]}
   (let [query   (c/map->bson query)
-        updates ^List (mapv c/to-bson updates)
+        updates (c/map->bson updates)
         options (-> {:projection (when (seq projection)
                                    (projection-keys->bson projection))
                      :sort       sort

@@ -131,15 +131,15 @@
     (testing "update single document"
       (is (= {:modified 1
               :matched  1}
-             (m/update-one! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+             (m/update-one! db-spec coll {:_id id-1} {$set {:foo 10}}))))
     (testing "same update again -> no changes"
       (is (= {:modified 0
               :matched  1}
-             (m/update-one! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+             (m/update-one! db-spec coll {:_id id-1} {$set {:foo 10}}))))
     (testing "no match"
       (is (= {:modified 0
               :matched  0}
-             (m/update-one! db-spec coll {:quuz "kukka"} [{$set {:foo 10}}]))))))
+             (m/update-one! db-spec coll {:quuz "kukka"} {$set {:foo 10}}))))))
 
 (deftest update-many-test
   (let [coll    (get-coll)
@@ -150,24 +150,24 @@
     (testing "update single document"
       (is (= {:modified 1
               :matched  1}
-             (m/update-many! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+             (m/update-many! db-spec coll {:_id id-1} {$set {:foo 10}}))))
     (testing "same update again -> no changes"
       (is (= {:modified 0
               :matched  1}
-             (m/update-many! db-spec coll {:_id id-1} [{$set {:foo 10}}]))))
+             (m/update-many! db-spec coll {:_id id-1} {$set {:foo 10}}))))
     (testing "no match"
       (is (= {:modified 0
               :matched  0}
-             (m/update-many! db-spec coll {:quuz "kukka"} [{$set {:foo 10}}]))))
+             (m/update-many! db-spec coll {:quuz "kukka"} {$set {:foo 10}}))))
     (testing "update multiple documents"
       (is (= {:modified 2 ; id-1 already has :foo as 10
               :matched  3}
-             (m/update-many! db-spec coll {:foo {$exists true}} [{$set {:foo 10}}]))))
+             (m/update-many! db-spec coll {:foo {$exists true}} {$set {:foo 10}}))))
     (testing "update multiple fields"
       (is (= {:modified 3
               :matched  3}
-             (m/update-many! db-spec coll {:foo {$exists true}} [{$set {:bar 1}}
-                                                                 {$set {:quuz 1}}]))))))
+             (m/update-many! db-spec coll {:foo {$exists true}} {$set {:bar  1
+                                                                       :quuz 1}}))))))
 
 (deftest find-test
   (let [coll    (get-coll)
@@ -472,21 +472,21 @@
 (deftest find-one-and-update-test
   (let [coll    (get-coll)
         db-spec (test-utils/get-db-spec)]
-    (is (nil? (m/find-one-and-update! db-spec coll {:foo 1} [{$set {:bar 2}}])))
+    (is (nil? (m/find-one-and-update! db-spec coll {:foo 1} {$set {:bar 2}})))
     (m/insert-many! db-spec coll [{:foo 1 :data "bar"}
                                   {:foo 2 :data "quuz"}])
     (is (= 2 (m/count-collection db-spec coll)))
 
     (testing "update document and return original"
       (is (match? {:_id m/id? :foo 1 :data "bar"}
-                  (m/find-one-and-update! db-spec coll {:foo 1} [{$set {:bar 2}}] :return :before)))
+                  (m/find-one-and-update! db-spec coll {:foo 1} {$set {:bar 2}} :return :before)))
       (is (match? {:_id m/id? :foo 1 :data "bar" :bar 2}
                   (m/find-one db-spec coll :query {:bar 2})))
       (is (= 2 (m/count-collection db-spec coll))))
 
     (testing "update document and return new version"
       (is (match? {:_id m/id? :foo 2 :data "quuz" :quuz 4}
-                  (m/find-one-and-update! db-spec coll {:foo 2} [{$set {:quuz 4}}] :return :after)))
+                  (m/find-one-and-update! db-spec coll {:foo 2} {$set {:quuz 4}} :return :after)))
       (is (match? {:_id m/id? :foo 2 :data "quuz" :quuz 4}
                   (m/find-one db-spec coll :query {:foo 2})))
       (is (= 2 (m/count-collection db-spec coll))))))
