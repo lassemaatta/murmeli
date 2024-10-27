@@ -20,14 +20,20 @@
 (set! *warn-on-reflection* true)
 
 (defn- bson->clj-xform
-  "Transforms BSON documents to clojure maps, optionally with map keys as keywords"
-  [keywords?]
-  (map (partial c/from-bson {:keywords? keywords?})))
+  "Transforms BSON documents to clojure maps, optionally with map keys as keywords
+  and `ObjectId` handled as strings"
+  [opts]
+  (map (partial c/from-bson opts)))
 
 ;; Utilities
 
-(defn create-id
+(defn create-object-id
   "Returns a new object-id"
+  []
+  (ObjectId/get))
+
+(defn create-id
+  "Returns a new object-id as string"
   []
   (str (ObjectId/get)))
 
@@ -91,11 +97,13 @@
 (defn list-dbs
   "List all databases"
   [{::keys [^MongoClient client
-            ^ClientSession session]}]
+            ^ClientSession session]}
+   & {:keys [keywords?]
+      :or   {keywords? true}}]
   (let [it (cond
              session (.listDatabases client session BsonDocument)
              :else   (.listDatabases client BsonDocument))]
-    (transduce (bson->clj-xform true) conj it)))
+    (transduce (bson->clj-xform {:keywords? keywords?}) conj it)))
 
 (defn drop-db!
   "Drop a database"
@@ -232,7 +240,9 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    & {:keys [batch-size
-             max-time-ms]}]
+             max-time-ms
+             keywords?]
+      :or   {keywords? true}}]
   {:pre [db-spec collection]}
   (let [coll                    (get-collection db-spec collection)
         ^ListIndexesIterable it (if session
@@ -240,7 +250,7 @@
                                   (.listIndexes coll BsonDocument))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-    (transduce (bson->clj-xform true) conj it)))
+    (transduce (bson->clj-xform {:keywords? keywords?}) conj it)))
 
 (defn drop-all-indexes!
   [{::keys [^ClientSession session] :as db-spec}
@@ -417,10 +427,13 @@
              batch-size
              xform
              max-time-ms
-             keywords?]
-      :or   {keywords? true}}]
+             keywords?
+             object-ids?]
+      :or   {keywords?   true
+             object-ids? true}}]
   {:pre [db-spec collection field]}
-  (let [xform-clj            (bson->clj-xform keywords?)
+  (let [xform-clj            (bson->clj-xform {:keywords?   keywords?
+                                               :object-ids? object-ids?})
         xform                (if xform (comp xform-clj xform) xform-clj)
         coll                 (get-collection db-spec collection)
         field-name           (name field)
@@ -455,10 +468,13 @@
              skip
              batch-size
              max-time-ms
-             keywords?]
-      :or   {keywords? true}}]
+             keywords?
+             object-ids?]
+      :or   {keywords?   true
+             object-ids? true}}]
   {:pre [db-spec collection]}
-  (let [xform-clj  (bson->clj-xform keywords?)
+  (let [xform-clj  (bson->clj-xform {:keywords?   keywords?
+                                     :object-ids? object-ids?})
         xform      (if xform (comp xform-clj xform) xform-clj)
         coll       (get-collection db-spec collection)
         query      (when (seq query)
@@ -519,7 +535,8 @@
 (defn find-by-id
   "Like `find-one`, but fetches a single document by id."
   {:arglists '([db-spec collection id & {:keys [projection
-                                                keywords?]}])}
+                                                keywords?
+                                                object-ids?]}])}
   [db-spec collection id & {:as options}]
   {:pre [db-spec collection id]}
   (find-one db-spec collection (assoc options :query {:_id id})))
@@ -560,9 +577,10 @@
    collection
    query
    replacement
-   & {:keys [projection sort return upsert? keywords?]
-      :or   {keywords? true
-             return    :after}}]
+   & {:keys [projection sort return upsert? keywords? object-ids?]
+      :or   {keywords?   true
+             object-ids? true
+             return      :after}}]
   {:pre [db-spec collection (seq replacement) (seq query)]}
   (let [query       (c/map->bson query)
         replacement (c/to-bson replacement)
@@ -580,7 +598,8 @@
                       options               (.findOneAndReplace coll query replacement options)
                       :else                 (.findOneAndReplace coll query replacement))]
     (some->> result
-             (c/from-bson {:keywords? keywords?}))))
+             (c/from-bson {:keywords?   keywords?
+                           :object-ids? object-ids?}))))
 
 (defn find-one-and-update!
   "Find a document and update it.
@@ -591,9 +610,10 @@
    collection
    query
    updates
-   & {:keys [projection sort return upsert? keywords?]
-      :or   {keywords? true
-             return    :after}}]
+   & {:keys [projection sort return upsert? keywords? object-ids?]
+      :or   {keywords?   true
+             object-ids? true
+             return      :after}}]
   {:pre [db-spec collection (seq updates) (seq query)]}
   (let [query   (c/map->bson query)
         updates (c/map->bson updates)
@@ -610,7 +630,8 @@
                   options               (.findOneAndUpdate coll query updates options)
                   :else                 (.findOneAndUpdate coll query updates))]
     (some->> result
-             (c/from-bson {:keywords? keywords?}))))
+             (c/from-bson {:keywords?   keywords?
+                           :object-ids? object-ids?}))))
 
 ;; Aggregation
 
@@ -623,15 +644,18 @@
              batch-size
              max-time-ms
              allow-disk-use?
-             keywords?]
-      :or   {keywords? true}}]
+             keywords?
+             object-ids?]
+      :or   {keywords?   true
+             object-ids? true}}]
   {:pre [db-spec collection (sequential? pipeline)]}
   (let [coll      (get-collection db-spec collection)
         pipeline  ^List (mapv c/map->bson pipeline)
         it        (cond
                     session (.aggregate coll session pipeline)
                     :else   (.aggregate coll pipeline))
-        xform-clj (bson->clj-xform keywords?)
+        xform-clj (bson->clj-xform {:keywords?   keywords?
+                                    :object-ids? object-ids?})
         xform     (if xform (comp xform-clj xform) xform-clj)]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))

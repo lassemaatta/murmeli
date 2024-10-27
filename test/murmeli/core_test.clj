@@ -61,13 +61,17 @@
     (let [db-spec (test-utils/get-db-spec)
           coll    (get-coll)
           id      (m/insert-one! db-spec coll {:foo 123})]
-      (is (m/id? id))
+      ;; By default the generated ID will be a proper ObjectId
+      (is (m/object-id? id))
       (is (= 1 (m/count-collection db-spec coll)))
       (is (= {:_id id
               :foo 123}
              (m/find-one db-spec coll :query {:_id id})
              (m/find-by-id db-spec coll id)
-             (m/find-by-id db-spec coll (ObjectId. (str id))))))))
+             (m/find-by-id db-spec coll (ObjectId. (str id)))))
+      (let [id-2 (m/insert-one! db-spec coll {:foo 2
+                                              :_id (m/create-id)})]
+        (is (m/id? id-2))))))
 
 (deftest simple-insert-many-test
   (testing "inserting documents"
@@ -76,7 +80,7 @@
           [id-1 id-2 id-3 :as ids] (m/insert-many! db-spec coll [{:foo 1}
                                                                  {:foo 2}
                                                                  {:foo 3}])]
-      (is (every? m/id? ids))
+      (is (every? m/object-id? ids))
       (is (= 3 (count ids)))
       (is (= 3 (m/count-collection db-spec coll)))
       (is (= [{:_id id-1 :foo 1}
@@ -90,7 +94,7 @@
   (testing "count with query"
     (let [db-spec (test-utils/get-db-spec)
           coll    (get-coll)]
-      (is (m/id? (m/insert-one! db-spec coll {:foo 123})))
+      (is (m/object-id? (m/insert-one! db-spec coll {:foo 123})))
       (is (= 1 (m/count-collection db-spec coll)))
       (is (= 0 (m/count-collection db-spec coll :query {:foo {$lt 100}})))
       (is (= 1 (m/count-collection db-spec coll :query {:foo {$lt 200}})))
@@ -183,9 +187,9 @@
         item-3  {:_id id-3
                  :foo 200
                  :bar "aaaa"}]
-    (is (m/id? id))
-    (is (m/id? id-2))
-    (is (m/id? id-3))
+    (is (m/object-id? id))
+    (is (m/object-id? id-2))
+    (is (m/object-id? id-3))
     (testing "find all"
       (let [results (m/find-all db-spec coll)]
         (is (= [item-1 item-2 item-3]
@@ -389,10 +393,12 @@
 (deftest external-xform-test
   (let [coll    (get-coll)
         db-spec (test-utils/get-db-spec)
-        input   [{:set #{}
+        input   [{:_id (m/create-id)
+                  :set #{}
                   :vec []
                   :map {}}
-                 {:set #{"a" "b" "c"}
+                 {:_id (m/create-id)
+                  :set #{"a" "b" "c"}
                   :vec [1 2 3]
                   :map {:a :x
                         :b :y}}]]
@@ -456,16 +462,16 @@
     (is (= 2 (m/count-collection db-spec coll)))
 
     (testing "replace document and return original"
-      (is (match? {:_id m/id? :foo 1 :data "bar"}
+      (is (match? {:_id m/object-id? :foo 1 :data "bar"}
                   (m/find-one-and-replace! db-spec coll {:foo 1} {:foo 4 :data "bar 2"} :return :before)))
-      (is (match? {:_id m/id? :foo 4 :data "bar 2"}
+      (is (match? {:_id m/object-id? :foo 4 :data "bar 2"}
                   (m/find-one db-spec coll :query {:foo 4})))
       (is (= 2 (m/count-collection db-spec coll))))
 
     (testing "replace document and return new version"
-      (is (match? {:_id m/id? :foo 2 :data "quuz 2"}
+      (is (match? {:_id m/object-id? :foo 2 :data "quuz 2"}
                   (m/find-one-and-replace! db-spec coll {:foo 2} {:foo 2 :data "quuz 2"} :return :after)))
-      (is (match? {:_id m/id? :foo 2 :data "quuz 2"}
+      (is (match? {:_id m/object-id? :foo 2 :data "quuz 2"}
                   (m/find-one db-spec coll :query {:foo 2})))
       (is (= 2 (m/count-collection db-spec coll))))))
 
@@ -478,16 +484,16 @@
     (is (= 2 (m/count-collection db-spec coll)))
 
     (testing "update document and return original"
-      (is (match? {:_id m/id? :foo 1 :data "bar"}
+      (is (match? {:_id m/object-id? :foo 1 :data "bar"}
                   (m/find-one-and-update! db-spec coll {:foo 1} {$set {:bar 2}} :return :before)))
-      (is (match? {:_id m/id? :foo 1 :data "bar" :bar 2}
+      (is (match? {:_id m/object-id? :foo 1 :data "bar" :bar 2}
                   (m/find-one db-spec coll :query {:bar 2})))
       (is (= 2 (m/count-collection db-spec coll))))
 
     (testing "update document and return new version"
-      (is (match? {:_id m/id? :foo 2 :data "quuz" :quuz 4}
+      (is (match? {:_id m/object-id? :foo 2 :data "quuz" :quuz 4}
                   (m/find-one-and-update! db-spec coll {:foo 2} {$set {:quuz 4}} :return :after)))
-      (is (match? {:_id m/id? :foo 2 :data "quuz" :quuz 4}
+      (is (match? {:_id m/object-id? :foo 2 :data "quuz" :quuz 4}
                   (m/find-one db-spec coll :query {:foo 2})))
       (is (= 2 (m/count-collection db-spec coll))))))
 

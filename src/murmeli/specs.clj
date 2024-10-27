@@ -269,6 +269,7 @@
 (s/def ::batch-size int?)
 (s/def ::max-time-ms int?)
 (s/def ::keywords? boolean?)
+(s/def ::object-ids? boolean?)
 (s/def ::xform fn?)
 
 (s/def ::find-all-options (s/keys* :opt-un [::query
@@ -279,7 +280,8 @@
                                             ::skip
                                             ::batch-size
                                             ::max-time-ms
-                                            ::keywords?]))
+                                            ::keywords?
+                                            ::object-ids?]))
 
 (s/fdef m/find-all
   :args (s/cat :db-spec ::db-spec-with-db
@@ -291,6 +293,7 @@
 (s/def ::find-one-options (s/keys* :opt-un [::query
                                             ::projection
                                             ::keywords?
+                                            ::object-ids?
                                             ::warn-on-multiple?
                                             ::throw-on-multiple?]))
 
@@ -300,7 +303,8 @@
                :options ::find-one-options))
 
 (s/def ::find-by-id-options (s/keys* :opt-un [::projection
-                                              ::keywords?]))
+                                              ::keywords?
+                                              ::object-ids?]))
 
 (s/fdef m/find-by-id
   :args (s/cat :db-spec ::db-spec-with-db
@@ -326,7 +330,8 @@
   :args (s/cat :m map?)
   :ret bson?)
 
-(s/def ::from-bson-options (s/keys :opt-un [::keywords?]))
+(s/def ::from-bson-options (s/keys :opt-un [::keywords?
+                                            ::object-ids?]))
 
 (s/fdef mc/from-bson
   :args (s/cat :options (s/? ::from-bson-options)

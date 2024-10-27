@@ -4,6 +4,7 @@
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
             [murmeli.convert :as c]
+            [murmeli.core :as m]
             [murmeli.specs])
   (:import [org.bson BsonArray
                      BsonBoolean
@@ -14,6 +15,7 @@
                      BsonInt32
                      BsonInt64
                      BsonNull
+                     BsonObjectId
                      BsonString]))
 
 (deftest to-bson-test
@@ -31,6 +33,7 @@
   (is (instance? BsonString (c/to-bson :bar/foo)))
   (is (instance? BsonString (c/to-bson 'foo)))
   (is (instance? BsonString (c/to-bson 'bar/foo)))
+  (is (instance? BsonObjectId (c/to-bson (m/create-object-id))))
   (is (instance? BsonArray (c/to-bson (list 1 2 3))))
   (is (instance? BsonArray (c/to-bson (range 0 10))))
   (is (instance? BsonArray (c/to-bson [true (int 1) (long 2) "hello" nil])))
@@ -94,6 +97,12 @@
         output (roundtrip input)]
     (is (= ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"]
            (keys output)))))
+
+(deftest object-id-conversion-test
+  (let [oid  (m/create-object-id)
+        bson (c/to-bson oid)]
+    (is (= oid (c/from-bson {:object-ids? true} bson)))
+    (is (= (str oid) (c/from-bson {:object-ids? false} bson)))))
 
 #_{:clj-kondo/ignore [:unresolved-symbol]}
 (defspec to-bson-props 100

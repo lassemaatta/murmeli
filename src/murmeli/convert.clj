@@ -105,9 +105,7 @@
     (let [doc (BsonDocument. (count this))]
       (doseq [[k v] this]
         (let [k (-to-key k)]
-          (if (and (= "_id" k) (id? v))
-            (.put doc k (to-bson (ObjectId. ^String v)))
-            (.put doc k (to-bson v)))))
+          (.put doc k (to-bson v))))
       doc))
 
   ;; Clojure stuff
@@ -156,8 +154,9 @@
   (-from-bson [_ _]
     nil)
   BsonObjectId
-  (-from-bson [this _]
-    (.toHexString (.getValue this)))
+  (-from-bson [this {:keys [object-ids?]}]
+    (let [obj-id (.getValue this)]
+      (if object-ids? obj-id (.toHexString obj-id))))
   BsonBoolean
   (-from-bson [this _]
     (.getValue this))
@@ -195,7 +194,12 @@
          (apply array-map))))
 
 (defn from-bson
+  "Unwrap a `BsonValue` to produce a `String`, a clojure map, etc.
+  Options:
+  - `:keywords?`: Whether to transform map keys to keywords (`true`) or leave as strings (`false`)
+  - `:object-ids?`: Whether to transform `BsonObjectId` values to `ObjectID`s (`true`) or `String`s (`false`)
+  "
   ([bson]
-   (from-bson {} bson))
+   (from-bson {:object-ids? true} bson))
   ([opts ^BsonValue bson]
    (-from-bson bson opts)))
