@@ -89,10 +89,12 @@
   ([{:keys [database-name]
      :as   db-spec}]
    (with-db db-spec database-name))
-  ([db-spec
+  ([{::keys [^MongoDatabase db] :as db-spec}
     database-name]
    {:pre [database-name]}
-   (assoc db-spec ::db (get-database db-spec database-name))))
+   (if-not (and db (= database-name (.getName db)))
+     (assoc db-spec ::db (get-database db-spec database-name))
+     db-spec)))
 
 (defn list-dbs
   "List all databases"
