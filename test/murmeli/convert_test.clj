@@ -72,6 +72,7 @@
     [1 2 3]
     {"a" "b"}
     {"_id" "666d6ac707ac44090c958ad3"}
+    {"_id" "whatever"}
     {"a" "v"
      "b" [1 2 3]
      "c" 1
@@ -93,11 +94,6 @@
         output (roundtrip input)]
     (is (= ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"]
            (keys output)))))
-
-(deftest invalid-id-map-test
-  (is (thrown-with-msg? IllegalArgumentException
-                        #"state should be: hexString has 24 characters"
-                        (roundtrip {"_id" "123"}))))
 
 #_{:clj-kondo/ignore [:unresolved-symbol]}
 (defspec to-bson-props 100

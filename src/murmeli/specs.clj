@@ -32,7 +32,8 @@
                           false)))))
 
 (s/def ::id (s/or :str-id m/id?
-                  :object-id m/object-id?))
+                  :object-id m/object-id?
+                  :any-str string?))
 
 (defn valid-db-name?
   [db-name]

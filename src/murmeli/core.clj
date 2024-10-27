@@ -33,8 +33,8 @@
 
 (defn id?
   "Return true if given string represents an object-id"
-  [^String id]
-  (boolean (and (string? id) (ObjectId/isValid id))))
+  [id]
+  (c/id? id))
 
 (defn object-id?
   [id]
@@ -274,9 +274,9 @@
 
 ;; Insertion
 
-(defn- bson-value->object-id
+(defn- bson-value->document-id
   [^BsonValue v]
-  (.. v asObjectId getValue toHexString))
+  (c/from-bson v))
 
 (defn insert-one!
   [{::keys [^ClientSession session] :as db-spec}
@@ -288,7 +288,7 @@
         result (if session
                  (.insertOne coll session bson)
                  (.insertOne coll bson))]
-    (bson-value->object-id (.getInsertedId result))))
+    (bson-value->document-id (.getInsertedId result))))
 
 (defn insert-many!
   [{::keys [^ClientSession session] :as db-spec}
@@ -302,7 +302,7 @@
                  (.insertMany coll bsons))]
     (->> (.getInsertedIds result)
          (sort-by key)
-         (mapv (comp bson-value->object-id val)))))
+         (mapv (comp bson-value->document-id val)))))
 
 ;; Updates
 

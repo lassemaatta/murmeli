@@ -27,6 +27,10 @@
 
 (set! *warn-on-reflection* true)
 
+(defn id?
+  [^String id]
+  (boolean (and (string? id) (ObjectId/isValid id))))
+
 (defprotocol ToKey
   (-to-key [this] "Convert value to BSON map key"))
 
@@ -101,7 +105,7 @@
     (let [doc (BsonDocument. (count this))]
       (doseq [[k v] this]
         (let [k (-to-key k)]
-          (if (and (= "_id" k) (string? v))
+          (if (and (= "_id" k) (id? v))
             (.put doc k (to-bson (ObjectId. ^String v)))
             (.put doc k (to-bson v)))))
       doc))
