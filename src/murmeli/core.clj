@@ -297,7 +297,7 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    doc]
-  {:pre [db-spec collection doc]}
+  {:pre [db-spec collection (map? doc)]}
   (let [bson   (c/to-bson doc)
         coll   (get-collection db-spec collection)
         result (if session
@@ -309,7 +309,7 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    docs]
-  {:pre [db-spec collection docs]}
+  {:pre [db-spec collection (seq docs) (every? map? docs)]}
   (let [bsons  ^List (mapv c/to-bson docs)
         coll   (get-collection db-spec collection)
         result (if session
@@ -330,7 +330,7 @@
    query
    changes
    & {:as options}]
-  {:pre [db-spec collection query changes]}
+  {:pre [db-spec collection (map? query) (map? changes)]}
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
         updates (c/map->bson changes)
@@ -354,7 +354,7 @@
    query
    changes
    & {:as options}]
-  {:pre [db-spec collection query changes]}
+  {:pre [db-spec collection (map? query) (map? changes)]}
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
         updates (c/map->bson changes)
@@ -373,7 +373,7 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    & {:keys [query]}]
-  {:pre [db-spec collection query]}
+  {:pre [db-spec collection (map? query)]}
   (let [coll   (get-collection db-spec collection)
         query  (c/map->bson query)
         result (cond
@@ -386,7 +386,7 @@
   [{::keys [^ClientSession session] :as db-spec}
    collection
    & {:keys [query]}]
-  {:pre [db-spec collection query]}
+  {:pre [db-spec collection (map? query)]}
   (let [coll   (get-collection db-spec collection)
         query  (c/map->bson query)
         result (cond
@@ -586,7 +586,7 @@
       :or   {keywords?   true
              object-ids? true
              return      :after}}]
-  {:pre [db-spec collection (seq replacement) (seq query)]}
+  {:pre [db-spec collection (map? replacement) (map? query)]}
   (let [query       (c/map->bson query)
         replacement (c/to-bson replacement)
         options     (-> {:projection (when (seq projection)
@@ -619,7 +619,7 @@
       :or   {keywords?   true
              object-ids? true
              return      :after}}]
-  {:pre [db-spec collection (seq updates) (seq query)]}
+  {:pre [db-spec collection (map? updates) (map? query)]}
   (let [query   (c/map->bson query)
         updates (c/map->bson updates)
         options (-> {:projection (when (seq projection)
