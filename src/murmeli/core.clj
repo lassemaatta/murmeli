@@ -61,7 +61,9 @@
                         retry-writes?]}])}
   [db-spec]
   (let [settings (di/make-client-settings db-spec)]
-    (assoc db-spec ::client (MongoClients/create settings))))
+    (-> db-spec
+        (assoc ::client (MongoClients/create settings))
+        (dissoc ::db))))
 
 (defn connected?
   [{::keys [client]}]
