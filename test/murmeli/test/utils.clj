@@ -7,7 +7,12 @@
 
 (set! *warn-on-reflection* true)
 
-(def *container (atom nil))
+(defonce *containers (atom {}))
+(def ^:dynamic *container* nil)
+
+(def retain-containers?
+  "Cache containers between tests when running in a REPL"
+  (= "true" (System/getProperty "murmeli.repl")))
 
 (stest/instrument `tc/init)
 
@@ -24,18 +29,25 @@
 (defn container-fixture
   [test-fn]
   (doseq [image version-matrix]
-    (when (compare-and-set! *container nil (delay (tc/start! (config image))))
-      (log/infof "Starting container %s for tests" image))
-    (test-fn)
-    (let [c (deref *container)]
-      (when (realized? c)
-        (log/infof "Stopping container %s for tests" image)
-        (tc/stop! (force c))))
-    (reset! *container nil)))
+    (log/infof "Selecting image: %s" image)
+    (let [containers (swap! *containers (fn [containers]
+                                          (if (get containers image)
+                                            containers
+                                            (assoc containers image (delay (tc/start! (config image)))))))
+          container  (get containers image)]
+      (when (not (realized? container))
+        (log/infof "Created container %s for tests" image))
+      (binding [*container* container]
+        (test-fn))
+      (let [c (get (deref *containers) image)]
+        (when (and (realized? c) (not retain-containers?))
+          (log/infof "Stopping container %s for tests" image)
+          (tc/stop! (force c))))
+      (log/infof "Finished with %s" image))))
 
 (defn get-mongo-port
   []
-  (let [container @*container]
+  (let [container *container*]
     (when-not container
       (throw (ex-info "Container not running" {})))
     (get-in @container [:mapped-ports 27017])))
