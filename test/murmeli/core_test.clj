@@ -195,10 +195,10 @@
         (is (= [item-1 item-2 item-3]
                results)))
       (testing "projection"
-        (let [results (m/find-all db-spec coll :projection [:_id])]
+        (let [results (m/find-all db-spec coll :projection {:_id 1})]
           (is (= [{:_id id} {:_id id-2} {:_id id-3}]
                  results)))
-        (let [results (m/find-all db-spec coll :projection [:foo])]
+        (let [results (m/find-all db-spec coll :projection {:foo 1})]
           (is (= [{:_id id :foo 123} {:_id id-2} {:_id id-3 :foo 200}]
                  results))))
       (testing "sorting"
@@ -243,10 +243,10 @@
         (is (= [item-1 item-2 item-3]
                results)))
       (testing "projection"
-        (let [results (m/find-all db-spec coll :projection ["_id"] :keywords? false)]
+        (let [results (m/find-all db-spec coll :projection {"_id" 1} :keywords? false)]
           (is (= [{"_id" id} {"_id" id-2} {"_id" id-3}]
                  results)))
-        (let [results (m/find-all db-spec coll :projection ["foo"] :keywords? false)]
+        (let [results (m/find-all db-spec coll :projection {"foo" 1} :keywords? false)]
           (is (= [{"_id" id "foo" 123} {"_id" id-2} {"_id" id-3 "foo" 200}]
                  results))))
       (testing "sorting"

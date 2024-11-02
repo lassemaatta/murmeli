@@ -456,14 +456,6 @@
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     (transduce xform conj #{} it)))
 
-(defn- projection-keys->bson
-  [projection]
-  (->> projection
-       (mapcat (fn [field-name]
-                 [field-name 1]))
-       (apply array-map)
-       c/map->bson))
-
 (defn find-all
   [{::keys [^ClientSession session]
     :as    db-spec}
@@ -488,7 +480,7 @@
         query      (when (seq query)
                      (c/map->bson query))
         projection (when (seq projection)
-                     (projection-keys->bson projection))
+                     (c/map->bson projection))
         sort       (when (seq sort)
                      (c/map->bson sort))
         it         ^FindIterable (cond
@@ -565,7 +557,7 @@
         options (-> {:sort       (when (seq sort)
                                    (c/map->bson sort))
                      :projection (when (seq projection)
-                                   (projection-keys->bson projection))}
+                                   (c/map->bson projection))}
                     di/make-find-one-and-delete-options)
         coll    (get-collection db-spec collection)
         result  (cond
@@ -593,7 +585,7 @@
   (let [query       (c/map->bson query)
         replacement (c/to-bson replacement)
         options     (-> {:projection (when (seq projection)
-                                       (projection-keys->bson projection))
+                                       (c/map->bson projection))
                          :return     return
                          :sort       (when (seq sort)
                                        (c/map->bson sort))
@@ -626,7 +618,7 @@
   (let [query   (c/map->bson query)
         updates (c/map->bson updates)
         options (-> {:projection (when (seq projection)
-                                   (projection-keys->bson projection))
+                                   (c/map->bson projection))
                      :sort       sort
                      :return     return
                      :upsert?    upsert?}
