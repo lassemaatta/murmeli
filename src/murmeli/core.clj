@@ -95,7 +95,9 @@
     database-name]
    {:pre [database-name]}
    (if-not (and db (= database-name (.getName db)))
-     (assoc db-spec ::db (get-database db-spec database-name))
+     (do
+       (log/debugf "Loading database %s" database-name)
+       (assoc db-spec ::db (get-database db-spec database-name)))
      db-spec)))
 
 (defn list-dbs
@@ -103,7 +105,9 @@
   [{::keys [^MongoClient client
             ^ClientSession session]}
    & {:keys [keywords?]
-      :or   {keywords? true}}]
+      :or   {keywords? true}
+      :as   options}]
+  (log/debugf "list databases; %s" (select-keys options [:keywords?]))
   (let [it (cond
              session (.listDatabases client session BsonDocument)
              :else   (.listDatabases client BsonDocument))]
@@ -149,6 +153,7 @@
       :or   {keywords? true}
       :as   options}]
   {:pre [db-spec]}
+  (log/debugf "list collection names; %s" (select-keys options [:keywords?]))
   (let [it (cond
              session (.listCollectionNames db session)
              :else   (.listCollectionNames db))]
@@ -234,6 +239,15 @@
    index-keys
    & {:as options}]
   {:pre [db-spec collection (seq index-keys)]}
+  (log/debugf "create index; %s %s %s" collection index-keys (select-keys options [:background?
+                                                                                   :bits
+                                                                                   :default-language
+                                                                                   :expire-after-seconds
+                                                                                   :name
+                                                                                   :partial-filter-expression
+                                                                                   :sparse?
+                                                                                   :unique?
+                                                                                   :version]))
   (let [coll       (get-collection db-spec collection)
         index-keys (di/make-index-bson index-keys)
         io         (when options
@@ -250,8 +264,12 @@
    & {:keys [batch-size
              max-time-ms
              keywords?]
-      :or   {keywords? true}}]
+      :or   {keywords? true}
+      :as   options}]
   {:pre [db-spec collection]}
+  (log/debugf "list indexes; %s" (select-keys options [:batch-size
+                                                       :max-time-ms
+                                                       :keywords?]))
   (let [coll                    (get-collection db-spec collection)
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session BsonDocument)
@@ -301,6 +319,7 @@
    collection
    doc]
   {:pre [db-spec collection (map? doc)]}
+  (log/debugf "insert one; %s %s" collection (:_id doc))
   (let [bson   (c/to-bson doc)
         coll   (get-collection db-spec collection)
         result (if session
@@ -313,6 +332,7 @@
    collection
    docs]
   {:pre [db-spec collection (seq docs) (every? map? docs)]}
+  (log/debugf "insert many; %s %s" collection (count docs))
   (let [bsons  ^List (mapv c/to-bson docs)
         coll   (get-collection db-spec collection)
         result (if session
@@ -334,6 +354,7 @@
    changes
    & {:as options}]
   {:pre [db-spec collection (map? query) (map? changes)]}
+  (log/debugf "update one; %s %s" collection (select-keys options [:upsert?]))
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
         updates (c/map->bson changes)
@@ -358,6 +379,7 @@
    changes
    & {:as options}]
   {:pre [db-spec collection (map? query) (map? changes)]}
+  (log/debugf "update many; %s %s" collection (select-keys options [:upsert?]))
   (let [coll    (get-collection db-spec collection)
         filter  (c/map->bson query)
         updates (c/map->bson changes)
@@ -382,6 +404,7 @@
    replacement
    & {:as options}]
   {:pre [db-spec collection (map? query) (map? replacement)]}
+  (log/debugf "replace one; %s %s" collection (select-keys options [:upsert?]))
   (let [coll        (get-collection db-spec collection)
         filter      (c/map->bson query)
         replacement (c/to-bson replacement)
@@ -403,6 +426,7 @@
    collection
    & {:keys [query]}]
   {:pre [db-spec collection (map? query)]}
+  (log/debugf "delete one; %s" collection)
   (let [coll   (get-collection db-spec collection)
         query  (c/map->bson query)
         result (cond
@@ -416,6 +440,7 @@
    collection
    & {:keys [query]}]
   {:pre [db-spec collection (map? query)]}
+  (log/debugf "delete many; %s" collection)
   (let [coll   (get-collection db-spec collection)
         query  (c/map->bson query)
         result (cond
@@ -464,8 +489,10 @@
              keywords?
              object-ids?]
       :or   {keywords?   true
-             object-ids? true}}]
+             object-ids? true}
+      :as   options}]
   {:pre [db-spec collection field]}
+  (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :object-ids? :batch-size :max-time-ms]))
   (let [xform-clj            (bson->clj-xform {:keywords?   keywords?
                                                :object-ids? object-ids?})
         xform                (if xform (comp xform-clj xform) xform-clj)
@@ -480,7 +507,9 @@
                                :else               (.distinct coll field-name BsonValue))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-    (transduce xform conj #{} it)))
+    (let [res (transduce xform conj #{} it)]
+      (log/debugf "distinct results: %d" (count res))
+      res)))
 
 (defn find-all
   [{::keys [^ClientSession session]
@@ -497,8 +526,10 @@
              keywords?
              object-ids?]
       :or   {keywords?   true
-             object-ids? true}}]
+             object-ids? true}
+      :as   options}]
   {:pre [db-spec collection]}
+  (log/debugf "find all; %s %s" collection (select-keys options [:keywords? :object-ids? :batch-size :max-time-ms :limit :skip]))
   (let [xform-clj  (bson->clj-xform {:keywords?   keywords?
                                      :object-ids? object-ids?})
         xform      (if xform (comp xform-clj xform) xform-clj)
@@ -521,7 +552,9 @@
     (when sort (.sort it sort))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     ;; Eagerly consume the results, but without chunking
-    (transduce xform conj it)))
+    (let [res (transduce xform conj it)]
+      (log/debugf "find all results: %d" (count res))
+      res)))
 
 (defn find-one
   "Like `find-all`, but fetches a single document
@@ -541,6 +574,7 @@
              throw-on-multiple? true}
       :as   options}]
   {:pre [db-spec collection]}
+  (log/debugf "find one; %s %s" collection (select-keys options [:keywords? :warn-on-multiple? :throw-on-multiple?]))
   (let [;; "A negative limit is similar to a positive limit but closes the cursor after
         ;; returning a single batch of results."
         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
@@ -550,6 +584,7 @@
                       (assoc :limit cnt :batch-size 2))
         results   (find-all db-spec collection options)
         multiple? (< 1 (count results))]
+    (log/debugf "find one results: %d" (count results))
     ;; Check if the query really did produce a single result, or did we (accidentally?)
     ;; match multiple documents?
     (when (and multiple? warn-on-multiple?)
@@ -565,6 +600,7 @@
                                                 object-ids?]}])}
   [db-spec collection id & {:as options}]
   {:pre [db-spec collection id]}
+  (log/debugf "find by id; %s %s %s" collection id (select-keys options [:keywords?]))
   (find-one db-spec collection (assoc options :query {:_id id})))
 
 ;; Find one and - API
@@ -577,8 +613,10 @@
    collection
    query
    & {:keys [projection sort keywords?]
-      :or   {keywords? true}}]
+      :or   {keywords? true}
+      :as   options}]
   {:pre [db-spec collection (seq query)]}
+  (log/debugf "find one and delete; %s %s" collection (select-keys options [:keywords?]))
   (let [query   (c/map->bson query)
         options (-> {:sort       (when (seq sort)
                                    (c/map->bson sort))
@@ -606,8 +644,10 @@
    & {:keys [projection sort return upsert? keywords? object-ids?]
       :or   {keywords?   true
              object-ids? true
-             return      :after}}]
+             return      :after}
+      :as   options}]
   {:pre [db-spec collection (map? replacement) (map? query)]}
+  (log/debugf "find one and replace; %s %s" collection (select-keys options [:keywords? :upsert? :return]))
   (let [query       (c/map->bson query)
         replacement (c/to-bson replacement)
         options     (-> {:projection (when (seq projection)
@@ -639,8 +679,10 @@
    & {:keys [projection sort return upsert? keywords? object-ids?]
       :or   {keywords?   true
              object-ids? true
-             return      :after}}]
+             return      :after}
+      :as   options}]
   {:pre [db-spec collection (map? updates) (map? query)]}
+  (log/debugf "find one and update; %s %s" collection (select-keys options [:keywords? :upsert? :return]))
   (let [query   (c/map->bson query)
         updates (c/map->bson updates)
         options (-> {:projection (when (seq projection)
@@ -673,8 +715,10 @@
              keywords?
              object-ids?]
       :or   {keywords?   true
-             object-ids? true}}]
+             object-ids? true}
+      :as   options}]
   {:pre [db-spec collection (sequential? pipeline)]}
+  (log/debugf "aggregate; %s %s" collection (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
   (let [coll      (get-collection db-spec collection)
         pipeline  ^List (mapv c/map->bson pipeline)
         it        (cond
