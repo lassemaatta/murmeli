@@ -18,6 +18,7 @@
                                      FindOneAndUpdateOptions
                                      IndexOptions
                                      Indexes
+                                     ReplaceOptions
                                      ReturnDocument
                                      UpdateOptions]
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
@@ -181,6 +182,14 @@
   [{:keys [upsert?]}]
   (when upsert?
     (let [options (UpdateOptions.)]
+      (.upsert options true)
+      options)))
+
+(defn make-replace-options
+  ^ReplaceOptions
+  [{:keys [upsert?]}]
+  (when upsert?
+    (let [options (ReplaceOptions.)]
       (.upsert options true)
       options)))
 

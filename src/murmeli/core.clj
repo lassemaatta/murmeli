@@ -370,6 +370,32 @@
     {:modified (.getModifiedCount result)
      :matched  (.getMatchedCount result)}))
 
+;; Replace
+
+(defn replace-one!
+  "Find document(s) matching `query` and replace the first one.
+  Returns a map describing if a match was found and if it was actually altered."
+  {:arglists '([db-spec collection query changes & {:keys [upsert?]}])}
+  [{::keys [^ClientSession session] :as db-spec}
+   collection
+   query
+   replacement
+   & {:as options}]
+  {:pre [db-spec collection (map? query) (map? replacement)]}
+  (let [coll        (get-collection db-spec collection)
+        filter      (c/map->bson query)
+        replacement (c/to-bson replacement)
+        options     (di/make-replace-options (or options {}))
+        result      (cond
+                      (and session options) (.replaceOne coll session filter replacement options)
+                      session               (.replaceOne coll session filter replacement)
+                      options               (.replaceOne coll filter replacement options)
+                      :else                 (.replaceOne coll filter replacement))]
+    ;; There doesn't seem to be a way to verify that the query would match
+    ;; just a single document because matched count is always either 0 or 1 :(
+    {:modified (.getModifiedCount result)
+     :matched  (.getMatchedCount result)}))
+
 ;; Deletes
 
 (defn delete-one!
