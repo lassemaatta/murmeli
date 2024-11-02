@@ -9,6 +9,7 @@
                       Map
                       Set
                       UUID]
+           [java.util.regex Pattern]
            [org.bson BsonArray
                      BsonBinary
                      BsonBoolean
@@ -20,6 +21,7 @@
                      BsonInt64
                      BsonNull
                      BsonObjectId
+                     BsonRegularExpression
                      BsonString
                      BsonValue]
            [org.bson.conversions Bson]
@@ -83,6 +85,9 @@
   String
   (-to-bson [this]
     (BsonString. this))
+  Pattern
+  (-to-bson [this]
+    (BsonRegularExpression. (.pattern this)))
   Date
   (-to-bson [this]
     (BsonDateTime. (.getTime this)))
@@ -175,6 +180,11 @@
   BsonString
   (-from-bson [this _]
     (.getValue this))
+  BsonRegularExpression
+  (-from-bson [this _]
+    (let [pattern  (.getPattern this)
+          _options (.getOptions this)]
+      (Pattern/compile pattern)))
   BsonDateTime
   (-from-bson [this _]
     (Date. (.getValue this)))

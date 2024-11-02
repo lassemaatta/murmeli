@@ -16,6 +16,7 @@
                      BsonInt64
                      BsonNull
                      BsonObjectId
+                     BsonRegularExpression
                      BsonString]))
 
 (deftest to-bson-test
@@ -33,6 +34,7 @@
   (is (instance? BsonString (c/to-bson :bar/foo)))
   (is (instance? BsonString (c/to-bson 'foo)))
   (is (instance? BsonString (c/to-bson 'bar/foo)))
+  (is (instance? BsonRegularExpression (c/to-bson #"asd")))
   (is (instance? BsonObjectId (c/to-bson (m/create-object-id))))
   (is (instance? BsonArray (c/to-bson (list 1 2 3))))
   (is (instance? BsonArray (c/to-bson (range 0 10))))
