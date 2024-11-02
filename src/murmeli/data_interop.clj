@@ -141,18 +141,24 @@
 (defn make-index-options
   ^IndexOptions
   [{:keys [background?
+           bits
+           default-language
+           expire-after-seconds
            name
-           version
            partial-filter-expression
+           sparse?
            unique?
-           sparse?]}]
+           version]}]
   (cond-> (IndexOptions.)
     background?               (.background true)
+    bits                      (.bits (int bits))
+    default-language          (.defaultLanguage default-language)
+    expire-after-seconds      (.expireAfter (long expire-after-seconds) TimeUnit/SECONDS)
     name                      (.name name)
-    version                   (.version (int version))
     partial-filter-expression (.partialFilterExpression (c/map->bson partial-filter-expression))
+    sparse?                   (.sparse true)
     unique?                   (.unique true)
-    sparse?                   (.sparse true)))
+    version                   (.version (int version))))
 
 (defn make-index-bson
   ^Bson [index-keys]

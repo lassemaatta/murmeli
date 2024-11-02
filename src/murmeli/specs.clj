@@ -172,16 +172,26 @@
                               :min-count 1
                               :max-count 64))
 
+(s/def ::document (s/map-of ::key any?))
+
 (s/def ::background? boolean?)
+(s/def ::bits ::integer)
+(s/def ::default-language ::non-blank-str)
+(s/def ::expire-after-seconds int?)
 (s/def ::name ::non-blank-str)
+(s/def ::partial-filter-expression ::document)
 (s/def ::version ::integer)
 (s/def ::unique? boolean?)
 (s/def ::sparse? boolean?)
 (s/def ::create-index-options (s/keys* :opt-un [::background?
+                                                ::bits
+                                                ::default-language
+                                                ::expire-after-seconds
                                                 ::name
-                                                ::version
+                                                ::partial-filter-expression
+                                                ::sparse?
                                                 ::unique?
-                                                ::sparse?]))
+                                                ::version]))
 
 (s/fdef m/create-index!
   :args (s/cat :db-spec ::db-spec-with-db
@@ -210,8 +220,6 @@
   :args (s/cat :db-spec ::db-spec-with-db
                :collection ::collection
                :index-name ::name))
-
-(s/def ::document (s/map-of ::key any?))
 
 (s/fdef m/insert-one!
   :args (s/cat :db-spec ::db-spec-with-db
@@ -422,10 +430,14 @@
   :ret session-options?)
 
 (s/def ::make-index-options (s/keys :opt-un [::background?
+                                             ::bits
+                                             ::default-language
+                                             ::expire-after-seconds
                                              ::name
-                                             ::version
+                                             ::partial-filter-expression
+                                             ::sparse?
                                              ::unique?
-                                             ::sparse?]))
+                                             ::version]))
 
 (defn index-options?
   [object]

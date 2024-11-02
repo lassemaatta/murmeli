@@ -220,12 +220,15 @@
   {:arglists '([db-spec
                 collection
                 index-keys
-                & {:keys [background
+                & {:keys [background?
+                          bits
+                          default-language
+                          expire-after-seconds
                           name
-                          version
                           partial-filter-expression
+                          sparse?
                           unique?
-                          sparse?]}])}
+                          version]}])}
   [{::keys [^ClientSession session] :as db-spec}
    collection
    index-keys
