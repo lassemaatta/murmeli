@@ -446,10 +446,10 @@
     (m/insert-many! db-spec coll [{:foo 1 :data "bar"}
                                   {:foo 2 :data "quuz"}])
     (is (= 2 (m/count-collection db-spec coll)))
-    (is (match? {:_id m/id? :foo 1 :data "bar"}
+    (is (match? {:_id m/object-id? :foo 1 :data "bar"}
                 (m/find-one-and-delete! db-spec coll {:foo 1})))
     (is (= 1 (m/count-collection db-spec coll)))
-    (is (match? {:_id m/id? :foo 2 :data "quuz"}
+    (is (match? {:_id m/object-id? :foo 2 :data "quuz"}
                 (m/find-one-and-delete! db-spec coll {:foo 2})))
     (is (zero? (m/count-collection db-spec coll)))))
 

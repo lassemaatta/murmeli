@@ -4,7 +4,8 @@
             [murmeli.convert :as c]
             [murmeli.cursor]
             [murmeli.data-interop :as di])
-  (:import [com.mongodb.client ClientSession
+  (:import [clojure.lang PersistentHashMap]
+           [com.mongodb.client ClientSession
                                DistinctIterable
                                FindIterable
                                ListIndexesIterable
@@ -12,18 +13,13 @@
                                MongoClients
                                MongoCollection
                                MongoDatabase]
+           [com.mongodb.client.model IndexOptions]
            [java.util List]
            [java.util.concurrent TimeUnit]
-           [org.bson BsonDocument BsonValue]
+           [org.bson BsonType BsonValue]
            [org.bson.types ObjectId]))
 
 (set! *warn-on-reflection* true)
-
-(defn- bson->clj-xform
-  "Transforms BSON documents to clojure maps, optionally with map keys as keywords
-  and `ObjectId` handled as strings"
-  [opts]
-  (map (partial c/from-bson opts)))
 
 ;; Utilities
 
@@ -35,7 +31,7 @@
 (defn create-id
   "Returns a new object-id as string"
   []
-  (str (ObjectId/get)))
+  (str (create-object-id)))
 
 (defn id?
   "Return true if given string represents an object-id"
@@ -58,7 +54,8 @@
                         write-concern
                         read-preference
                         retry-reads?
-                        retry-writes?]}])}
+                        retry-writes?
+                        keywords?]}])}
   [db-spec]
   (let [settings (di/make-client-settings db-spec)]
     (-> db-spec
@@ -103,15 +100,12 @@
 (defn list-dbs
   "List all databases"
   [{::keys [^MongoClient client
-            ^ClientSession session]}
-   & {:keys [keywords?]
-      :or   {keywords? true}
-      :as   options}]
-  (log/debugf "list databases; %s" (select-keys options [:keywords?]))
+            ^ClientSession session]}]
+  (log/debugf "list databases")
   (let [it (cond
-             session (.listDatabases client session BsonDocument)
-             :else   (.listDatabases client BsonDocument))]
-    (transduce (bson->clj-xform {:keywords? keywords?}) conj it)))
+             session (.listDatabases client session PersistentHashMap)
+             :else   (.listDatabases client PersistentHashMap))]
+    (into [] it)))
 
 (defn drop-db!
   "Drop a database"
@@ -138,10 +132,17 @@
     :else   (.createCollection db (name collection))))
 
 (defn- get-collection
-  ^MongoCollection
-  [{::keys [^MongoDatabase db]} collection]
-  {:pre [db collection]}
-  (.getCollection db (name collection) BsonDocument))
+  (^MongoCollection
+   [db-spec collection]
+   (get-collection db-spec collection {}))
+  (^MongoCollection
+   [{::keys [^MongoDatabase db] :as db-spec} collection opts]
+   {:pre [db collection opts]}
+   (let [registry-opts (merge (select-keys db-spec [:keywords?])
+                              opts)]
+     (-> db
+         (.getCollection (name collection) PersistentHashMap)
+         (.withCodecRegistry (c/registry registry-opts))))))
 
 (defn list-collection-names
   [{::keys [^MongoDatabase db
@@ -248,10 +249,13 @@
                                                                                    :sparse?
                                                                                    :unique?
                                                                                    :version]))
-  (let [coll       (get-collection db-spec collection)
-        index-keys (di/make-index-bson index-keys)
-        io         (when options
-                     (di/make-index-options options))]
+  (let [coll             (get-collection db-spec collection)
+        index-keys       (di/make-index-bson index-keys)
+        ^IndexOptions io (cond-> options
+                           (:partial-filter-expression options)
+                           (update :partial-filter-expression (fn [pfe] (c/map->bson pfe (.getCodecRegistry coll))))
+                           (seq options)
+                           (di/make-index-options))]
     (cond
       (and io session) (.createIndex coll session index-keys io)
       session          (.createIndex coll session index-keys)
@@ -270,13 +274,13 @@
   (log/debugf "list indexes; %s" (select-keys options [:batch-size
                                                        :max-time-ms
                                                        :keywords?]))
-  (let [coll                    (get-collection db-spec collection)
+  (let [coll                    (get-collection db-spec collection {:keywords? keywords?})
         ^ListIndexesIterable it (if session
-                                  (.listIndexes coll session BsonDocument)
-                                  (.listIndexes coll BsonDocument))]
+                                  (.listIndexes coll session PersistentHashMap)
+                                  (.listIndexes coll PersistentHashMap))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-    (transduce (bson->clj-xform {:keywords? keywords?}) conj it)))
+    (into [] it)))
 
 (defn drop-all-indexes!
   [{::keys [^ClientSession session] :as db-spec}
@@ -311,8 +315,12 @@
 ;; Insertion
 
 (defn- bson-value->document-id
+  "The inserted ID is either a `BsonObjectId` or `BsonString`"
   [^BsonValue v]
-  (c/from-bson v))
+  (let [t (.getBsonType v)]
+    (cond
+      (= t BsonType/STRING)    (-> v .asString .getValue)
+      (= t BsonType/OBJECT_ID) (-> v .asObjectId .getValue))))
 
 (defn insert-one!
   [{::keys [^ClientSession session] :as db-spec}
@@ -320,11 +328,10 @@
    doc]
   {:pre [db-spec collection (map? doc)]}
   (log/debugf "insert one; %s %s" collection (:_id doc))
-  (let [bson   (c/to-bson doc)
-        coll   (get-collection db-spec collection)
+  (let [coll   (get-collection db-spec collection)
         result (if session
-                 (.insertOne coll session bson)
-                 (.insertOne coll bson))]
+                 (.insertOne coll session doc)
+                 (.insertOne coll doc))]
     (bson-value->document-id (.getInsertedId result))))
 
 (defn insert-many!
@@ -333,7 +340,7 @@
    docs]
   {:pre [db-spec collection (seq docs) (every? map? docs)]}
   (log/debugf "insert many; %s %s" collection (count docs))
-  (let [bsons  ^List (mapv c/to-bson docs)
+  (let [bsons  ^List (mapv identity #_c/to-bson docs)
         coll   (get-collection db-spec collection)
         result (if session
                  (.insertMany coll session bsons)
@@ -356,8 +363,8 @@
   {:pre [db-spec collection (map? query) (map? changes)]}
   (log/debugf "update one; %s %s" collection (select-keys options [:upsert?]))
   (let [coll    (get-collection db-spec collection)
-        filter  (c/map->bson query)
-        updates (c/map->bson changes)
+        filter  (c/map->bson query (.getCodecRegistry coll))
+        updates (c/map->bson changes (.getCodecRegistry coll))
         options (di/make-update-options (or options {}))
         result  (cond
                   (and session options) (.updateOne coll session filter updates options)
@@ -381,8 +388,8 @@
   {:pre [db-spec collection (map? query) (map? changes)]}
   (log/debugf "update many; %s %s" collection (select-keys options [:upsert?]))
   (let [coll    (get-collection db-spec collection)
-        filter  (c/map->bson query)
-        updates (c/map->bson changes)
+        filter  (c/map->bson query (.getCodecRegistry coll))
+        updates (c/map->bson changes (.getCodecRegistry coll))
         options (di/make-update-options (or options {}))
         result  (cond
                   (and session options) (.updateMany coll session filter updates options)
@@ -405,15 +412,14 @@
    & {:as options}]
   {:pre [db-spec collection (map? query) (map? replacement)]}
   (log/debugf "replace one; %s %s" collection (select-keys options [:upsert?]))
-  (let [coll        (get-collection db-spec collection)
-        filter      (c/map->bson query)
-        replacement (c/to-bson replacement)
-        options     (di/make-replace-options (or options {}))
-        result      (cond
-                      (and session options) (.replaceOne coll session filter replacement options)
-                      session               (.replaceOne coll session filter replacement)
-                      options               (.replaceOne coll filter replacement options)
-                      :else                 (.replaceOne coll filter replacement))]
+  (let [coll    (get-collection db-spec collection)
+        filter  (c/map->bson query (.getCodecRegistry coll))
+        options (di/make-replace-options (or options {}))
+        result  (cond
+                  (and session options) (.replaceOne coll session filter replacement options)
+                  session               (.replaceOne coll session filter replacement)
+                  options               (.replaceOne coll filter replacement options)
+                  :else                 (.replaceOne coll filter replacement))]
     ;; There doesn't seem to be a way to verify that the query would match
     ;; just a single document because matched count is always either 0 or 1 :(
     {:modified (.getModifiedCount result)
@@ -428,7 +434,7 @@
   {:pre [db-spec collection (map? query)]}
   (log/debugf "delete one; %s" collection)
   (let [coll   (get-collection db-spec collection)
-        query  (c/map->bson query)
+        query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteOne coll session query)
                  :else   (.deleteOne coll query))]
@@ -442,7 +448,7 @@
   {:pre [db-spec collection (map? query)]}
   (log/debugf "delete many; %s" collection)
   (let [coll   (get-collection db-spec collection)
-        query  (c/map->bson query)
+        query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteMany coll session query)
                  :else   (.deleteMany coll query))]
@@ -458,7 +464,7 @@
   {:pre [db-spec collection]}
   (let [coll    (get-collection db-spec collection)
         query   (when query
-                  (c/map->bson query))
+                  (c/map->bson query (.getCodecRegistry coll)))
         options (di/make-count-options options)]
     (cond
       (and session query options) (.countDocuments coll session query options)
@@ -486,25 +492,22 @@
              batch-size
              xform
              max-time-ms
-             keywords?
-             object-ids?]
-      :or   {keywords?   true
-             object-ids? true}
+             keywords?]
+      :or   {keywords? true}
       :as   options}]
   {:pre [db-spec collection field]}
-  (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :object-ids? :batch-size :max-time-ms]))
-  (let [xform-clj            (bson->clj-xform {:keywords?   keywords?
-                                               :object-ids? object-ids?})
-        xform                (if xform (comp xform-clj xform) xform-clj)
-        coll                 (get-collection db-spec collection)
+  (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
+  (let [xform                (or xform (map identity))
+        coll                 (get-collection db-spec collection {:keywords? keywords?})
         field-name           (name field)
         query                (when (seq query)
-                               (c/map->bson query))
+                               (c/map->bson query (.getCodecRegistry coll)))
         ^DistinctIterable it (cond
-                               (and session query) (.distinct coll session field-name query BsonValue)
-                               session             (.distinct coll session field-name BsonValue)
-                               query               (.distinct coll field-name query BsonValue)
-                               :else               (.distinct coll field-name BsonValue))]
+                               ;; We don't know the type of the distinct field so use `Object`
+                               (and session query) (.distinct coll session field-name query Object)
+                               session             (.distinct coll session field-name Object)
+                               query               (.distinct coll field-name query Object)
+                               :else               (.distinct coll field-name Object))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     (let [res (transduce xform conj #{} it)]
@@ -523,28 +526,24 @@
              skip
              batch-size
              max-time-ms
-             keywords?
-             object-ids?]
-      :or   {keywords?   true
-             object-ids? true}
+             keywords?]
+      :or   {keywords? true}
       :as   options}]
   {:pre [db-spec collection]}
-  (log/debugf "find all; %s %s" collection (select-keys options [:keywords? :object-ids? :batch-size :max-time-ms :limit :skip]))
-  (let [xform-clj  (bson->clj-xform {:keywords?   keywords?
-                                     :object-ids? object-ids?})
-        xform      (if xform (comp xform-clj xform) xform-clj)
-        coll       (get-collection db-spec collection)
+  (log/debugf "find all; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
+  (let [coll       (get-collection db-spec collection {:keywords? keywords?})
         query      (when (seq query)
-                     (c/map->bson query))
+                     (c/map->bson query (.getCodecRegistry coll)))
         projection (when (seq projection)
-                     (c/map->bson projection))
+                     (c/map->bson projection (.getCodecRegistry coll)))
         sort       (when (seq sort)
-                     (c/map->bson sort))
+                     (c/map->bson sort (.getCodecRegistry coll)))
+        xform      (or xform (map identity))
         it         ^FindIterable (cond
-                                   (and query session) (.find coll session query)
-                                   session             (.find coll session)
-                                   query               (.find coll query)
-                                   :else               (.find coll))]
+                                   (and query session) (.find coll session query PersistentHashMap)
+                                   session             (.find coll session PersistentHashMap)
+                                   query               (.find coll query PersistentHashMap)
+                                   :else               (.find coll PersistentHashMap))]
     (when limit (.limit it (int limit)))
     (when skip (.skip it (int skip)))
     (when batch-size (.batchSize it (int batch-size)))
@@ -596,8 +595,7 @@
 (defn find-by-id
   "Like `find-one`, but fetches a single document by id."
   {:arglists '([db-spec collection id & {:keys [projection
-                                                keywords?
-                                                object-ids?]}])}
+                                                keywords?]}])}
   [db-spec collection id & {:as options}]
   {:pre [db-spec collection id]}
   (log/debugf "find by id; %s %s %s" collection id (select-keys options [:keywords?]))
@@ -617,20 +615,19 @@
       :as   options}]
   {:pre [db-spec collection (seq query)]}
   (log/debugf "find one and delete; %s %s" collection (select-keys options [:keywords?]))
-  (let [query   (c/map->bson query)
+  (let [coll    (get-collection db-spec collection {:keywords? keywords?})
+        query   (c/map->bson query (.getCodecRegistry coll))
         options (-> {:sort       (when (seq sort)
-                                   (c/map->bson sort))
+                                   (c/map->bson sort (.getCodecRegistry coll)))
                      :projection (when (seq projection)
-                                   (c/map->bson projection))}
+                                   (c/map->bson projection (.getCodecRegistry coll)))}
                     di/make-find-one-and-delete-options)
-        coll    (get-collection db-spec collection)
         result  (cond
                   (and session options) (.findOneAndDelete coll session query options)
                   session               (.findOneAndDelete coll session query)
                   options               (.findOneAndDelete coll query options)
                   :else                 (.findOneAndDelete coll query))]
-    (some->> result
-             (c/from-bson {:keywords? keywords?}))))
+    result))
 
 (defn find-one-and-replace!
   "Find a document and replace it.
@@ -641,31 +638,27 @@
    collection
    query
    replacement
-   & {:keys [projection sort return upsert? keywords? object-ids?]
-      :or   {keywords?   true
-             object-ids? true
-             return      :after}
+   & {:keys [projection sort return upsert? keywords?]
+      :or   {keywords? true
+             return    :after}
       :as   options}]
   {:pre [db-spec collection (map? replacement) (map? query)]}
-  (log/debugf "find one and replace; %s %s" collection (select-keys options [:keywords? :upsert? :return]))
-  (let [query       (c/map->bson query)
-        replacement (c/to-bson replacement)
-        options     (-> {:projection (when (seq projection)
-                                       (c/map->bson projection))
-                         :return     return
-                         :sort       (when (seq sort)
-                                       (c/map->bson sort))
-                         :upsert?    upsert?}
-                        di/make-find-one-and-replace-options)
-        coll        (get-collection db-spec collection)
-        result      (cond
-                      (and session options) (.findOneAndReplace coll session query replacement options)
-                      session               (.findOneAndReplace coll session query replacement)
-                      options               (.findOneAndReplace coll query replacement options)
-                      :else                 (.findOneAndReplace coll query replacement))]
-    (some->> result
-             (c/from-bson {:keywords?   keywords?
-                           :object-ids? object-ids?}))))
+  (log/debugf "find one and replace; %s %s" collection
+              (select-keys options [:keywords? :upsert? :return]))
+  (let [coll    (get-collection db-spec collection {:keywords? keywords?})
+        query   (c/map->bson query (.getCodecRegistry coll))
+        options (-> {:projection (when (seq projection)
+                                   (c/map->bson projection (.getCodecRegistry coll)))
+                     :return     return
+                     :sort       (when (seq sort)
+                                   (c/map->bson sort (.getCodecRegistry coll)))
+                     :upsert?    upsert?}
+                    di/make-find-one-and-replace-options)]
+    (cond
+      (and session options) (.findOneAndReplace coll session query replacement options)
+      session               (.findOneAndReplace coll session query replacement)
+      options               (.findOneAndReplace coll query replacement options)
+      :else                 (.findOneAndReplace coll query replacement))))
 
 (defn find-one-and-update!
   "Find a document and update it.
@@ -676,30 +669,28 @@
    collection
    query
    updates
-   & {:keys [projection sort return upsert? keywords? object-ids?]
-      :or   {keywords?   true
-             object-ids? true
-             return      :after}
+   & {:keys [projection sort return upsert? keywords?]
+      :or   {keywords? true
+             return    :after}
       :as   options}]
   {:pre [db-spec collection (map? updates) (map? query)]}
-  (log/debugf "find one and update; %s %s" collection (select-keys options [:keywords? :upsert? :return]))
-  (let [query   (c/map->bson query)
-        updates (c/map->bson updates)
+  (log/debugf "find one and update; %s %s" collection
+              (select-keys options [:keywords? :upsert? :return]))
+  (let [coll    (get-collection db-spec collection {:keywords? keywords?})
+        query   (c/map->bson query (.getCodecRegistry coll))
+        updates (c/map->bson updates (.getCodecRegistry coll))
         options (-> {:projection (when (seq projection)
-                                   (c/map->bson projection))
-                     :sort       sort
+                                   (c/map->bson projection (.getCodecRegistry coll)))
+                     :sort       (when (seq sort)
+                                   (c/map->bson sort (.getCodecRegistry coll)))
                      :return     return
                      :upsert?    upsert?}
-                    di/make-find-one-and-update-options)
-        coll    (get-collection db-spec collection)
-        result  (cond
-                  (and session options) (.findOneAndUpdate coll session query updates options)
-                  session               (.findOneAndUpdate coll session query updates)
-                  options               (.findOneAndUpdate coll query updates options)
-                  :else                 (.findOneAndUpdate coll query updates))]
-    (some->> result
-             (c/from-bson {:keywords?   keywords?
-                           :object-ids? object-ids?}))))
+                    di/make-find-one-and-update-options)]
+    (cond
+      (and session options) (.findOneAndUpdate coll session query updates options)
+      session               (.findOneAndUpdate coll session query updates)
+      options               (.findOneAndUpdate coll query updates options)
+      :else                 (.findOneAndUpdate coll query updates))))
 
 ;; Aggregation
 
@@ -712,21 +703,18 @@
              batch-size
              max-time-ms
              allow-disk-use?
-             keywords?
-             object-ids?]
-      :or   {keywords?   true
-             object-ids? true}
+             keywords?]
+      :or   {keywords? true}
       :as   options}]
   {:pre [db-spec collection (sequential? pipeline)]}
-  (log/debugf "aggregate; %s %s" collection (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
-  (let [coll      (get-collection db-spec collection)
-        pipeline  ^List (mapv c/map->bson pipeline)
-        it        (cond
-                    session (.aggregate coll session pipeline)
-                    :else   (.aggregate coll pipeline))
-        xform-clj (bson->clj-xform {:keywords?   keywords?
-                                    :object-ids? object-ids?})
-        xform     (if xform (comp xform-clj xform) xform-clj)]
+  (log/debugf "aggregate; %s %s" collection
+              (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
+  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+        pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
+        it       (cond
+                   session (.aggregate coll session pipeline)
+                   :else   (.aggregate coll pipeline))
+        xform    (or xform (map identity))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     (when allow-disk-use? (.allowDiskUse it (boolean allow-disk-use?)))

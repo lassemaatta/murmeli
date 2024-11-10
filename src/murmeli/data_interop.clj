@@ -88,7 +88,8 @@
            write-concern
            read-preference
            retry-reads?
-           retry-writes?]}]
+           retry-writes?
+           keywords?]}]
   (let [server-api (-> (ServerApi/builder)
                        (.version api-version)
                        .build)
@@ -116,6 +117,7 @@
                                                       (.enabled ssl-builder (boolean enabled?)))
                                                     (when (some? invalid-hostname-allowed?)
                                                       (.invalidHostNameAllowed ssl-builder (boolean invalid-hostname-allowed?))))))))
+    (.codecRegistry builder (c/registry {:keywords? keywords?}))
     (.build builder)))
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
@@ -156,7 +158,7 @@
     default-language          (.defaultLanguage default-language)
     expire-after-seconds      (.expireAfter (long expire-after-seconds) TimeUnit/SECONDS)
     name                      (.name name)
-    partial-filter-expression (.partialFilterExpression (c/map->bson partial-filter-expression))
+    partial-filter-expression (.partialFilterExpression partial-filter-expression)
     sparse?                   (.sparse true)
     unique?                   (.unique true)
     version                   (.version (int version))))
@@ -227,7 +229,7 @@
   (when (or projection sort return (some? upsert?))
     (cond-> (FindOneAndUpdateOptions.)
       projection      (.projection projection)
-      sort            (.sort (c/map->bson sort))
+      sort            (.sort sort)
       max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
       return          (.returnDocument (case return
                                          :after  ReturnDocument/AFTER

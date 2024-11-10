@@ -62,7 +62,8 @@
 (defn db-fixture
   [test-fn]
   (binding [*db-spec* (-> {:uri           (get-mongo-uri)
-                           :database-name "test-db"}
+                           :database-name "test-db"
+                           :keywords?     true}
                           m/connect-client!
                           m/with-db)]
     (try

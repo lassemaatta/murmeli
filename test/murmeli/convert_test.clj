@@ -1,87 +1,75 @@
 (ns murmeli.convert-test
-  (:require [clojure.test :refer [are deftest is]]
-            [clojure.test.check.clojure-test :refer [defspec]]
-            [clojure.test.check.generators :as gen]
-            [clojure.test.check.properties :as prop]
+  (:require [clojure.test :refer [are deftest is testing]]
             [murmeli.convert :as c]
-            [murmeli.core :as m]
             [murmeli.specs])
-  (:import [org.bson BsonArray
-                     BsonBoolean
-                     BsonDateTime
-                     BsonDecimal128
-                     BsonDocument
-                     BsonDouble
-                     BsonInt32
-                     BsonInt64
-                     BsonNull
-                     BsonObjectId
-                     BsonRegularExpression
-                     BsonString]))
+  (:import [java.nio ByteBuffer]
+           [java.util.regex Pattern]
+           [org.bson BsonBinaryReader BsonBinaryWriter ByteBufNIO]
+           [org.bson.codecs Codec DecoderContext EncoderContext]
+           [org.bson.codecs.configuration CodecRegistry]
+           [org.bson.io BasicOutputBuffer ByteBufferBsonInput OutputBuffer]
+           [org.bson.types ObjectId]))
 
-(deftest to-bson-test
-  (is (instance? BsonNull (c/to-bson nil)))
-  (is (instance? BsonBoolean (c/to-bson true)))
-  (is (instance? BsonInt32 (c/to-bson (int 1))))
-  (is (instance? BsonInt64 (c/to-bson (long 1))))
-  (is (instance? BsonDouble (c/to-bson (double 1.234))))
-  (is (instance? BsonDecimal128 (c/to-bson (bigdec 1.234))))
-  (is (instance? BsonDecimal128 (c/to-bson (bigint 1234))))
-  (is (instance? BsonDouble (c/to-bson (/ 1 3))))
-  (is (instance? BsonDateTime (c/to-bson #inst "2024-06-01")))
-  (is (instance? BsonString (c/to-bson "hello")))
-  (is (instance? BsonString (c/to-bson :foo)))
-  (is (instance? BsonString (c/to-bson :bar/foo)))
-  (is (instance? BsonString (c/to-bson 'foo)))
-  (is (instance? BsonString (c/to-bson 'bar/foo)))
-  (is (instance? BsonRegularExpression (c/to-bson #"asd")))
-  (is (instance? BsonObjectId (c/to-bson (m/create-object-id))))
-  (is (instance? BsonArray (c/to-bson (list 1 2 3))))
-  (is (instance? BsonArray (c/to-bson (range 0 10))))
-  (is (instance? BsonArray (c/to-bson [true (int 1) (long 2) "hello" nil])))
-  (is (instance? BsonArray (c/to-bson #{true (int 1) (long 2) "hello" nil})))
-  (is (instance? BsonDocument (c/to-bson {"key" "value"})))
-  (is (instance? BsonDocument (c/to-bson {:foo  1
-                                          :bar  [1 2 3]
-                                          :quuz #{"hello"}}))))
+(set! *warn-on-reflection* true)
 
-(deftest invalid-keys-test
-  (is (thrown-with-msg? RuntimeException
-                        #"Not a valid BSON map key"
-                        (c/to-bson {[1] :a-vector}))))
+(defn encode
+  "Encode `value` using `registry` into an `OutputBuffer`"
+  [^CodecRegistry registry value]
+  (let [codec  (.get registry (class value))
+        buffer (BasicOutputBuffer.)
+        writer (BsonBinaryWriter. buffer)]
+    (.encode codec writer value (-> (EncoderContext/builder) .build))
+    {:codec codec :buffer buffer}))
 
-(def roundtrip (comp c/from-bson c/to-bson))
+(defn decode
+  [{:keys [^OutputBuffer buffer ^Codec codec]}]
+  (let [bb     (ByteBuffer/wrap (.toByteArray buffer))
+        bbnio  (ByteBufNIO. bb)
+        bbbi   (ByteBufferBsonInput. bbnio)
+        reader (BsonBinaryReader. bbbi)]
+    (.decode codec reader (-> (DecoderContext/builder) .build))))
 
-(deftest simple-roundtrip-test
-  (are [value] (= value (roundtrip value))
-    nil
-    true
-    false
-    "a string"
-    (long 123)
-    Long/MIN_VALUE
-    Long/MAX_VALUE
-    (int 123)
-    (int Integer/MIN_VALUE)
-    (int Integer/MAX_VALUE)
-    (double 1.23)
-    (double Double/MIN_VALUE)
-    (double Double/MAX_VALUE)
-    (bigdec 1.23)
-    (bigdec Long/MAX_VALUE)
-    (bigdec Long/MIN_VALUE)
-    #inst "0000-01-01"
-    #inst "2024-06-01"
-    #inst "9999-12-31"
-    (list 1 2 3)
-    [1 2 3]
-    {"a" "b"}
-    {"_id" "666d6ac707ac44090c958ad3"}
-    {"_id" "whatever"}
-    {"a" "v"
-     "b" [1 2 3]
-     "c" 1
-     "d" {"a" 1}}))
+(defn roundtrip
+  ([value]
+   (roundtrip (c/registry {:keywords? true}) value))
+  ([registry value]
+   (decode (encode registry value))))
+
+(deftest roundtrip-test
+  (let [oid (ObjectId.)]
+    (are [value] (= value (roundtrip value))
+      {:nil nil}
+      {:bool true}
+      {:int (int 1)}
+      {:long (long 1)}
+      {:double 1.2}
+      {:object-id oid}
+      {:string "foo"}
+      {:inst #inst "2024-06-20"}
+      {:list '(1 2 3)}
+      {:map {:a 1
+             :b "2"
+             :c nil
+             :d false}}
+      {:vector [1 "2" 3 nil false]})))
+
+(deftest asymmetric-roundtrips
+  (testing "pattern"
+    (let [in           #"(?i)foobar\d+"
+          ^Pattern out (:foo (roundtrip {:foo in}))]
+      (is (instance? Pattern out))
+      (is (= (.pattern in) (.pattern out)))
+      (is (= (.flags in) (.flags out)))))
+  (testing "keyword values"
+    (let [in  {:foo [:bar]}
+          out (:foo (roundtrip in))]
+      (is (= ["bar"] out))))
+  (testing "list -> JSON array -> vector"
+    (let [in            {:l '(1 2 3)
+                         :r (range 1 3)}
+          {:keys [l r]} (roundtrip in)]
+      (is (vector? l))
+      (is (vector? r)))))
 
 (deftest map-key-ordering-test
   (let [input  (array-map "a" 1
@@ -97,32 +85,6 @@
                           "k" 11
                           "l" 12)
         output (roundtrip input)]
-    (is (= ["a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"]
-           (keys output)))))
-
-(deftest object-id-conversion-test
-  (let [oid  (m/create-object-id)
-        bson (c/to-bson oid)]
-    (is (= oid (c/from-bson {:object-ids? true} bson)))
-    (is (= (str oid) (c/from-bson {:object-ids? false} bson)))))
-
-#_{:clj-kondo/ignore [:unresolved-symbol]}
-(defspec to-bson-props 100
-  (prop/for-all [v gen/any]
-    (try
-      (c/to-bson v)
-      (catch Exception e
-        (let [msg (.getMessage e)]
-          (when-not (or (re-matches #"Conversion to Decimal128 would require inexact rounding of.*" msg)
-                        (re-matches #"Not a valid BSON map key.*" msg))
-            (throw e))
-          true)))))
-
-#_{:clj-kondo/ignore [:unresolved-symbol]}
-(defspec map->bson-props 100
-  (prop/for-all [m (gen/map (gen/one-of
-                              [gen/string-ascii
-                               gen/symbol
-                               gen/keyword])
-                            gen/any)]
-    (c/map->bson m)))
+    ;; BSON document -> hashmap : key ordering is not preserved
+    (is (not= (keys input)
+              (keys output)))))

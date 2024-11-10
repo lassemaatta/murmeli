@@ -14,7 +14,9 @@
                         WriteConcern]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
            [com.mongodb.client.model IndexOptions UpdateOptions]
+           [java.util.regex Pattern]
            [org.bson BsonValue]
+           [org.bson.codecs.configuration CodecRegistry]
            [org.bson.conversions Bson]))
 
 (set! *warn-on-reflection* true)
@@ -31,9 +33,17 @@
                         (catch Exception _
                           false)))))
 
+(s/def ::object-id m/object-id?)
+
 (s/def ::id (s/or :str-id m/id?
-                  :object-id m/object-id?
+                  :object-id ::object-id
                   :any-str string?))
+
+(s/def ::registry (fn [v] (instance? CodecRegistry v)))
+
+(defn bson?
+  [object]
+  (instance? Bson object))
 
 (defn valid-db-name?
   [db-name]
@@ -172,7 +182,9 @@
                               :min-count 1
                               :max-count 64))
 
-(s/def ::document (s/map-of ::key any?))
+(s/def ::document (s/map-of ::key ::convertable))
+
+(s/def ::bson bson?)
 
 (s/def ::background? boolean?)
 (s/def ::bits ::integer)
@@ -180,6 +192,7 @@
 (s/def ::expire-after-seconds int?)
 (s/def ::name ::non-blank-str)
 (s/def ::partial-filter-expression ::document)
+(s/def :bson/partial-filter-expression ::bson)
 (s/def ::version ::integer)
 (s/def ::unique? boolean?)
 (s/def ::sparse? boolean?)
@@ -277,7 +290,6 @@
 (s/def ::batch-size int?)
 (s/def ::max-time-ms int?)
 (s/def ::keywords? boolean?)
-(s/def ::object-ids? boolean?)
 (s/def ::xform fn?)
 
 (s/def ::find-all-options (s/keys* :opt-un [::query
@@ -288,8 +300,7 @@
                                             ::skip
                                             ::batch-size
                                             ::max-time-ms
-                                            ::keywords?
-                                            ::object-ids?]))
+                                            ::keywords?]))
 
 (s/fdef m/find-all
   :args (s/cat :db-spec ::db-spec-with-db
@@ -301,7 +312,6 @@
 (s/def ::find-one-options (s/keys* :opt-un [::query
                                             ::projection
                                             ::keywords?
-                                            ::object-ids?
                                             ::warn-on-multiple?
                                             ::throw-on-multiple?]))
 
@@ -311,8 +321,7 @@
                :options ::find-one-options))
 
 (s/def ::find-by-id-options (s/keys* :opt-un [::projection
-                                              ::keywords?
-                                              ::object-ids?]))
+                                              ::keywords?]))
 
 (s/fdef m/find-by-id
   :args (s/cat :db-spec ::db-spec-with-db
@@ -326,20 +335,33 @@
   [object]
   (instance? BsonValue object))
 
+(defn regex?
+  [re]
+  (instance? Pattern re))
+
+(s/def ::regex regex?)
+
+(s/def ::convertable (s/or :keyword keyword?
+                           :string string?
+                           :int int?
+                           :boolean boolean?
+                           :inst inst?
+                           :nil nil?
+                           :object-id ::object-id
+                           :pattern ::regex
+                           :set (s/coll-of ::convertable :into #{})
+                           :vec (s/coll-of ::convertable :into [])
+                           :map (s/map-of keyword? ::convertable)))
+
 (s/fdef mc/to-bson
-  :args (s/cat :object any?)
+  :args (s/cat :object ::convertable)
   :ret bson-value?)
 
-(defn bson?
-  [object]
-  (instance? Bson object))
-
 (s/fdef mc/map->bson
-  :args (s/cat :m map?)
-  :ret bson?)
+  :args (s/cat :m map? :registry ::registry)
+  :ret ::bson)
 
-(s/def ::from-bson-options (s/keys :opt-un [::keywords?
-                                            ::object-ids?]))
+(s/def ::from-bson-options (s/keys :opt-un [::keywords?]))
 
 (s/fdef mc/from-bson
   :args (s/cat :options (s/? ::from-bson-options)
@@ -434,7 +456,7 @@
                                              ::default-language
                                              ::expire-after-seconds
                                              ::name
-                                             ::partial-filter-expression
+                                             :bson/partial-filter-expression
                                              ::sparse?
                                              ::unique?
                                              ::version]))
@@ -449,7 +471,7 @@
 
 (s/fdef di/make-index-bson
   :args (s/cat :index-keys ::index-keys)
-  :ret bson?)
+  :ret ::bson)
 
 (s/def ::make-update-options (s/keys :opt-un [::upsert?]))
 
