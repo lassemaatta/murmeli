@@ -1,6 +1,7 @@
 (ns murmeli.data-interop-test
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
+            [clojure.spec.test.check :as-alias stc]
             [clojure.test :refer [deftest is]]
             [clojure.test.check.generators :as gen]
             [matcher-combinators.test]
@@ -28,8 +29,6 @@
                                                    ::ms/regex     regex-gen})]
                  (mc/map->bson doc registry)))
 
-;(println (gen/sample (bson-gen) 1))
-
 (deftest get-read-concern-test
   (is (match? passed
               (stest/check `di/get-read-concern))))
@@ -55,7 +54,10 @@
   (binding [s/*recursion-limit* 1]
     (is (match? passed
                 (stest/check `di/make-index-options
-                             {:gen {::ms/bson bson-gen}})))))
+                             {:gen       {::ms/bson bson-gen}
+                              ;; Generating the BSON can get expensive, so drop
+                              ;; the number of test runs from 1k to 100
+                              ::stc/opts {:num-tests 100}})))))
 
 (deftest make-index-bson-test
   (is (match? passed
