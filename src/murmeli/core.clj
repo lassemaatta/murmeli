@@ -88,13 +88,15 @@
   (.getDatabase client database-name))
 
 (defn with-db
-  "Find a database and store it in `db-spec`."
+  "Retrieve a database using the client and store it in `db-spec`."
   ([{:keys [database-name]
      :as   db-spec}]
    (with-db db-spec database-name))
   ([{::keys [^MongoDatabase db] :as db-spec}
     database-name]
    {:pre [database-name]}
+   (when-not (connected? db-spec)
+     (throw (ex-info "Cannot retrieve database without a connection" {:database-name database-name})))
    (if-not (and db (= database-name (.getName db)))
      (do
        (log/debugf "Loading database %s" database-name)
