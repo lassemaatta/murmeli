@@ -80,45 +80,43 @@
 
 (defn make-client-settings
   ^MongoClientSettings
-  [{:keys [^String uri
-           credentials
-           ssl-settings
-           cluster-settings
-           read-concern
-           write-concern
-           read-preference
-           retry-reads?
-           retry-writes?
-           keywords?]}]
-  (let [server-api (-> (ServerApi/builder)
-                       (.version api-version)
-                       .build)
-        builder    (-> (MongoClientSettings/builder)
-                       (.serverApi server-api))]
-    (when (some? uri) (.applyConnectionString builder (ConnectionString. uri)))
-    (when (some? retry-reads?) (.retryReads builder (boolean retry-reads?)))
-    (when (some? retry-writes?) (.retryWrites builder (boolean retry-writes?)))
-    (when read-concern (.readConcern builder (get-read-concern read-concern)))
-    (when write-concern (.writeConcern builder (get-write-concern write-concern)))
-    (when read-preference (.readPreference builder (get-read-preference read-preference)))
-    (when (seq credentials)
-      (let [{:keys [username auth-db ^String password]} credentials]
-        (.credential builder (MongoCredential/createScramSha256Credential username auth-db (.toCharArray password)))))
-    (when cluster-settings
-      (.applyToClusterSettings builder (apply-block (fn [^ClusterSettings$Builder cluster-builder]
-                                                      (let [{:keys [hosts]} cluster-settings]
-                                                        (when (seq hosts)
-                                                          (.hosts cluster-builder (make-hosts hosts))))))))
-    (when ssl-settings
-      (.applyToSslSettings builder (apply-block (fn [^SslSettings$Builder ssl-builder]
-                                                  (let [{:keys [enabled?
-                                                                invalid-hostname-allowed?]} ssl-settings]
-                                                    (when (some? enabled?)
-                                                      (.enabled ssl-builder (boolean enabled?)))
-                                                    (when (some? invalid-hostname-allowed?)
-                                                      (.invalidHostNameAllowed ssl-builder (boolean invalid-hostname-allowed?))))))))
-    (.codecRegistry builder (c/registry {:keywords? keywords?}))
-    (.build builder)))
+  [{:keys                      [^String uri
+                                credentials
+                                ssl-settings
+                                cluster-settings
+                                read-concern
+                                write-concern
+                                read-preference
+                                retry-reads?
+                                retry-writes?
+                                keywords?]
+    {:keys [username
+            auth-db
+            ^String password]} :credentials}]
+  (cond-> (MongoClientSettings/builder)
+    true                  (.serverApi (-> (ServerApi/builder)
+                                          (.version api-version)
+                                          .build))
+    uri                   (.applyConnectionString (ConnectionString. uri))
+    (some? retry-reads?)  (.retryReads (boolean retry-reads?))
+    (some? retry-writes?) (.retryWrites (boolean retry-writes?))
+    read-concern          (.readConcern (get-read-concern read-concern))
+    write-concern         (.writeConcern (get-write-concern write-concern))
+    read-preference       (.readPreference (get-read-preference read-preference))
+    (seq credentials)     (.credential (MongoCredential/createScramSha256Credential username auth-db (.toCharArray password)))
+    cluster-settings      (.applyToClusterSettings (apply-block (fn [^ClusterSettings$Builder cluster-builder]
+                                                                  (let [{:keys [hosts]} cluster-settings]
+                                                                    (when (seq hosts)
+                                                                      (.hosts cluster-builder (make-hosts hosts)))))))
+    ssl-settings          (.applyToSslSettings (apply-block (fn [^SslSettings$Builder ssl-builder]
+                                                              (let [{:keys [enabled?
+                                                                            invalid-hostname-allowed?]} ssl-settings]
+                                                                (when (some? enabled?)
+                                                                  (.enabled ssl-builder (boolean enabled?)))
+                                                                (when (some? invalid-hostname-allowed?)
+                                                                  (.invalidHostNameAllowed ssl-builder (boolean invalid-hostname-allowed?)))))))
+    true                  (.codecRegistry (c/registry {:keywords? keywords?}))
+    true                  (.build)))
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
 (defn make-client-session-options
