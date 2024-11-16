@@ -2,14 +2,9 @@
   (:import [clojure.lang APersistentMap
                          APersistentSet
                          APersistentVector
-                         BigInt
                          Keyword
-                         PersistentArrayMap
                          PersistentHashMap
-                         PersistentHashSet
-                         PersistentVector
-                         Ratio
-                         Symbol]
+                         PersistentVector]
            [com.mongodb MongoClientSettings]
            [java.util Date]
            [java.util.regex Pattern]
@@ -66,8 +61,7 @@
    BsonInt64             Long
    BsonObjectId          ObjectId
    BsonRegularExpression Pattern
-   BsonString            String
-   PersistentArrayMap    PersistentHashMap})
+   BsonString            String})
 
 (defn value->class
   [value overrides]
@@ -194,39 +188,9 @@
     (decode [_this ^BsonReader reader ^DecoderContext _ctx]
       (keyword (.readString reader)))))
 
-(def symbol-codec
-  "A `Codec` for `Symbol`."
-  (reify Codec
-    (getEncoderClass [_this] Symbol)
-    (^void encode [_this ^BsonWriter writer s ^EncoderContext _ctx]
-     (.writeString writer (name s)))
-    (decode [_this ^BsonReader reader ^DecoderContext _ctx]
-      (symbol (.readString reader)))))
-
-(def bigint-codec
-  "A `Codec` for `BigInt`."
-  (reify Codec
-    (getEncoderClass [_this] BigInt)
-    (^void encode [_this ^BsonWriter writer bi ^EncoderContext _ctx]
-     (.writeString writer (str bi)))
-    (decode [_this ^BsonReader reader ^DecoderContext _ctx]
-      (bigint (.readString reader)))))
-
-(def ratio-codec
-  "A `Codec` for `Ratio`."
-  (reify Codec
-    (getEncoderClass [_this] Ratio)
-    (^void encode [_this ^BsonWriter writer r ^EncoderContext _ctx]
-     (.writeStartArray writer)
-     (.writeInt64 writer (.longValue (.numerator ^Ratio r)))
-     (.writeInt64 writer (.longValue (.denominator ^Ratio r)))
-     (.writeEndArray writer))
-    (decode [_this ^BsonReader reader ^DecoderContext _ctx]
-      (bigint (.readString reader)))))
-
 (defn object-codec
   "A `Codec` for `Object`."
-  [^CodecRegistry registry opts]
+  [^CodecRegistry registry]
   (reify Codec
     (getEncoderClass [_this] Object)
     (^void encode [_this ^BsonWriter _writer v ^EncoderContext _ctx]
@@ -244,11 +208,8 @@
     (^Codec get [_this ^Class clazz ^CodecRegistry registry]
      (when clazz
        (cond
-         (= Object clazz)                            (object-codec registry opts)
+         (= Object clazz)                            (object-codec registry)
          (= Keyword clazz)                           keyword-codec
-         ;; (= Symbol clazz)                            symbol-codec
-         ;; (= BigInt clazz)                            bigint-codec
-         ;; (= Ratio clazz)                             ratio-codec
          (.isAssignableFrom APersistentMap clazz)    (map-codec registry opts)
          (.isAssignableFrom APersistentSet clazz)    (set-codec registry)
          (.isAssignableFrom APersistentVector clazz) (vector-codec registry))))))
