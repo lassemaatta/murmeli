@@ -215,6 +215,10 @@
          (.isAssignableFrom APersistentVector clazz) (vector-codec registry))))))
 
 (defn registry
+  "Construct a `CodecRegistry` for converting between Java classes and BSON
+  Options:
+  - `keywords?`: Decode map keys as keywords instead of strings"
+  {:arglists '([{:keys [keywords?]}])}
   [opts]
   (CodecRegistries/fromRegistries
     ^"[Lorg.bson.codecs.configuration.CodecRegistry;"
