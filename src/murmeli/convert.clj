@@ -79,8 +79,8 @@
   (let [clazz (BsonValueCodecProvider/getClassForBsonType bson-type)]
     (get overrides clazz clazz)))
 
-(defn phm-codec
-  "Build `Codec` for `PersistentHashMap`."
+(defn map-codec
+  "Build `Codec` for `APersistentMap`."
   ^Codec [^CodecRegistry registry {:keys [keywords?]}]
   (reify Codec
     (getEncoderClass [_this] APersistentMap)
@@ -119,11 +119,11 @@
         (.readEndDocument reader)
         m))))
 
-(defn pv-codec
-  "Build `Codec` for `PersistentVector`."
-  ^Codec [^CodecRegistry registry opts]
+(defn vector-codec
+  "Build `Codec` for `APersistentVector`."
+  ^Codec [^CodecRegistry registry]
   (reify Codec
-    (getEncoderClass [_this] PersistentVector)
+    (getEncoderClass [_this] APersistentVector)
     (^void encode [_this ^BsonWriter writer xs ^EncoderContext ctx]
      (.writeStartArray writer)
      (run! (fn [x]
@@ -154,11 +154,11 @@
         (.readEndArray reader)
         xs))))
 
-(defn phs-codec
-  "Build `Codec` for `PersistentHashSet`."
-  ^Codec [^CodecRegistry registry opts]
+(defn set-codec
+  "Build `Codec` for `APersistentSet`."
+  ^Codec [^CodecRegistry registry]
   (reify Codec
-    (getEncoderClass [_this] PersistentHashSet)
+    (getEncoderClass [_this] APersistentSet)
     (^void encode [_this ^BsonWriter writer xs ^EncoderContext ctx]
      (.writeStartArray writer)
      (run! (fn [x]
@@ -249,9 +249,9 @@
          ;; (= Symbol clazz)                            symbol-codec
          ;; (= BigInt clazz)                            bigint-codec
          ;; (= Ratio clazz)                             ratio-codec
-         (.isAssignableFrom APersistentMap clazz)    (phm-codec registry opts)
-         (.isAssignableFrom APersistentSet clazz)    (phs-codec registry opts)
-         (.isAssignableFrom APersistentVector clazz) (pv-codec registry opts))))))
+         (.isAssignableFrom APersistentMap clazz)    (map-codec registry opts)
+         (.isAssignableFrom APersistentSet clazz)    (set-codec registry)
+         (.isAssignableFrom APersistentVector clazz) (vector-codec registry))))))
 
 (defn registry
   [opts]
