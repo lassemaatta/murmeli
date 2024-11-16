@@ -70,8 +70,12 @@
   "Disconnect the Client and discard any related state"
   [{::keys [^MongoClient client]
     :as    db-spec}]
-  (.close client)
-  (select-keys db-spec [:uri]))
+  (when client
+    (.close client))
+  (->> db-spec
+       (filter (fn [[k _]]
+                 (simple-keyword? k)))
+       (into {})))
 
 ;; Databases
 

@@ -31,6 +31,22 @@
   (is (m/id? "667c471cea82561061cb1a96"))
   (is (m/id? (m/create-id))))
 
+(deftest connect-test
+  (let [original-db-spec (test-utils/get-db-spec)]
+    (is (m/connected? original-db-spec))
+    ;; Create a new parallel connection
+    (let [new-db-spec (dissoc original-db-spec ::m/client ::m/db)]
+      (is (not (m/connected? new-db-spec)) "Initially not connected")
+      (is (= new-db-spec (m/disconnect! new-db-spec)) "Disconnecting an unconnected db-spec does nothing")
+      (let [connected (m/connect-client! new-db-spec)]
+        (is (m/connected? connected))
+        (let [disconnected (m/disconnect! connected)]
+          (is (not (m/connected? disconnected)))
+          (is (= #{:uri
+                   :keywords?
+                   :database-name} (set (keys disconnected)))))))
+    (is (m/connected? original-db-spec))))
+
 (deftest db-test
   (testing "list databases "
     (let [db-spec (test-utils/get-db-spec)]
