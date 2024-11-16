@@ -188,6 +188,8 @@
   (reify Codec
     (getEncoderClass [_this] Keyword)
     (^void encode [_this ^BsonWriter writer k ^EncoderContext _ctx]
+     (when (qualified-keyword? k)
+       (throw (ex-info "Cannot serialize qualified keywords" {:k k})))
      (.writeString writer (name k)))
     (decode [_this ^BsonReader reader ^DecoderContext _ctx]
       (keyword (.readString reader)))))
