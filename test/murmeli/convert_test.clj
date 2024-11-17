@@ -1,7 +1,10 @@
 (ns murmeli.convert-test
   (:require [clojure.test :refer [are deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.properties :as properties]
             [murmeli.convert :as c]
-            [murmeli.specs])
+            [murmeli.specs]
+            [murmeli.test.generators :as mg])
   (:import [java.nio ByteBuffer]
            [java.util.regex Pattern]
            [org.bson BsonBinaryReader BsonBinaryWriter ByteBufNIO]
@@ -88,3 +91,13 @@
     ;; BSON document -> hashmap : key ordering is not preserved
     (is (not= (keys input)
               (keys output)))))
+
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
+(defspec map->bson-test 50
+  (properties/for-all [doc mg/doc-gen]
+    (try
+      ;; Use `.size` to force unwrapping the BSON which encodes it
+      (.size (c/map->bson doc mg/registry))
+      true
+      (catch Exception _
+        false))))
