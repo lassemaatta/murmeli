@@ -13,7 +13,14 @@
                         ReadPreference
                         WriteConcern]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
-           [com.mongodb.client.model IndexOptions UpdateOptions]
+           [com.mongodb.client.model Collation
+                                     CountOptions
+                                     FindOneAndDeleteOptions
+                                     FindOneAndReplaceOptions
+                                     FindOneAndUpdateOptions
+                                     IndexOptions
+                                     ReplaceOptions
+                                     UpdateOptions]
            [java.util.regex Pattern]
            [org.bson BsonValue]
            [org.bson.codecs.configuration CodecRegistry]
@@ -285,8 +292,8 @@
                         ;; "You can sort on a maximum of 32 keys."
                         :min-count 1
                         :max-count 32))
-(s/def ::limit int?)
-(s/def ::skip int?)
+(s/def ::limit ::integer)
+(s/def ::skip ::integer)
 (s/def ::batch-size int?)
 (s/def ::max-time-ms int?)
 (s/def ::keywords? boolean?)
@@ -341,7 +348,7 @@
 
 (s/def ::regex regex?)
 
-(s/def ::convertable (s/or :keyword keyword?
+(s/def ::convertable (s/or :keyword simple-keyword?
                            :string string?
                            :int int?
                            :boolean boolean?
@@ -351,7 +358,7 @@
                            :pattern ::regex
                            :set (s/coll-of ::convertable :into #{})
                            :vec (s/coll-of ::convertable :into [])
-                           :map (s/map-of keyword? ::convertable)))
+                           :map ::document))
 
 (s/fdef mc/to-bson
   :args (s/cat :object ::convertable)
@@ -440,26 +447,79 @@
   ;; May not be both causally consistent and snapshot
   (not (and causally-consistent? snapshot?)))
 
-(s/def ::client-session-options (s/and (s/keys :opt-un [::read-preference
+(s/def ::default-timeout-ms nat-int?)
+
+(s/def ::client-session-options (s/and (s/keys :opt-un [::causally-consistent?
+                                                        ::default-timeout-ms
                                                         ::read-concern
-                                                        ::write-concern
-                                                        ::causally-consistent?
-                                                        ::snapshot?])
+                                                        ::read-preference
+                                                        ::snapshot?
+                                                        ::write-concern])
                                        session-opts-valid?))
 
 (s/fdef di/make-client-session-options
   :args (s/cat :options ::client-session-options)
   :ret session-options?)
 
+(defn collation?
+  [object]
+  (instance? Collation object))
+
+(s/def ::collation collation?)
+
+(s/def ::alternate #{:non-ignorable :shifted})
+(s/def ::backwards? boolean?)
+(s/def ::case-first #{:lower :off :upper})
+(s/def ::case-sensitive? boolean?)
+(s/def ::locale ::non-blank-str)
+(s/def ::max-variable #{:punct :space})
+(s/def ::normalize? boolean?)
+(s/def ::numeric-ordering? boolean?)
+(s/def ::strength #{:identical
+                    :primary
+                    :quaternary
+                    :secondary
+                    :tertiary})
+
+(s/def ::collation-options (s/keys :opt-un [::alternate
+                                            ::backwards?
+                                            ::case-first
+                                            ::case-sensitive?
+                                            ::locale
+                                            ::max-variable
+                                            ::normalize?
+                                            ::numeric-ordering?
+                                            ::strength]))
+
+(s/fdef di/make-collation
+  :args (s/cat :options ::collation-options)
+  :ret (s/nilable ::collation))
+
+(s/def ::hidden? boolean?)
+(s/def ::language-override ::non-blank-str)
+(s/def ::sphere-version ::integer)
+(s/def :bson/storage-engine ::bson)
+(s/def ::text-version ::integer)
+(s/def :bson/weights ::bson)
+(s/def :bson/wildcard-projection ::bson)
+
 (s/def ::make-index-options (s/keys :opt-un [::background?
                                              ::bits
+                                             ::collation-options
                                              ::default-language
                                              ::expire-after-seconds
+                                             ::hidden?
+                                             ::language-override
                                              ::name
                                              :bson/partial-filter-expression
                                              ::sparse?
+                                             ::sphere-version
+                                             :bson/storage-engine
+                                             ::text-version
                                              ::unique?
-                                             ::version]))
+                                             ::version
+                                             :bson/weights
+                                             :bson/wildcard-projection]))
 
 (defn index-options?
   [object]
@@ -473,7 +533,19 @@
   :args (s/cat :index-keys ::index-keys)
   :ret ::bson)
 
-(s/def ::make-update-options (s/keys :opt-un [::upsert?]))
+(s/def ::array-filters (s/coll-of ::bson :into []))
+(s/def ::bypass-validation? boolean?)
+(s/def ::comment ::non-blank-str)
+(s/def :bson/hint ::bson)
+(s/def :bson/variables ::bson)
+
+(s/def ::make-update-options (s/keys :opt-un [::array-filters
+                                              ::bypass-validation?
+                                              ::collation-options
+                                              ::comment
+                                              :bson/hint
+                                              ::upsert?
+                                              :bson/variables]))
 
 (defn update-options?
   [object]
@@ -482,3 +554,94 @@
 (s/fdef di/make-update-options
   :args (s/cat :options ::make-update-options)
   :ret (s/nilable update-options?))
+
+(s/def ::make-replace-options (s/keys :opt-un [::bypass-validation?
+                                               ::collation-options
+                                               ::comment
+                                               :bson/hint
+                                               ::upsert?
+                                               :bson/variables]))
+
+(defn replace-options?
+  [object]
+  (instance? ReplaceOptions object))
+
+(s/fdef di/make-replace-options
+  :args (s/cat :options ::make-replace-options)
+  :ret (s/nilable replace-options?))
+
+(s/def :bson/projection ::bson)
+(s/def ::return #{:after :before})
+(s/def :bson/sort ::bson)
+
+(s/def ::make-find-one-and-delete-options (s/keys :opt-un [::collation-options
+                                                           ::comment
+                                                           :bson/hint
+                                                           ::max-time-ms
+                                                           :bson/projection
+                                                           ::return
+                                                           :bson/sort
+                                                           ::upsert?
+                                                           :bson/variables]))
+
+(defn find-one-and-delete-options?
+  [object]
+  (instance? FindOneAndDeleteOptions object))
+
+(s/fdef di/make-find-one-and-delete-options
+  :args (s/cat :options ::make-find-one-and-delete-options)
+  :ret (s/nilable find-one-and-delete-options?))
+
+(s/def ::make-find-one-and-replace-options (s/keys :opt-un [::bypass-validation?
+                                                            ::collation-options
+                                                            ::comment
+                                                            :bson/hint
+                                                            ::max-time-ms
+                                                            :bson/projection
+                                                            ::return
+                                                            :bson/sort
+                                                            ::upsert?
+                                                            :bson/variables]))
+
+(defn find-one-and-replace-options?
+  [object]
+  (instance? FindOneAndReplaceOptions object))
+
+(s/fdef di/make-find-one-and-replace-options
+  :args (s/cat :options ::make-find-one-and-replace-options)
+  :ret (s/nilable find-one-and-replace-options?))
+
+(s/def ::make-find-one-and-update-options (s/keys :opt-un [::array-filters
+                                                           ::bypass-validation?
+                                                           ::collation-options
+                                                           ::comment
+                                                           :bson/hint
+                                                           ::max-time-ms
+                                                           :bson/projection
+                                                           ::return
+                                                           :bson/sort
+                                                           ::upsert?
+                                                           :bson/variables]))
+
+(defn find-one-and-update-options?
+  [object]
+  (instance? FindOneAndUpdateOptions object))
+
+(s/fdef di/make-find-one-and-update-options
+  :args (s/cat :options ::make-find-one-and-update-options)
+  :ret (s/nilable find-one-and-update-options?))
+
+(s/def ::make-count-options (s/keys :opt-un [::collation-options
+                                             ::comment
+                                             :bson/hint
+                                             ::limit
+                                             ::max-time-ms
+                                             ::skip]))
+
+(defn count-options?
+  [object]
+  (instance? CountOptions object))
+
+(s/fdef di/make-count-options
+  :args (s/cat :options ::make-count-options)
+  :ret (s/nilable count-options?))

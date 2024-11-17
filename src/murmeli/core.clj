@@ -466,12 +466,15 @@
 (defn count-collection
   [{::keys [^ClientSession session] :as db-spec}
    collection
-   & {:keys [query] :as options}]
+   & {:keys [query hint] :as options}]
   {:pre [db-spec collection]}
-  (let [coll    (get-collection db-spec collection)
-        query   (when query
-                  (c/map->bson query (.getCodecRegistry coll)))
-        options (di/make-count-options options)]
+  (let [coll     (get-collection db-spec collection)
+        registry (.getCodecRegistry coll)
+        query    (when query
+                   (c/map->bson query registry))
+        options  (di/make-count-options
+                   (cond-> (or options {})
+                     (seq hint) (assoc :hint (c/map->bson hint registry))))]
     (cond
       (and session query options) (.countDocuments coll session query options)
       (and session query)         (.countDocuments coll session query)
@@ -616,24 +619,25 @@
     :as    db-spec}
    collection
    query
-   & {:keys [projection sort keywords?]
+   & {:keys [hint projection sort variables keywords?]
       :or   {keywords? true}
       :as   options}]
   {:pre [db-spec collection (seq query)]}
   (log/debugf "find one and delete; %s %s" collection (select-keys options [:keywords?]))
-  (let [coll    (get-collection db-spec collection {:keywords? keywords?})
-        query   (c/map->bson query (.getCodecRegistry coll))
-        options (-> {:sort       (when (seq sort)
-                                   (c/map->bson sort (.getCodecRegistry coll)))
-                     :projection (when (seq projection)
-                                   (c/map->bson projection (.getCodecRegistry coll)))}
-                    di/make-find-one-and-delete-options)
-        result  (cond
-                  (and session options) (.findOneAndDelete coll session query options)
-                  session               (.findOneAndDelete coll session query)
-                  options               (.findOneAndDelete coll query options)
-                  :else                 (.findOneAndDelete coll query))]
-    result))
+  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+        registry (.getCodecRegistry coll)
+        query    (c/map->bson query registry)
+        options  (di/make-find-one-and-delete-options
+                   (cond-> (or options {})
+                     (seq hint)       (assoc :hint (c/map->bson hint registry))
+                     (seq projection) (assoc :projection (c/map->bson projection registry))
+                     (seq sort)       (assoc :sort (c/map->bson sort registry))
+                     (seq variables)  (assoc :variables (c/map->bson variables registry))))]
+    (cond
+      (and session options) (.findOneAndDelete coll session query options)
+      session               (.findOneAndDelete coll session query)
+      options               (.findOneAndDelete coll query options)
+      :else                 (.findOneAndDelete coll query))))
 
 (defn find-one-and-replace!
   "Find a document and replace it.
@@ -644,22 +648,21 @@
    collection
    query
    replacement
-   & {:keys [projection sort return upsert? keywords?]
-      :or   {keywords? true
-             return    :after}
+   & {:keys [hint projection sort variables keywords?]
+      :or   {keywords? true}
       :as   options}]
   {:pre [db-spec collection (map? replacement) (map? query)]}
   (log/debugf "find one and replace; %s %s" collection
               (select-keys options [:keywords? :upsert? :return]))
-  (let [coll    (get-collection db-spec collection {:keywords? keywords?})
-        query   (c/map->bson query (.getCodecRegistry coll))
-        options (-> {:projection (when (seq projection)
-                                   (c/map->bson projection (.getCodecRegistry coll)))
-                     :return     return
-                     :sort       (when (seq sort)
-                                   (c/map->bson sort (.getCodecRegistry coll)))
-                     :upsert?    upsert?}
-                    di/make-find-one-and-replace-options)]
+  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+        registry (.getCodecRegistry coll)
+        query    (c/map->bson query registry)
+        options  (di/make-find-one-and-replace-options
+                   (cond-> (or options {})
+                     (seq hint)       (assoc :hint (c/map->bson hint registry))
+                     (seq projection) (assoc :projection (c/map->bson projection registry))
+                     (seq sort)       (assoc :sort (c/map->bson sort registry))
+                     (seq variables)  (assoc :variables (c/map->bson variables registry))))]
     (cond
       (and session options) (.findOneAndReplace coll session query replacement options)
       session               (.findOneAndReplace coll session query replacement)
@@ -675,23 +678,23 @@
    collection
    query
    updates
-   & {:keys [projection sort return upsert? keywords?]
-      :or   {keywords? true
-             return    :after}
+   & {:keys [array-filters hint projection sort variables keywords?]
+      :or   {keywords? true}
       :as   options}]
   {:pre [db-spec collection (map? updates) (map? query)]}
   (log/debugf "find one and update; %s %s" collection
               (select-keys options [:keywords? :upsert? :return]))
-  (let [coll    (get-collection db-spec collection {:keywords? keywords?})
-        query   (c/map->bson query (.getCodecRegistry coll))
-        updates (c/map->bson updates (.getCodecRegistry coll))
-        options (-> {:projection (when (seq projection)
-                                   (c/map->bson projection (.getCodecRegistry coll)))
-                     :sort       (when (seq sort)
-                                   (c/map->bson sort (.getCodecRegistry coll)))
-                     :return     return
-                     :upsert?    upsert?}
-                    di/make-find-one-and-update-options)]
+  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+        registry (.getCodecRegistry coll)
+        query    (c/map->bson query registry)
+        updates  (c/map->bson updates registry)
+        options  (di/make-find-one-and-update-options
+                   (cond-> (or options {})
+                     (seq array-filters) (assoc :array-filters (mapv (fn [f] (c/map->bson f registry)) array-filters))
+                     (seq hint)          (assoc :hint (c/map->bson hint registry))
+                     (seq projection)    (assoc :projection (c/map->bson projection registry))
+                     (seq sort)          (assoc :sort (c/map->bson sort registry))
+                     (seq variables)     (assoc :variables (c/map->bson variables registry))))]
     (cond
       (and session options) (.findOneAndUpdate coll session query updates options)
       session               (.findOneAndUpdate coll session query updates)

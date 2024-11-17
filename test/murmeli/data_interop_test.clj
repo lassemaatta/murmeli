@@ -33,6 +33,10 @@
   (is (match? passed
               (stest/check `di/make-client-session-options))))
 
+(deftest make-collation-test
+  (is (match? passed
+              (stest/check `di/make-collation))))
+
 (deftest make-index-options-test
   (is (match? passed
               (stest/check `di/make-index-options
@@ -47,4 +51,48 @@
 
 (deftest make-update-options-test
   (is (match? passed
-              (stest/check `di/make-update-options))))
+              (stest/check `di/make-update-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 50
+                            ::stc/opts {:num-tests 50}}))))
+
+(deftest make-replace-options-test
+  (is (match? passed
+              (stest/check `di/make-replace-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 100
+                            ::stc/opts {:num-tests 100}}))))
+
+(deftest make-find-one-and-delete-options-test
+  (is (match? passed
+              (stest/check `di/make-find-one-and-delete-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 100
+                            ::stc/opts {:num-tests 100}}))))
+
+(deftest make-find-one-and-replace-options-test
+  (is (match? passed
+              (stest/check `di/make-find-one-and-replace-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 100
+                            ::stc/opts {:num-tests 100}}))))
+
+(deftest make-find-one-and-update-options-test
+  (is (match? passed
+              (stest/check `di/make-find-one-and-update-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 50
+                            ::stc/opts {:num-tests 50}}))))
+
+(deftest make-count-options-test
+  (is (match? passed
+              (stest/check `di/make-count-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 50
+                            ::stc/opts {:num-tests 100}}))))

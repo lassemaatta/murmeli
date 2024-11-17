@@ -12,7 +12,12 @@
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
-           [com.mongodb.client.model CountOptions
+           [com.mongodb.client.model Collation
+                                     CollationAlternate
+                                     CollationCaseFirst
+                                     CollationMaxVariable
+                                     CollationStrength
+                                     CountOptions
                                      FindOneAndDeleteOptions
                                      FindOneAndReplaceOptions
                                      FindOneAndUpdateOptions
@@ -122,44 +127,104 @@
 (defn make-client-session-options
   ^ClientSessionOptions
   [{:keys [causally-consistent?
-           snapshot?
-           read-preference
+           default-timeout-ms
            read-concern
-           write-concern]
-    :or   {causally-consistent? false
-           snapshot?            false}}]
-  (-> (ClientSessionOptions/builder)
-      (.causallyConsistent causally-consistent?)
-      ;; https://www.mongodb.com/docs/manual/reference/read-concern-snapshot/
-      (.snapshot snapshot?)
-      (.defaultTransactionOptions (cond-> (TransactionOptions/builder)
-                                    read-preference (.readPreference (get-read-preference read-preference))
-                                    read-concern    (.readConcern (get-read-concern read-concern))
-                                    write-concern   (.writeConcern (get-write-concern write-concern))
-                                    true            .build))
-      .build))
+           read-preference
+           snapshot?
+           write-concern]}]
+  (cond-> (ClientSessionOptions/builder)
+    (some? causally-consistent?) (.causallyConsistent (boolean causally-consistent?))
+    default-timeout-ms           (.defaultTimeout (long default-timeout-ms) TimeUnit/MILLISECONDS)
+    (some? snapshot?)            (.snapshot (boolean snapshot?))
+    ;; https://www.mongodb.com/docs/manual/reference/read-concern-snapshot/
+    (or read-preference
+        read-concern
+        write-concern)           (.defaultTransactionOptions (cond-> (TransactionOptions/builder)
+                                                               read-preference (.readPreference (get-read-preference read-preference))
+                                                               read-concern    (.readConcern (get-read-concern read-concern))
+                                                               write-concern   (.writeConcern (get-write-concern write-concern))
+                                                               true            .build))
+    true                         (.build)))
+
+(defn make-collation
+  [{:keys [alternate
+           backwards?
+           case-first
+           case-sensitive?
+           locale
+           max-variable
+           normalize?
+           numeric-ordering?
+           strength]
+    :as   options}]
+  (when (seq options)
+    (cond-> (Collation/builder)
+      alternate                 (.collationAlternate (case alternate
+                                                       :non-ignorable CollationAlternate/NON_IGNORABLE
+                                                       :shifted       CollationAlternate/SHIFTED))
+      (some? backwards?)        (.backwards (boolean backwards?))
+      case-first                (.collationCaseFirst (case case-first
+                                                       :lower CollationCaseFirst/LOWER
+                                                       :off   CollationCaseFirst/OFF
+                                                       :upper CollationCaseFirst/UPPER))
+      (some? case-sensitive?)   (.caseLevel (boolean case-sensitive?))
+      locale                    (.locale locale)
+      max-variable              (.collationMaxVariable (case max-variable
+                                                         :punct CollationMaxVariable/PUNCT
+                                                         :space CollationMaxVariable/SPACE))
+      (some? normalize?)        (.normalization (boolean normalize?))
+      (some? numeric-ordering?) (.numericOrdering (boolean numeric-ordering?))
+      strength                  (.collationStrength (case strength
+                                                      :identical  CollationStrength/IDENTICAL
+                                                      :primary    CollationStrength/PRIMARY
+                                                      :quaternary CollationStrength/QUATERNARY
+                                                      :secondary  CollationStrength/SECONDARY
+                                                      :tertiary   CollationStrength/TERTIARY))
+      true                      (.build))))
 
 (defn make-index-options
   ^IndexOptions
   [{:keys [background?
            bits
+           collation-options
            default-language
            expire-after-seconds
+           hidden?
+           language-override
+           max-boundary
+           min-boundary
            name
            partial-filter-expression
            sparse?
+           sphere-version
+           storage-engine
+           text-version
            unique?
-           version]}]
-  (cond-> (IndexOptions.)
-    background?               (.background true)
-    bits                      (.bits (int bits))
-    default-language          (.defaultLanguage default-language)
-    expire-after-seconds      (.expireAfter (long expire-after-seconds) TimeUnit/SECONDS)
-    name                      (.name name)
-    partial-filter-expression (.partialFilterExpression partial-filter-expression)
-    sparse?                   (.sparse true)
-    unique?                   (.unique true)
-    version                   (.version (int version))))
+           version
+           weights
+           wildcard-projection]}]
+  (let [collation (when (seq collation-options)
+                    (make-collation collation-options))]
+    (cond-> (IndexOptions.)
+      (some? background?)       (.background (boolean background?))
+      bits                      (.bits (int bits))
+      collation                 (.collation collation)
+      default-language          (.defaultLanguage default-language)
+      expire-after-seconds      (.expireAfter (long expire-after-seconds) TimeUnit/SECONDS)
+      (some? hidden?)           (.hidden (boolean hidden?))
+      language-override         (.languageOverride language-override)
+      max-boundary              (.max (double max-boundary))
+      min-boundary              (.min (double min-boundary))
+      name                      (.name name)
+      partial-filter-expression (.partialFilterExpression partial-filter-expression)
+      (some? sparse?)           (.sparse (boolean sparse?))
+      sphere-version            (.sphereVersion (int sphere-version))
+      storage-engine            (.storageEngine storage-engine)
+      text-version              (.textVersion (int text-version))
+      (some? unique?)           (.unique (boolean unique?))
+      version                   (.version (int version))
+      weights                   (.weights weights)
+      wildcard-projection       (.wildcardProjection wildcard-projection))))
 
 (defn make-index-bson
   ^Bson [index-keys]
@@ -179,68 +244,146 @@
 
 (defn make-update-options
   ^UpdateOptions
-  [{:keys [upsert?]}]
-  (when upsert?
-    (let [options (UpdateOptions.)]
-      (.upsert options true)
-      options)))
+  [{:keys [array-filters
+           bypass-validation?
+           collation-options
+           ^String comment
+           hint
+           upsert?
+           variables]
+    :as   options}]
+  (when (seq options)
+    (let [collation (when (seq collation-options)
+                      (make-collation collation-options))]
+      (cond-> (UpdateOptions.)
+        (seq array-filters)        (.arrayFilters array-filters)
+        (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
+        collation                  (.collation collation)
+        comment                    (.comment comment)
+        hint                       (.hint hint)
+        (some? upsert?)            (.upsert (boolean upsert?))
+        variables                  (.let variables)))))
 
 (defn make-replace-options
   ^ReplaceOptions
-  [{:keys [upsert?]}]
-  (when upsert?
-    (let [options (ReplaceOptions.)]
-      (.upsert options true)
-      options)))
+  [{:keys [bypass-validation?
+           collation-options
+           ^String comment
+           hint
+           upsert?
+           variables]
+    :as   options}]
+  (when (seq options)
+    (let [collation (when (seq collation-options)
+                      (make-collation collation-options))]
+      (cond-> (ReplaceOptions.)
+        (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
+        collation                  (.collation collation)
+        comment                    (.comment comment)
+        hint                       (.hint hint)
+        (some? upsert?)            (.upsert (boolean upsert?))
+        variables                  (.let variables)))))
 
 (defn make-find-one-and-delete-options
   ^FindOneAndDeleteOptions
-  [{:keys [projection
-           sort]}]
-  (when (or projection sort)
-    (cond-> (FindOneAndDeleteOptions.)
-      projection (.projection projection)
-      sort       (.sort sort))))
+  [{:keys [collation-options
+           ^String comment
+           max-time-ms
+           hint
+           projection
+           sort
+           variables]
+    :as   options}]
+  (when (seq options)
+    (let [collation (when (seq collation-options)
+                      (make-collation collation-options))]
+      (cond-> (FindOneAndDeleteOptions.)
+        collation   (.collation collation)
+        comment     (.comment comment)
+        max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+        hint        (.hint hint)
+        projection  (.projection projection)
+        sort        (.sort sort)
+        variables   (.let variables)))))
 
 (defn make-find-one-and-replace-options
   ^FindOneAndReplaceOptions
-  [{:keys [projection
-           sort
+  [{:keys [bypass-validation?
+           collation-options
+           ^String comment
+           max-time-ms
+           hint
+           projection
            return
-           upsert?]}]
-  (when (or projection sort return (some? upsert?))
-    (cond-> (FindOneAndReplaceOptions.)
-      projection      (.projection projection)
-      sort            (.sort sort)
-      return          (.returnDocument (case return
-                                         :after  ReturnDocument/AFTER
-                                         :before ReturnDocument/BEFORE))
-      (some? upsert?) (.upsert upsert?))))
+           sort
+           upsert?
+           variables]
+    :as   options}]
+  (when (seq options)
+    (let [collation (when (seq collation-options)
+                      (make-collation collation-options))]
+      (cond-> (FindOneAndReplaceOptions.)
+        (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
+        collation                  (.collation collation)
+        comment                    (.comment comment)
+        max-time-ms                (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+        hint                       (.hint hint)
+        projection                 (.projection projection)
+        sort                       (.sort sort)
+        return                     (.returnDocument (case return
+                                                      :after  ReturnDocument/AFTER
+                                                      :before ReturnDocument/BEFORE))
+        (some? upsert?)            (.upsert upsert?)
+        variables                  (.let variables)))))
 
 (defn make-find-one-and-update-options
   ^FindOneAndUpdateOptions
-  [{:keys [projection
-           sort
-           return
+  [{:keys [array-filters
+           bypass-validation?
+           collation-options
+           ^String comment
+           hint
            max-time-ms
-           upsert?]}]
-  (when (or projection sort return (some? upsert?))
-    (cond-> (FindOneAndUpdateOptions.)
-      projection      (.projection projection)
-      sort            (.sort sort)
-      max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
-      return          (.returnDocument (case return
-                                         :after  ReturnDocument/AFTER
-                                         :before ReturnDocument/BEFORE))
-      (some? upsert?) (.upsert upsert?))))
+           projection
+           return
+           sort
+           upsert?
+           variables]
+    :as   options}]
+  (when (seq options)
+    (let [collation (when (seq collation-options)
+                      (make-collation collation-options))]
+      (cond-> (FindOneAndUpdateOptions.)
+        (seq array-filters)        (.arrayFilters array-filters)
+        (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
+        collation                  (.collation collation)
+        comment                    (.comment comment)
+        hint                       (.hint hint)
+        max-time-ms                (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+        projection                 (.projection projection)
+        return                     (.returnDocument (case return
+                                                      :after  ReturnDocument/AFTER
+                                                      :before ReturnDocument/BEFORE))
+        sort                       (.sort sort)
+        (some? upsert?)            (.upsert upsert?)
+        variables                  (.let variables)))))
 
 (defn make-count-options
   ^CountOptions
-  [{:keys [limit
-           skip
-           max-time-ms]}]
-  (when (or limit skip max-time-ms)
-    (cond-> (CountOptions.)
-      limit (.limit (int limit))
-      skip  (.skip (int skip))
-      max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))))
+  [{:keys [collation-options
+           ^String comment
+           hint
+           limit
+           max-time-ms
+           skip]
+    :as   options}]
+  (when (seq options)
+    (let [collation (when (seq collation-options)
+                      (make-collation collation-options))]
+      (cond-> (CountOptions.)
+        collation   (.collation collation)
+        comment     (.comment comment)
+        hint        (.hint hint)
+        limit       (.limit (int limit))
+        max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+        skip        (.skip (int skip))))))
