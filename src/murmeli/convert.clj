@@ -113,6 +113,16 @@
         (.readEndDocument reader)
         m))))
 
+(defn- write-coll-children!
+  [^BsonWriter writer ^CodecRegistry registry ^EncoderContext ctx xs]
+  (run! (fn [x]
+          (if (nil? x)
+            (.writeNull writer)
+            (let [clazz (value->class x overrides)
+                  c     (.get registry clazz)]
+              (.encodeWithChildContext ctx c writer x))))
+        xs))
+
 (defn vector-codec
   "Build `Codec` for `APersistentVector`."
   ^Codec [^CodecRegistry registry]
@@ -120,13 +130,7 @@
     (getEncoderClass [_this] APersistentVector)
     (^void encode [_this ^BsonWriter writer xs ^EncoderContext ctx]
      (.writeStartArray writer)
-     (run! (fn [x]
-             (if (nil? x)
-               (.writeNull writer)
-               (let [clazz (value->class x overrides)
-                     c     (.get registry clazz)]
-                 (.encodeWithChildContext ctx c writer x))))
-           xs)
+     (write-coll-children! writer registry ctx xs)
      (.writeEndArray writer))
     (decode [_this ^BsonReader reader ^DecoderContext ctx]
       (.readStartArray reader)
@@ -155,11 +159,7 @@
     (getEncoderClass [_this] APersistentSet)
     (^void encode [_this ^BsonWriter writer xs ^EncoderContext ctx]
      (.writeStartArray writer)
-     (run! (fn [x]
-             (let [clazz (value->class x overrides)
-                   c     (.get registry clazz)]
-               (.encodeWithChildContext ctx c writer x)))
-           xs)
+     (write-coll-children! writer registry ctx xs)
      (.writeEndArray writer))
     (decode [_this ^BsonReader reader ^DecoderContext ctx]
       (.readStartArray reader)
