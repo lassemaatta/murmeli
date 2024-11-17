@@ -31,7 +31,6 @@
                             EncoderContext
                             UuidCodecProvider]
            [org.bson.codecs.configuration CodecProvider CodecRegistries CodecRegistry]
-           [org.bson.conversions Bson]
            [org.bson.types Binary Decimal128 ObjectId]))
 
 ;; https://github.com/mongodb/mongo-java-driver/tree/main/bson/src/main/org/bson/codecs
@@ -44,7 +43,7 @@
 
 (defn map->bson
   "Convert a map to a `Bson`, which can produce a `BsonDocument`."
-  ^Bson [m ^CodecRegistry registry]
+  ^BsonDocumentWrapper [m ^CodecRegistry registry]
   {:pre [(map? m) registry]}
   (BsonDocumentWrapper/asBsonDocument m registry))
 
