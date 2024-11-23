@@ -167,7 +167,9 @@
              :else   (.listCollectionNames db))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-    (into #{} (map (if keywords? keyword identity)) it)))
+    (if keywords?
+      (into #{} (map keyword) it)
+      (into #{} it))))
 
 (defn drop-collection!
   [{::keys [^ClientSession session] :as db-spec}
@@ -350,7 +352,7 @@
    docs]
   {:pre [db-spec collection (seq docs) (every? map? docs)]}
   (log/debugf "insert many; %s %s" collection (count docs))
-  (let [bsons  ^List (mapv identity #_c/to-bson docs)
+  (let [bsons  ^List (vec docs)
         coll   (get-collection db-spec collection)
         result (if session
                  (.insertMany coll session bsons)
@@ -540,8 +542,7 @@
       :as   options}]
   {:pre [db-spec collection field]}
   (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
-  (let [xform                (or xform (map identity))
-        coll                 (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll                 (get-collection db-spec collection {:keywords? keywords?})
         field-name           (name field)
         query                (when (seq query)
                                (c/map->bson query (.getCodecRegistry coll)))
@@ -553,7 +554,9 @@
                                :else               (.distinct coll field-name Object))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-    (let [res (transduce xform conj #{} it)]
+    (let [res (if xform
+                (into #{} xform it)
+                (into #{} it))]
       (log/debugf "distinct results: %d" (count res))
       res)))
 
@@ -581,7 +584,6 @@
                      (c/map->bson projection (.getCodecRegistry coll)))
         sort       (when (seq sort)
                      (c/map->bson sort (.getCodecRegistry coll)))
-        xform      (or xform (map identity))
         it         ^FindIterable (cond
                                    (and query session) (.find coll session query PersistentHashMap)
                                    session             (.find coll session PersistentHashMap)
@@ -594,7 +596,9 @@
     (when sort (.sort it sort))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     ;; Eagerly consume the results, but without chunking
-    (let [res (transduce xform conj it)]
+    (let [res (if xform
+                (into [] xform it)
+                (into [] it))]
       (log/debugf "find all results: %d" (count res))
       res)))
 
@@ -785,9 +789,10 @@
         pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
         it       (cond
                    session (.aggregate coll session pipeline)
-                   :else   (.aggregate coll pipeline))
-        xform    (or xform (map identity))]
+                   :else   (.aggregate coll pipeline))]
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     (when allow-disk-use? (.allowDiskUse it (boolean allow-disk-use?)))
-    (transduce xform conj it)))
+    (if xform
+      (into [] xform it)
+      (into [] it))))

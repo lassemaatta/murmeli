@@ -543,6 +543,7 @@
 
     (is (= #{} (m/find-distinct db-spec coll :i-dont-exist)))
     (is (= #{1 2} (m/find-distinct db-spec coll :foo)))
+    (is (= #{"1" "2"} (m/find-distinct db-spec coll :foo {:xform (map str)})))
     (is (= #{"bar" "quuz"} (m/find-distinct db-spec coll :data)))
     (is (= #{{:key 1} {:key 2}} (m/find-distinct db-spec coll :bar)))
     (is (= #{"this"} (m/find-distinct db-spec coll :quuz)))))
