@@ -114,7 +114,8 @@
     (into [] it)))
 
 (defn drop-db!
-  "Drop a database"
+  "Drop the given database. Does nothing, if the database does not exist. Returns `nil`."
+  {:arglists '([db-spec database-name])}
   [{::keys [^ClientSession session]
     :as    db-spec}
    database-name]

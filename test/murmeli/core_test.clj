@@ -55,6 +55,28 @@
         (is (int? sizeOnDisk))
         (is (not empty))))))
 
+(deftest drop-db-test
+  (let [db-spec      (test-utils/get-db-spec)
+        get-db-names (fn [db-spec]
+                       (->> (m/list-dbs db-spec)
+                            (map :name)
+                            (into #{})))]
+    (is (= 4 (count (get-db-names db-spec))))
+    (testing "dropping an unknown db does nothing"
+      (is (nil? (m/drop-db! db-spec (str (random-uuid))))))
+    (testing "create db with coll and drop it"
+      (let [db-name "my-new-db"
+            db-spec (m/with-db db-spec db-name)
+            coll    (get-coll)]
+        (is (= 4 (count (get-db-names db-spec)))
+            "Retrieving a database does not create it")
+        (m/create-collection! db-spec coll)
+        (let [db-names (get-db-names db-spec)]
+          (is (= 5 (count db-names)))
+          (is (contains? db-names db-name))
+          (is (nil? (m/drop-db! db-spec db-name)))
+          (is (= 4 (count (get-db-names db-spec)))))))))
+
 (deftest coll-test
   (let [db-spec (-> (test-utils/get-db-spec)
                     ;; Use a separate db for this tests so that we don't
