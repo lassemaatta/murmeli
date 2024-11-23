@@ -24,38 +24,60 @@
 ;; Utilities
 
 (defn create-object-id
-  "Returns a new object-id"
+  "Returns a new unique `ObjectId` instance."
   []
   (ObjectId/get))
 
 (defn create-id
-  "Returns a new object-id as string"
+  "Returns a new unique `ObjectId` instance as string."
   []
   (str (create-object-id)))
 
 (defn id?
-  "Return true if given string represents an object-id"
+  "Returns true if given string represents an `ObjectId`."
   [id]
   (c/id? id))
 
 (defn object-id?
+  "Returns true if given object is an `ObjectId`."
   [id]
   (instance? ObjectId id))
 
 ;; Connect and disconnect
 
 (defn connect-client!
-  "Connect to a Mongo instance and construct a Client"
-  {:arglists '([{:keys [uri
+  "Connects to a Mongo instance as described by the `db-spec` by constructing a client connection.
+
+  Returns a `db-spec` with the client connection attached.
+
+  Options:
+  * `cluster-settings` -- Map of cluster settings, see below
+  * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
+  * `keywords?` -- If true, deserialize map keys as keywords instead of strings
+  * `read-concern` -- Choose level of read isolation, see [[murmeli.data-interop/get-read-concern]]
+  * `read-preference` -- Choose preferred replica set members when reading, see [[murmeli.data-interop/get-read-preference]]
+  * `retry-reads?` -- Retry reads if they fail due to a network error
+  * `retry-writes?` -- Retry writes if they fail due to a network error
+  * `ssl-settings` -- Map of SSL settings, see below
+  * `uri` -- The connection string to use, eg. \"mongodb://[username:password@]host[:port1],...\"
+  * `write-concern` -- Acknowledgement of write operations, see [[murmeli.data-interop/get-write-concern]]
+
+  The `cluster-settings` map:
+  * `hosts` -- Sequence of maps with `host` and optionally `port`
+
+  The `ssl-settings` map:
+  * `enabled?` -- Enable SSL
+  * `invalid-hostname-allowed?` -- Allow invalid hostnames"
+  {:arglists '([{:keys [cluster-settings
                         credentials
-                        ssl-settings
-                        cluster-settings
+                        keywords?
                         read-concern
-                        write-concern
                         read-preference
                         retry-reads?
                         retry-writes?
-                        keywords?]}])}
+                        ssl-settings
+                        uri
+                        write-concern]}])}
   [db-spec]
   (let [settings (di/make-client-settings db-spec)]
     (-> db-spec
@@ -63,11 +85,14 @@
         (dissoc ::db))))
 
 (defn connected?
+  "Return `true` if the `db-spec` contains a client connection."
+  {:arglists '([db-spec])}
   [{::keys [client]}]
   (some? client))
 
 (defn disconnect!
-  "Disconnect the Client and discard any related state"
+  "Disconnect the client and discard any related state"
+  {:arglists '([db-spec])}
   [{::keys [^MongoClient client]
     :as    db-spec}]
   (when client
@@ -89,6 +114,8 @@
 
 (defn with-db
   "Retrieve a database using the client and store it in `db-spec`."
+  {:arglists '([db-spec]
+               [db-spec database-name])}
   ([{:keys [database-name]
      :as   db-spec}]
    (with-db db-spec database-name))
@@ -105,6 +132,7 @@
 
 (defn list-dbs
   "List all databases"
+  {:arglists '([db-spec])}
   [{::keys [^MongoClient client
             ^ClientSession session]}]
   (log/debugf "list databases")
@@ -129,6 +157,7 @@
 
 (defn create-collection!
   "Creates a collection"
+  {:arglists '([db-spec collection])}
   [{::keys [^MongoDatabase db
             ^ClientSession session]}
    collection]
@@ -152,6 +181,10 @@
          (.withCodecRegistry (c/registry registry-opts))))))
 
 (defn list-collection-names
+  "Returns a set of collection names in the current database"
+  {:arglists '([db-spec & {:keys [batch-size
+                                  max-time-ms
+                                  keywords?]}])}
   [{::keys [^MongoDatabase db
             ^ClientSession session]
     :as    db-spec}
@@ -161,7 +194,7 @@
       :or   {keywords? true}
       :as   options}]
   {:pre [db-spec]}
-  (log/debugf "list collection names; %s" (select-keys options [:keywords?]))
+  (log/debugf "list collection names; %s" options)
   (let [it (cond
              session (.listCollectionNames db session)
              :else   (.listCollectionNames db))]
@@ -172,6 +205,8 @@
       (into #{} it))))
 
 (defn drop-collection!
+  "Drop the given collection from the database"
+  {:arglists '([db-spec collection])}
   [{::keys [^ClientSession session] :as db-spec}
    collection]
   (let [coll (get-collection db-spec collection)]
@@ -275,6 +310,12 @@
       :else            (.createIndex coll index-keys))))
 
 (defn list-indexes
+  "List indexes in the given collection"
+  {:arglists '([db-spec
+                collection
+                & {:keys [batch-size
+                          max-time-ms
+                          keywords?]}])}
   [{::keys [^ClientSession session] :as db-spec}
    collection
    & {:keys [batch-size
