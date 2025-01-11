@@ -5,13 +5,13 @@
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.12.0"]
                  [org.clojure/tools.logging "1.3.0"]
-                 [org.mongodb/mongodb-driver-sync "5.2.1"]
+                 [org.mongodb/mongodb-driver-sync "5.3.0"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
   :profiles {:dev           {:dependencies   [;; Sources (incl. deps)
-                                              [org.mongodb/mongodb-driver-sync "5.2.1" :classifier "sources"]
-                                              [org.mongodb/bson "5.2.1" :classifier "sources"]
-                                              [org.mongodb/mongodb-driver-core "5.2.1" :classifier "sources"]
+                                              [org.mongodb/mongodb-driver-sync "5.3.0" :classifier "sources"]
+                                              [org.mongodb/bson "5.3.0" :classifier "sources"]
+                                              [org.mongodb/mongodb-driver-core "5.3.0" :classifier "sources"]
                                               ;; Testcontainers for mongodb
                                               [clj-test-containers "0.7.4"]
                                               [org.testcontainers/mongodb "1.17.6"]
@@ -21,7 +21,7 @@
                                               [nubank/matcher-combinators "3.9.1"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.16"]
-                                              [ch.qos.logback/logback-classic "1.5.12"]]
+                                              [ch.qos.logback/logback-classic "1.5.16"]]
                              :resource-paths ["test-resources"]
                              :jvm-opts       ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
              :repl          {:jvm-opts ["-Dmurmeli.repl=true"]}
