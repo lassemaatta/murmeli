@@ -98,6 +98,24 @@
                  (ServerAddress. host port)
                  (ServerAddress. host))))))
 
+(defn- make-cluster-settings
+  [cluster-settings]
+  (apply-block
+    (fn [^ClusterSettings$Builder cluster-builder]
+      (let [{:keys [hosts]} cluster-settings]
+        (cond-> cluster-builder
+          (seq hosts) (.hosts (make-hosts hosts)))))))
+
+(defn- make-ssl-settings
+  [ssl-settings]
+  (apply-block
+    (fn [^SslSettings$Builder ssl-builder]
+      (let [{:keys [enabled?
+                    invalid-hostname-allowed?]} ssl-settings]
+        (cond-> ssl-builder
+          (some? enabled?)                  (.enabled (boolean enabled?))
+          (some? invalid-hostname-allowed?) (.invalidHostNameAllowed (boolean invalid-hostname-allowed?)))))))
+
 (defn make-client-settings
   ^MongoClientSettings
   [{:keys                      [cluster-settings
@@ -124,16 +142,8 @@
     write-concern          (.writeConcern (get-write-concern write-concern))
     read-preference        (.readPreference (get-read-preference read-preference))
     (seq credentials)      (.credential (MongoCredential/createScramSha256Credential username auth-db (.toCharArray password)))
-    (seq cluster-settings) (.applyToClusterSettings (apply-block (fn [^ClusterSettings$Builder cluster-builder]
-                                                                   (let [{:keys [hosts]} cluster-settings]
-                                                                     (cond-> cluster-builder
-                                                                       (seq hosts) (.hosts (make-hosts hosts)))))))
-    (seq ssl-settings)     (.applyToSslSettings (apply-block (fn [^SslSettings$Builder ssl-builder]
-                                                               (let [{:keys [enabled?
-                                                                             invalid-hostname-allowed?]} ssl-settings]
-                                                                 (cond-> ssl-builder
-                                                                   (some? enabled?)                  (.enabled (boolean enabled?))
-                                                                   (some? invalid-hostname-allowed?) (.invalidHostNameAllowed (boolean invalid-hostname-allowed?)))))))
+    (seq cluster-settings) (.applyToClusterSettings (make-cluster-settings cluster-settings))
+    (seq ssl-settings)     (.applyToSslSettings (make-ssl-settings ssl-settings))
     true                   (.codecRegistry (c/registry {:keywords? keywords?}))
     true                   (.build)))
 
@@ -153,11 +163,12 @@
     ;; https://www.mongodb.com/docs/manual/reference/read-concern-snapshot/
     (or read-preference
         read-concern
-        write-concern)           (.defaultTransactionOptions (cond-> (TransactionOptions/builder)
-                                                               read-preference (.readPreference (get-read-preference read-preference))
-                                                               read-concern    (.readConcern (get-read-concern read-concern))
-                                                               write-concern   (.writeConcern (get-write-concern write-concern))
-                                                               true            .build))
+        write-concern)           (.defaultTransactionOptions
+                                   (cond-> (TransactionOptions/builder)
+                                     read-preference (.readPreference (get-read-preference read-preference))
+                                     read-concern    (.readConcern (get-read-concern read-concern))
+                                     write-concern   (.writeConcern (get-write-concern write-concern))
+                                     true            .build))
     true                         (.build)))
 
 (defn make-collation
