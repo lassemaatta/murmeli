@@ -91,7 +91,7 @@
   (some? client))
 
 (defn disconnect!
-  "Disconnect the client and discard any related state"
+  "Disconnect the client."
   {:arglists '([conn])}
   [{::keys [^MongoClient client]}]
   (when client
@@ -100,7 +100,7 @@
 ;; Databases
 
 (defn- get-database
-  "Find a database by name"
+  "Find a database by name."
   ^MongoDatabase
   [{::keys [^MongoClient client]}
    database-name]
@@ -108,7 +108,7 @@
   (.getDatabase client database-name))
 
 (defn with-db
-  "Retrieve a database using the client and store it in the connection"
+  "Retrieve a database using the client and store it in the connection."
   {:arglists '([conn database-name])}
   [{::keys [^MongoDatabase db] :as conn}
    database-name]
@@ -122,7 +122,8 @@
     conn))
 
 (defn list-dbs
-  "List all databases"
+  "List all databases as documents.
+  Returned documents contain keys like `:name`, `:sizeOnDisk`, `:empty`."
   {:arglists '([conn])}
   [{::keys [^MongoClient client
             ^ClientSession session]}]
@@ -133,7 +134,8 @@
     (into [] it)))
 
 (defn drop-db!
-  "Drop the given database. Does nothing, if the database does not exist. Returns `nil`."
+  "Drop the given database.
+  Does nothing, if the database does not exist. Returns `nil`."
   {:arglists '([conn database-name])}
   [{::keys [^ClientSession session]
     :as    conn}
@@ -147,7 +149,7 @@
 ;; Collections
 
 (defn create-collection!
-  "Creates a collection"
+  "Creates a collection."
   {:arglists '([conn collection])}
   [{::keys [^MongoDatabase db
             ^ClientSession session]}
@@ -172,7 +174,12 @@
          (.withCodecRegistry (c/registry registry-opts))))))
 
 (defn list-collection-names
-  "Returns a set of collection names in the current database"
+  "Returns a set of collection names in the current database.
+
+  Options:
+  * `batch-size` -- Number of documents per batch
+  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `keywords?` -- If true, return collection names as keywords"
   {:arglists '([conn & {:keys [batch-size
                                max-time-ms
                                keywords?]}])}
@@ -189,6 +196,8 @@
   (let [it (cond
              session (.listCollectionNames db session)
              :else   (.listCollectionNames db))]
+    ;; TODO: add `filter` parameter
+    ;; TODO: add `authorizedCollections` parameter
     (when batch-size (.batchSize it (int batch-size)))
     (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
     (if keywords?
@@ -233,7 +242,7 @@
   (.startSession client session-opts))
 
 (defmacro with-session
-  "Run `body` in a session/transaction
+  "Run `body` in a session/transaction.
 
   Gets the session options (as set by `with-client-session-options`), starts a session and stores it
   in `conn` and binds the result to `sym`. The session/transaction is either committed or aborted
@@ -258,7 +267,7 @@
 ;; Indexes
 
 (defn create-index!
-  "Create a new index"
+  "Create a new index."
   {:arglists '([conn
                 collection
                 index-keys
@@ -301,7 +310,7 @@
       :else            (.createIndex coll index-keys))))
 
 (defn list-indexes
-  "List indexes in the given collection"
+  "List indexes in the given collection."
   {:arglists '([conn
                 collection
                 & {:keys [batch-size
@@ -367,28 +376,36 @@
       (= t BsonType/OBJECT_ID) (-> v .asObjectId .getValue))))
 
 (defn insert-one!
+  "Insert a single document into a collection
+  If the document does not contain an `_id` field, one will be generated (by default an `ObjectId`).
+  Returns the `_id` of the inserted document (`String` or `ObjectId`)."
   [{::keys [^ClientSession session] :as conn}
    collection
    doc]
   {:pre [conn collection (map? doc)]}
   (log/debugf "insert one; %s %s" collection (:_id doc))
   (let [coll   (get-collection conn collection)
+        ;; TODO: add `InsertOneOptions` support
         result (if session
                  (.insertOne coll session doc)
                  (.insertOne coll doc))]
     (bson-value->document-id (.getInsertedId result))))
 
 (defn insert-many!
+  "Insert multiple documents into a collection.
+  If the documents do not contain `_id` fields, one will be generated (by default an `ObjectId`).
+  Returns the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
   [{::keys [^ClientSession session] :as conn}
    collection
    docs]
   {:pre [conn collection (seq docs) (every? map? docs)]}
   (log/debugf "insert many; %s %s" collection (count docs))
-  (let [bsons  ^List (vec docs)
+  (let [docs   ^List (vec docs)
         coll   (get-collection conn collection)
+        ;; TODO: add `InsertManyOptions` support
         result (if session
-                 (.insertMany coll session bsons)
-                 (.insertMany coll bsons))]
+                 (.insertMany coll session docs)
+                 (.insertMany coll docs))]
     (->> (.getInsertedIds result)
          (sort-by key)
          (mapv (comp bson-value->document-id val)))))
@@ -396,7 +413,17 @@
 ;; Updates
 
 (defn update-one!
-  "Find document(s) matching `query` and update the first one.
+  "Find document matching `query` and apply `changes` to it.
+
+  Options:
+  * `array-filters` -- List of array filter documents
+  * `bypass-validation?` -- If true, bypass document validation
+  * `collation-options` -- Map of collation options, see [[murmeli.data-interop/make-collation]]
+  * `comment` -- Operation comment string
+  * `hint` -- Indexing hint document
+  * `upsert?` -- If true, insert `changes` document if no existing document matches `query`
+  * `variables` -- Top-level variable documents
+
   Returns a map describing if a match was found and if it was actually altered."
   {:arglists '([conn collection query changes & {:keys [array-filters
                                                         bypass-validation?
@@ -415,6 +442,8 @@
   (let [coll    (get-collection conn collection)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
+        ;; TODO: array-filters should be BSON
+        ;; TODO: variables should be BSON
         options (di/make-update-options (or options {}))
         result  (cond
                   (and session options) (.updateOne coll session filter updates options)
@@ -423,11 +452,22 @@
                   :else                 (.updateOne coll filter updates))]
     ;; There doesn't seem to be a way to verify that the query would match
     ;; just a single document because matched count is always either 0 or 1 :(
+    ;; TODO: support `getUpsertedId`
     {:modified (.getModifiedCount result)
      :matched  (.getMatchedCount result)}))
 
 (defn update-many!
-  "Find document(s) matching `query` and update them.
+  "Find document(s) matching `query` and apply `changes` to them.
+
+  Options:
+  * `array-filters` -- List of array filter documents
+  * `bypass-validation?` -- If true, bypass document validation
+  * `collation-options` -- Map of collation options, see [[murmeli.data-interop/make-collation]]
+  * `comment` -- Operation comment string
+  * `hint` -- Indexing hint document
+  * `upsert?` -- If true, insert `changes` document if no existing document matches `query`
+  * `variables` -- Top-level variable documents
+
   Returns the number of matched and updated documents."
   {:arglists '([conn collection query changes & {:keys [array-filters
                                                         bypass-validation?
@@ -446,6 +486,8 @@
   (let [coll    (get-collection conn collection)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
+        ;; TODO: array-filters should be BSON
+        ;; TODO: variables should be BSON
         options (di/make-update-options (or options {}))
         result  (cond
                   (and session options) (.updateMany coll session filter updates options)
