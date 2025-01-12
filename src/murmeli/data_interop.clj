@@ -172,6 +172,30 @@
     true                         (.build)))
 
 (defn make-collation
+  "Construct a collation; a set of rules to compare strings.
+
+  Options:
+  * `alternate` -- How are spaces and punctuations considered:
+      `:non-ignorable`; considered as base characters.
+      `:shifted`; not considered as base characters, unless `strength` > 3.
+  * `backwards?` -- Consider secondary differences in reverse order (e.g. French).
+  * `case-first` -- Uppercase or lowercase characters first:
+     `:lower`; Lowercase first.
+     `:off`; Off.
+     `:upper`; Uppercase first.
+  * `case-sensitive?` -- If true, turn on case sensitivity.
+  * `locale` -- Locale.
+  * `max-variable` -- Which characters are affected by `:shifted`:
+      `:punct`; Spaces and punctuation are affected.
+      `:space`; Only spaces are affected.
+  * `normalize?` -- If true, normalizes to Unicode NFD.
+  * `numeric-ordering?` -- If true, order numbers based on numeric ordering instead of collation order.
+  * `strength` -- Collation strength:
+      `:identical`; When all else equal, use identical level.
+      `:primary`; Strongest level.
+      `:secondary`; Accents are considered secondary differences.
+      `:tertiary`; Upper and lower case differences considered.
+      `:quaternary`; Distinguish words with or without punctuations."
   [{:keys [alternate
            backwards?
            case-first
