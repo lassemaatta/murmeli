@@ -99,35 +99,34 @@
 (defn session? [instance] (instance? ClientSession instance))
 (s/def ::m/session session?)
 
-(s/def ::db-spec-disconnected (s/merge (s/keys :opt-un [::database-name])
-                                       ::client-settings-options))
+(s/def ::db-spec (s/merge (s/keys :opt-un [::database-name])
+                          ::client-settings-options))
 
-(s/def ::db-spec-with-client (s/merge ::db-spec-disconnected
-                                      (s/keys :req [::m/client]
-                                              :opt [::m/session-options
-                                                    ::m/session])))
+(s/def ::conn (s/keys :req [::m/client]
+                      :opt [::m/session-options
+                            ::m/session]))
 
-(s/def ::db-spec-with-db (s/merge ::db-spec-with-client
-                                  (s/keys :req [::m/db])))
+(s/def ::conn-with-db (s/merge ::conn
+                               (s/keys :req [::m/db])))
 
 (s/fdef m/connect-client!
-  :args (s/cat :db-spec ::db-spec-disconnected)
-  :ret ::db-spec-with-client)
+  :args (s/cat :db-spec ::db-spec)
+  :ret ::conn)
 
 (s/fdef m/with-db
-  :args (s/cat :db-spec ::db-spec-with-client
+  :args (s/cat :conn ::conn
                :database-name (s/? ::database-name))
-  :ret ::db-spec-with-db)
+  :ret ::conn-with-db)
 
 (s/fdef m/disconnect
-  :args (s/cat :db-spec ::db-spec-with-client)
-  :ret ::db-spec-disconnected)
+  :args (s/cat :conn ::conn)
+  :ret nil?)
 
 (s/fdef m/list-dbs
-  :args (s/cat :db-spec ::db-spec-with-client))
+  :args (s/cat :conn ::conn))
 
 (s/fdef m/drop-db!
-  :args (s/cat :db-spec ::db-spec-with-client
+  :args (s/cat :conn ::conn
                :database-name ::database-name))
 
 (s/def ::read-preference #{:nearest
@@ -161,12 +160,12 @@
                                            ::snapshot?]))
 
 (s/fdef m/with-client-session-options
-  :args (s/cat :db-spec ::db-spec-with-client
+  :args (s/cat :conn ::conn
                :options ::session-options)
-  :ret ::db-spec-with-client)
+  :ret ::conn)
 
 (s/fdef m/start-session!
-  :args (s/cat :db-spec ::db-spec-with-client
+  :args (s/cat :conn ::conn
                :session-opts ::m/session-options))
 
 (s/def ::with-session-bindings (s/tuple simple-symbol?
@@ -214,7 +213,7 @@
                                                 ::version]))
 
 (s/fdef m/create-index!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :keys ::index-keys
                :options ::create-index-options))
@@ -223,26 +222,26 @@
                                                 ::max-time-ms]))
 
 (s/fdef m/list-indexes
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :options ::list-indexes-options))
 
 (s/fdef m/drop-all-indexes!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection))
 
 (s/fdef m/drop-index!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :keys ::index-keys))
 
 (s/fdef m/drop-index-by-name!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :index-name ::name))
 
 (s/fdef m/insert-one!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :doc ::document))
 
@@ -250,7 +249,7 @@
                               :min-count 1))
 
 (s/fdef m/insert-many!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :docs ::documents))
 
@@ -258,14 +257,14 @@
 (s/def ::update-options (s/keys* :opt-un [::upsert?]))
 
 (s/fdef m/update-one!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :query ::document
                :changes ::document
                :options ::update-options))
 
 (s/fdef m/update-many!
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :query ::document
                :changes ::document
@@ -277,12 +276,12 @@
                                          ::max-time-ms]))
 
 (s/fdef m/count-collection
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :count-options ::count-options))
 
 (s/fdef m/estimated-count-collection
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection))
 
 (s/def ::query ::document)
@@ -310,7 +309,7 @@
                                             ::keywords?]))
 
 (s/fdef m/find-all
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :options ::find-all-options))
 
@@ -323,7 +322,7 @@
                                             ::throw-on-multiple?]))
 
 (s/fdef m/find-one
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :options ::find-one-options))
 
@@ -331,7 +330,7 @@
                                               ::keywords?]))
 
 (s/fdef m/find-by-id
-  :args (s/cat :db-spec ::db-spec-with-db
+  :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :id ::id
                :options ::find-by-id-options))

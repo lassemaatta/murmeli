@@ -1,5 +1,7 @@
 (ns murmeli.core
-  "https://www.mongodb.com/docs/drivers/java/sync/current/"
+  "Murmeli MongoDB driver
+
+  [Javadoc](https://www.mongodb.com/docs/drivers/java/sync/current/)"
   (:require [clojure.tools.logging :as log]
             [murmeli.convert :as c]
             [murmeli.cursor]
@@ -24,22 +26,22 @@
 ;; Utilities
 
 (defn create-object-id
-  "Returns a new unique `ObjectId` instance."
+  "Returns a new unique `org.bson.types.ObjectId` instance."
   []
   (ObjectId/get))
 
 (defn create-id
-  "Returns a new unique `ObjectId` instance as string."
+  "Returns a new unique string representation of an object id."
   []
   (str (create-object-id)))
 
 (defn id?
-  "Returns true if given string represents an `ObjectId`."
+  "Returns true if given string represents an object id."
   [id]
   (c/id? id))
 
 (defn object-id?
-  "Returns true if given object is an `ObjectId`."
+  "Returns true if given object is an `org.bson.types.ObjectId`."
   [id]
   (instance? ObjectId id))
 
@@ -48,7 +50,7 @@
 (defn connect-client!
   "Connects to a Mongo instance as described by the `db-spec` by constructing a client connection.
 
-  Returns a `db-spec` with the client connection attached.
+  Returns a connection (map).
 
   Options:
   * `cluster-settings` -- Map of cluster settings, see below
@@ -80,27 +82,20 @@
                         write-concern]}])}
   [db-spec]
   (let [settings (di/make-client-settings db-spec)]
-    (-> db-spec
-        (assoc ::client (MongoClients/create settings))
-        (dissoc ::db))))
+    {::client (MongoClients/create settings)}))
 
 (defn connected?
-  "Return `true` if the `db-spec` contains a client connection."
-  {:arglists '([db-spec])}
+  "Return `true` if the `conn` contains a client connection."
+  {:arglists '([conn])}
   [{::keys [client]}]
   (some? client))
 
 (defn disconnect!
   "Disconnect the client and discard any related state"
-  {:arglists '([db-spec])}
-  [{::keys [^MongoClient client]
-    :as    db-spec}]
+  {:arglists '([conn])}
+  [{::keys [^MongoClient client]}]
   (when client
-    (.close client))
-  (->> db-spec
-       (filter (fn [[k _]]
-                 (simple-keyword? k)))
-       (into {})))
+    (.close client)))
 
 ;; Databases
 
@@ -113,26 +108,22 @@
   (.getDatabase client database-name))
 
 (defn with-db
-  "Retrieve a database using the client and store it in `db-spec`."
-  {:arglists '([db-spec]
-               [db-spec database-name])}
-  ([{:keys [database-name]
-     :as   db-spec}]
-   (with-db db-spec database-name))
-  ([{::keys [^MongoDatabase db] :as db-spec}
-    database-name]
-   {:pre [database-name]}
-   (when-not (connected? db-spec)
-     (throw (ex-info "Cannot retrieve database without a connection" {:database-name database-name})))
-   (if-not (and db (= database-name (.getName db)))
-     (do
-       (log/debugf "Loading database %s" database-name)
-       (assoc db-spec ::db (get-database db-spec database-name)))
-     db-spec)))
+  "Retrieve a database using the client and store it in the connection"
+  {:arglists '([conn database-name])}
+  [{::keys [^MongoDatabase db] :as conn}
+   database-name]
+  {:pre [database-name]}
+  (when-not (connected? conn)
+    (throw (ex-info "Cannot retrieve database without a connection" {:database-name database-name})))
+  (if-not (and db (= database-name (.getName db)))
+    (do
+      (log/debugf "Loading database %s" database-name)
+      (assoc conn ::db (get-database conn database-name)))
+    conn))
 
 (defn list-dbs
   "List all databases"
-  {:arglists '([db-spec])}
+  {:arglists '([conn])}
   [{::keys [^MongoClient client
             ^ClientSession session]}]
   (log/debugf "list databases")
@@ -143,12 +134,12 @@
 
 (defn drop-db!
   "Drop the given database. Does nothing, if the database does not exist. Returns `nil`."
-  {:arglists '([db-spec database-name])}
+  {:arglists '([conn database-name])}
   [{::keys [^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    database-name]
-  {:pre [db-spec database-name]}
-  (let [db (get-database db-spec database-name)]
+  {:pre [conn database-name]}
+  (let [db (get-database conn database-name)]
     (if session
       (.drop db session)
       (.drop db))))
@@ -157,7 +148,7 @@
 
 (defn create-collection!
   "Creates a collection"
-  {:arglists '([db-spec collection])}
+  {:arglists '([conn collection])}
   [{::keys [^MongoDatabase db
             ^ClientSession session]}
    collection]
@@ -169,12 +160,12 @@
 
 (defn- get-collection
   (^MongoCollection
-   [db-spec collection]
-   (get-collection db-spec collection {}))
+   [conn collection]
+   (get-collection conn collection {}))
   (^MongoCollection
-   [{::keys [^MongoDatabase db] :as db-spec} collection opts]
+   [{::keys [^MongoDatabase db] :as conn} collection opts]
    {:pre [db collection opts]}
-   (let [registry-opts (merge (select-keys db-spec [:keywords?])
+   (let [registry-opts (merge (select-keys conn [:keywords?])
                               opts)]
      (-> db
          (.getCollection (name collection) PersistentHashMap)
@@ -182,18 +173,18 @@
 
 (defn list-collection-names
   "Returns a set of collection names in the current database"
-  {:arglists '([db-spec & {:keys [batch-size
-                                  max-time-ms
-                                  keywords?]}])}
+  {:arglists '([conn & {:keys [batch-size
+                               max-time-ms
+                               keywords?]}])}
   [{::keys [^MongoDatabase db
             ^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    & {:keys [batch-size
              max-time-ms
              keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec]}
+  {:pre [conn]}
   (log/debugf "list collection names; %s" options)
   (let [it (cond
              session (.listCollectionNames db session)
@@ -206,10 +197,10 @@
 
 (defn drop-collection!
   "Drop the given collection from the database"
-  {:arglists '([db-spec collection])}
-  [{::keys [^ClientSession session] :as db-spec}
+  {:arglists '([conn collection])}
+  [{::keys [^ClientSession session] :as conn}
    collection]
-  (let [coll (get-collection db-spec collection)]
+  (let [coll (get-collection conn collection)]
     (cond
       session (.drop coll session)
       :else   (.drop coll))))
@@ -217,20 +208,20 @@
 ;; Transactions / Sessions
 
 (defn with-client-session-options
-  "Store session options into `db-spec`, read by `with-session`"
-  {:arglists '([db-spec & {:keys [causally-consistent?
-                                  default-timeout-ms
-                                  read-concern
-                                  read-preference
-                                  snapshot?
-                                  write-concern]}])}
-  [db-spec
+  "Store session options into `conn`, read by `with-session`"
+  {:arglists '([conn & {:keys [causally-consistent?
+                               default-timeout-ms
+                               read-concern
+                               read-preference
+                               snapshot?
+                               write-concern]}])}
+  [conn
    & {:as options}]
-  (assoc db-spec ::session-options (di/make-client-session-options (or options {}))))
+  (assoc conn ::session-options (di/make-client-session-options (or options {}))))
 
 (defn- get-session-options
-  [db-spec]
-  (or (::session-options db-spec)
+  [conn]
+  (or (::session-options conn)
       (throw (ex-info "No session options specified, call `with-client-session-options`"
                       {}))))
 
@@ -245,16 +236,16 @@
   "Run `body` in a session/transaction
 
   Gets the session options (as set by `with-client-session-options`), starts a session and stores it
-  in `db-spec` and binds the result to `sym`. The session/transaction is either committed or aborted
+  in `conn` and binds the result to `sym`. The session/transaction is either committed or aborted
   depending on whether `body` throws or not."
-  [[sym db-spec :as bindings] & body]
+  [[sym conn :as bindings] & body]
   {:pre [(vector? bindings)
          (= 2 (count bindings))
          (simple-symbol? sym)]}
-  `(let [db-spec#                ~db-spec
-         session-opts#           (#'get-session-options db-spec#)
-         ^ClientSession session# (#'start-session! db-spec# session-opts#)
-         ~sym                    (assoc db-spec# ::session session#)]
+  `(let [conn#                   ~conn
+         session-opts#           (#'get-session-options conn#)
+         ^ClientSession session# (#'start-session! conn# session-opts#)
+         ~sym                    (assoc conn# ::session session#)]
      (try
        (.startTransaction session#)
        (let [result# (do ~@body)]
@@ -268,7 +259,7 @@
 
 (defn create-index!
   "Create a new index"
-  {:arglists '([db-spec
+  {:arglists '([conn
                 collection
                 index-keys
                 & {:keys [background?
@@ -290,13 +281,13 @@
                           version
                           weights
                           wildcard-projection]}])}
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    index-keys
    & {:as options}]
-  {:pre [db-spec collection (seq index-keys)]}
+  {:pre [conn collection (seq index-keys)]}
   (log/debugf "create index; %s %s %s" collection index-keys options)
-  (let [coll             (get-collection db-spec collection)
+  (let [coll             (get-collection conn collection)
         index-keys       (di/make-index-bson index-keys)
         ^IndexOptions io (cond-> options
                            (:partial-filter-expression options)
@@ -311,23 +302,23 @@
 
 (defn list-indexes
   "List indexes in the given collection"
-  {:arglists '([db-spec
+  {:arglists '([conn
                 collection
                 & {:keys [batch-size
                           max-time-ms
                           keywords?]}])}
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    & {:keys [batch-size
              max-time-ms
              keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec collection]}
+  {:pre [conn collection]}
   (log/debugf "list indexes; %s" (select-keys options [:batch-size
                                                        :max-time-ms
                                                        :keywords?]))
-  (let [coll                    (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll                    (get-collection conn collection {:keywords? keywords?})
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session PersistentHashMap)
                                   (.listIndexes coll PersistentHashMap))]
@@ -336,31 +327,31 @@
     (into [] it)))
 
 (defn drop-all-indexes!
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection]
-  {:pre [db-spec collection]}
-  (let [coll (get-collection db-spec collection)]
+  {:pre [conn collection]}
+  (let [coll (get-collection conn collection)]
     (if session
       (.dropIndexes coll session)
       (.dropIndexes coll))))
 
 (defn drop-index!
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    index-keys]
-  {:pre [db-spec collection (seq index-keys)]}
-  (let [coll       (get-collection db-spec collection)
+  {:pre [conn collection (seq index-keys)]}
+  (let [coll       (get-collection conn collection)
         index-keys (di/make-index-bson index-keys)]
     (cond
       session (.dropIndex coll session index-keys)
       :else   (.dropIndex coll index-keys))))
 
 (defn drop-index-by-name!
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    ^String index-name]
-  {:pre [db-spec collection index-name]}
-  (let [coll (get-collection db-spec collection)]
+  {:pre [conn collection index-name]}
+  (let [coll (get-collection conn collection)]
     (cond
       session (.dropIndex coll session index-name)
       :else   (.dropIndex coll index-name))))
@@ -376,25 +367,25 @@
       (= t BsonType/OBJECT_ID) (-> v .asObjectId .getValue))))
 
 (defn insert-one!
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    doc]
-  {:pre [db-spec collection (map? doc)]}
+  {:pre [conn collection (map? doc)]}
   (log/debugf "insert one; %s %s" collection (:_id doc))
-  (let [coll   (get-collection db-spec collection)
+  (let [coll   (get-collection conn collection)
         result (if session
                  (.insertOne coll session doc)
                  (.insertOne coll doc))]
     (bson-value->document-id (.getInsertedId result))))
 
 (defn insert-many!
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    docs]
-  {:pre [db-spec collection (seq docs) (every? map? docs)]}
+  {:pre [conn collection (seq docs) (every? map? docs)]}
   (log/debugf "insert many; %s %s" collection (count docs))
   (let [bsons  ^List (vec docs)
-        coll   (get-collection db-spec collection)
+        coll   (get-collection conn collection)
         result (if session
                  (.insertMany coll session bsons)
                  (.insertMany coll bsons))]
@@ -407,21 +398,21 @@
 (defn update-one!
   "Find document(s) matching `query` and update the first one.
   Returns a map describing if a match was found and if it was actually altered."
-  {:arglists '([db-spec collection query changes & {:keys [array-filters
-                                                           bypass-validation?
-                                                           collation-options
-                                                           comment
-                                                           hint
-                                                           upsert?
-                                                           variables]}])}
-  [{::keys [^ClientSession session] :as db-spec}
+  {:arglists '([conn collection query changes & {:keys [array-filters
+                                                        bypass-validation?
+                                                        collation-options
+                                                        comment
+                                                        hint
+                                                        upsert?
+                                                        variables]}])}
+  [{::keys [^ClientSession session] :as conn}
    collection
    query
    changes
    & {:as options}]
-  {:pre [db-spec collection (map? query) (map? changes)]}
+  {:pre [conn collection (map? query) (map? changes)]}
   (log/debugf "update one; %s %s" collection options)
-  (let [coll    (get-collection db-spec collection)
+  (let [coll    (get-collection conn collection)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
         options (di/make-update-options (or options {}))
@@ -438,21 +429,21 @@
 (defn update-many!
   "Find document(s) matching `query` and update them.
   Returns the number of matched and updated documents."
-  {:arglists '([db-spec collection query changes & {:keys [array-filters
-                                                           bypass-validation?
-                                                           collation-options
-                                                           comment
-                                                           hint
-                                                           upsert?
-                                                           variables]}])}
-  [{::keys [^ClientSession session] :as db-spec}
+  {:arglists '([conn collection query changes & {:keys [array-filters
+                                                        bypass-validation?
+                                                        collation-options
+                                                        comment
+                                                        hint
+                                                        upsert?
+                                                        variables]}])}
+  [{::keys [^ClientSession session] :as conn}
    collection
    query
    changes
    & {:as options}]
-  {:pre [db-spec collection (map? query) (map? changes)]}
+  {:pre [conn collection (map? query) (map? changes)]}
   (log/debugf "update many; %s %s" collection options)
-  (let [coll    (get-collection db-spec collection)
+  (let [coll    (get-collection conn collection)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
         options (di/make-update-options (or options {}))
@@ -469,20 +460,20 @@
 (defn replace-one!
   "Find document(s) matching `query` and replace the first one.
   Returns a map describing if a match was found and if it was actually altered."
-  {:arglists '([db-spec collection query changes & {:keys [bypass-validation?
-                                                           collation-options
-                                                           comment
-                                                           hint
-                                                           upsert?
-                                                           variables]}])}
-  [{::keys [^ClientSession session] :as db-spec}
+  {:arglists '([conn collection query changes & {:keys [bypass-validation?
+                                                        collation-options
+                                                        comment
+                                                        hint
+                                                        upsert?
+                                                        variables]}])}
+  [{::keys [^ClientSession session] :as conn}
    collection
    query
    replacement
    & {:as options}]
-  {:pre [db-spec collection (map? query) (map? replacement)]}
+  {:pre [conn collection (map? query) (map? replacement)]}
   (log/debugf "replace one; %s %s" collection options)
-  (let [coll    (get-collection db-spec collection)
+  (let [coll    (get-collection conn collection)
         filter  (c/map->bson query (.getCodecRegistry coll))
         options (di/make-replace-options (or options {}))
         result  (cond
@@ -498,12 +489,12 @@
 ;; Deletes
 
 (defn delete-one!
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    & {:keys [query]}]
-  {:pre [db-spec collection (map? query)]}
+  {:pre [conn collection (map? query)]}
   (log/debugf "delete one; %s" collection)
-  (let [coll   (get-collection db-spec collection)
+  (let [coll   (get-collection conn collection)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteOne coll session query)
@@ -512,12 +503,12 @@
      :count         (.getDeletedCount result)}))
 
 (defn delete-many!
-  [{::keys [^ClientSession session] :as db-spec}
+  [{::keys [^ClientSession session] :as conn}
    collection
    & {:keys [query]}]
-  {:pre [db-spec collection (map? query)]}
+  {:pre [conn collection (map? query)]}
   (log/debugf "delete many; %s" collection)
-  (let [coll   (get-collection db-spec collection)
+  (let [coll   (get-collection conn collection)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteMany coll session query)
@@ -529,18 +520,18 @@
 
 (defn count-collection
   "Count the number of documents in a collection"
-  {:arglists '([db-spec collection & {:keys [query
-                                             collation-options
-                                             comment
-                                             hint
-                                             limit
-                                             max-time-ms
-                                             skip]}])}
-  [{::keys [^ClientSession session] :as db-spec}
+  {:arglists '([conn collection & {:keys [query
+                                          collation-options
+                                          comment
+                                          hint
+                                          limit
+                                          max-time-ms
+                                          skip]}])}
+  [{::keys [^ClientSession session] :as conn}
    collection
    & {:keys [query hint] :as options}]
-  {:pre [db-spec collection]}
-  (let [coll     (get-collection db-spec collection)
+  {:pre [conn collection]}
+  (let [coll     (get-collection conn collection)
         registry (.getCodecRegistry coll)
         query    (when query
                    (c/map->bson query registry))
@@ -557,21 +548,21 @@
 
 (defn estimated-count-collection
   "Gets an estimate of the count of documents in a collection using collection metadata."
-  [db-spec
+  [conn
    collection]
-  {:pre [db-spec collection]}
-  (-> (get-collection db-spec collection)
+  {:pre [conn collection]}
+  (-> (get-collection conn collection)
       .estimatedDocumentCount))
 
 (defn find-distinct
   "Find all distinct value of a field in a collection. Returns a set."
-  {:arglists '([db-spec collection field & {:keys [query
-                                                   batch-size
-                                                   xform
-                                                   max-time-ms
-                                                   keywords?]}])}
+  {:arglists '([conn collection field & {:keys [query
+                                                batch-size
+                                                xform
+                                                max-time-ms
+                                                keywords?]}])}
   [{::keys [^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    collection
    field
    & {:keys [query
@@ -581,9 +572,9 @@
              keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec collection field]}
+  {:pre [conn collection field]}
   (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
-  (let [coll                 (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll                 (get-collection conn collection {:keywords? keywords?})
         field-name           (name field)
         query                (when (seq query)
                                (c/map->bson query (.getCodecRegistry coll)))
@@ -603,7 +594,7 @@
 
 (defn find-all
   [{::keys [^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    collection
    & {:keys [query
              projection
@@ -616,9 +607,9 @@
              keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec collection]}
+  {:pre [conn collection]}
   (log/debugf "find all; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
-  (let [coll       (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll       (get-collection conn collection {:keywords? keywords?})
         query      (when (seq query)
                      (c/map->bson query (.getCodecRegistry coll)))
         projection (when (seq projection)
@@ -648,19 +639,19 @@
 
   By default will warn & throw if query produces more than
   one result."
-  {:arglists '([db-spec collection & {:keys [query
-                                             projection
-                                             keywords?
-                                             warn-on-multiple?
-                                             throw-on-multiple?]}])}
-  [db-spec
+  {:arglists '([conn collection & {:keys [query
+                                          projection
+                                          keywords?
+                                          warn-on-multiple?
+                                          throw-on-multiple?]}])}
+  [conn
    collection
    & {:keys [warn-on-multiple?
              throw-on-multiple?]
       :or   {warn-on-multiple?  true
              throw-on-multiple? true}
       :as   options}]
-  {:pre [db-spec collection]}
+  {:pre [conn collection]}
   (log/debugf "find one; %s %s" collection (select-keys options [:keywords? :warn-on-multiple? :throw-on-multiple?]))
   (let [;; "A negative limit is similar to a positive limit but closes the cursor after
         ;; returning a single batch of results."
@@ -669,7 +660,7 @@
         options   (-> options
                       (select-keys [:query :projection :keywords?])
                       (assoc :limit cnt :batch-size 2))
-        results   (find-all db-spec collection options)
+        results   (find-all conn collection options)
         multiple? (< 1 (count results))]
     (log/debugf "find one results: %d" (count results))
     ;; Check if the query really did produce a single result, or did we (accidentally?)
@@ -682,36 +673,36 @@
 
 (defn find-by-id
   "Like `find-one`, but fetches a single document by id."
-  {:arglists '([db-spec collection id & {:keys [projection
-                                                keywords?]}])}
-  [db-spec collection id & {:as options}]
-  {:pre [db-spec collection id]}
+  {:arglists '([conn collection id & {:keys [projection
+                                             keywords?]}])}
+  [conn collection id & {:as options}]
+  {:pre [conn collection id]}
   (log/debugf "find by id; %s %s %s" collection id (select-keys options [:keywords?]))
-  (find-one db-spec collection (assoc options :query {:_id id})))
+  (find-one conn collection (assoc options :query {:_id id})))
 
 ;; Find one and - API
 
 (defn find-one-and-delete!
   "Find a document and remove it.
   Returns the document, or ´nil´ if none found."
-  {:arglists '([db-spec collection query & {:keys [collation-options
-                                                   comment
-                                                   keywords?
-                                                   max-time-ms
-                                                   hint
-                                                   projection
-                                                   sort
-                                                   variables]}])}
+  {:arglists '([conn collection query & {:keys [collation-options
+                                                comment
+                                                keywords?
+                                                max-time-ms
+                                                hint
+                                                projection
+                                                sort
+                                                variables]}])}
   [{::keys [^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    collection
    query
    & {:keys [hint projection sort variables keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec collection (seq query)]}
+  {:pre [conn collection (seq query)]}
   (log/debugf "find one and delete; %s %s" collection options)
-  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll     (get-collection conn collection {:keywords? keywords?})
         registry (.getCodecRegistry coll)
         query    (c/map->bson query registry)
         options  (di/make-find-one-and-delete-options
@@ -730,28 +721,28 @@
   "Find a document and replace it.
   Returns the document, or ´nil´ if none found. The `return` argument controls
   whether we return the document before or after the replacement."
-  {:arglists '([db-spec collection query replacement & {:keys [bypass-validation?
-                                                               collation-options
-                                                               comment
-                                                               hint
-                                                               keywords?
-                                                               max-time-ms
-                                                               projection
-                                                               return
-                                                               sort
-                                                               upsert?
-                                                               variables]}])}
+  {:arglists '([conn collection query replacement & {:keys [bypass-validation?
+                                                            collation-options
+                                                            comment
+                                                            hint
+                                                            keywords?
+                                                            max-time-ms
+                                                            projection
+                                                            return
+                                                            sort
+                                                            upsert?
+                                                            variables]}])}
   [{::keys [^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    collection
    query
    replacement
    & {:keys [hint projection sort variables keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec collection (map? replacement) (map? query)]}
+  {:pre [conn collection (map? replacement) (map? query)]}
   (log/debugf "find one and replace; %s %s" collection options)
-  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll     (get-collection conn collection {:keywords? keywords?})
         registry (.getCodecRegistry coll)
         query    (c/map->bson query registry)
         options  (di/make-find-one-and-replace-options
@@ -770,29 +761,29 @@
   "Find a document and update it.
   Returns the document, or ´nil´ if none found. The `return` argument controls
   whether we return the document before or after the replacement."
-  {:arglists '([db-spec collection query updates & {:keys [array-filters
-                                                           bypass-validation?
-                                                           collation-options
-                                                           comment
-                                                           hint
-                                                           keywords?
-                                                           max-time-ms
-                                                           projection
-                                                           return
-                                                           sort
-                                                           upsert?
-                                                           variables]}])}
+  {:arglists '([conn collection query updates & {:keys [array-filters
+                                                        bypass-validation?
+                                                        collation-options
+                                                        comment
+                                                        hint
+                                                        keywords?
+                                                        max-time-ms
+                                                        projection
+                                                        return
+                                                        sort
+                                                        upsert?
+                                                        variables]}])}
   [{::keys [^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    collection
    query
    updates
    & {:keys [array-filters hint projection sort variables keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec collection (map? updates) (map? query)]}
+  {:pre [conn collection (map? updates) (map? query)]}
   (log/debugf "find one and update; %s %s" collection options)
-  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll     (get-collection conn collection {:keywords? keywords?})
         registry (.getCodecRegistry coll)
         query    (c/map->bson query registry)
         updates  (c/map->bson updates registry)
@@ -813,7 +804,7 @@
 
 (defn aggregate!
   [{::keys [^ClientSession session]
-    :as    db-spec}
+    :as    conn}
    collection
    pipeline
    & {:keys [xform
@@ -823,10 +814,10 @@
              keywords?]
       :or   {keywords? true}
       :as   options}]
-  {:pre [db-spec collection (sequential? pipeline)]}
+  {:pre [conn collection (sequential? pipeline)]}
   (log/debugf "aggregate; %s %s" collection
               (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
-  (let [coll     (get-collection db-spec collection {:keywords? keywords?})
+  (let [coll     (get-collection conn collection {:keywords? keywords?})
         pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
         it       (cond
                    session (.aggregate coll session pipeline)
