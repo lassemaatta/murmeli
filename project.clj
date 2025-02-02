@@ -8,11 +8,7 @@
                  [org.mongodb/mongodb-driver-sync "5.3.0"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
-  :profiles {:dev           {:dependencies   [;; Sources (incl. deps)
-                                              [org.mongodb/mongodb-driver-sync "5.3.0" :classifier "sources"]
-                                              [org.mongodb/bson "5.3.0" :classifier "sources"]
-                                              [org.mongodb/mongodb-driver-core "5.3.0" :classifier "sources"]
-                                              ;; Testcontainers for mongodb
+  :profiles {:dev           {:dependencies   [;; Testcontainers for mongodb
                                               [clj-test-containers "0.7.4"]
                                               [org.testcontainers/mongodb "1.17.6"]
                                               ;; Generative testing with spec
