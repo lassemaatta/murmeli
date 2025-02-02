@@ -267,7 +267,33 @@
 ;; Indexes
 
 (defn create-index!
-  "Create a new index."
+  "Create a new index.
+
+  Arguments:
+  * `conn` -- The database connection
+  * `collection` -- The collection to operate on
+  * `index-keys` -- Map of index name to index type (1, -1, 2d, 2dsphere, text)
+
+  Options:
+  * `background?` -- Create index in the background
+  * `bits` -- 2d index location geodata hash precision bits
+  * `collation-options` -- Map of collation options, see [[murmeli.data-interop/make-collation]]
+  * `default-language` -- Text index language
+  * `expire-after-seconds` -- TTL for removing indexed documents
+  * `hidden?` -- Hide index from the query planner
+  * `language-override` -- Name of the field that contains the language string
+  * `max-boundary` -- Upper inclusive boundary for the longitude and latitude values for 2d indexes
+  * `min-boundary` -- Lower inclusive boundary for the longitude and latitude values for 2d indexes
+  * `index-name` -- Name of the index
+  * `partial-filter-expression` -- Filter expression (a map) for including documents in the index
+  * `sparse?` -- Create a sparse index
+  * `sphere-version` -- The 2dsphere index version number
+  * `storage-engine` -- Map of storage engine options
+  * `text-version` -- The text index version number
+  * `unique?` -- Create a unique index
+  * `version` -- The index version number
+  * `weights` -- Map of text index field weights
+  * `wildcard-projection` -- Map of fields to include/exclude in a wildcard index"
   {:arglists '([conn
                 collection
                 index-keys
@@ -280,7 +306,7 @@
                           language-override
                           max-boundary
                           min-boundary
-                          name
+                          index-name
                           partial-filter-expression
                           sparse?
                           sphere-version
@@ -293,16 +319,20 @@
   [{::keys [^ClientSession session] :as conn}
    collection
    index-keys
-   & {:as options}]
-  {:pre [conn collection (seq index-keys)]}
+   & {:keys [partial-filter-expression
+             storage-engine
+             weights]
+      :as   options}]
+  {:pre [conn collection (map? index-keys)]}
   (log/debugf "create index; %s %s %s" collection index-keys options)
   (let [coll             (get-collection conn collection)
+        registry         (.getCodecRegistry coll)
         index-keys       (di/make-index-bson index-keys)
         ^IndexOptions io (cond-> options
-                           (:partial-filter-expression options)
-                           (update :partial-filter-expression (fn [pfe] (c/map->bson pfe (.getCodecRegistry coll))))
-                           (seq options)
-                           (di/make-index-options))]
+                           partial-filter-expression (update :partial-filter-expression c/map->bson registry)
+                           storage-engine            (update :storage-engine c/map->bson registry)
+                           weights                   (update :weights c/map->bson registry)
+                           (seq options)             (di/make-index-options))]
     (cond
       (and io session) (.createIndex coll session index-keys io)
       session          (.createIndex coll session index-keys)

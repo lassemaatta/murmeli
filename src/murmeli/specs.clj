@@ -196,7 +196,7 @@
 (s/def ::bits ::integer)
 (s/def ::default-language ::non-blank-str)
 (s/def ::expire-after-seconds int?)
-(s/def ::name ::non-blank-str)
+(s/def ::index-name ::non-blank-str)
 (s/def ::partial-filter-expression ::document)
 (s/def :bson/partial-filter-expression ::bson)
 (s/def ::version ::integer)
@@ -206,7 +206,7 @@
                                                 ::bits
                                                 ::default-language
                                                 ::expire-after-seconds
-                                                ::name
+                                                ::index-name
                                                 ::partial-filter-expression
                                                 ::sparse?
                                                 ::unique?
@@ -238,7 +238,7 @@
 (s/fdef m/drop-index-by-name!
   :args (s/cat :conn ::conn-with-db
                :collection ::collection
-               :index-name ::name))
+               :index-name ::index-name))
 
 (s/fdef m/insert-one!
   :args (s/cat :conn ::conn-with-db
@@ -495,7 +495,7 @@
   :ret (s/nilable ::collation))
 
 (s/def ::hidden? boolean?)
-(s/def ::language-override ::non-blank-str)
+(s/def ::language-override (s/or :str ::non-blank-str :kw simple-keyword?))
 (s/def ::sphere-version ::integer)
 (s/def :bson/storage-engine ::bson)
 (s/def ::text-version ::integer)
@@ -509,7 +509,7 @@
                                              ::expire-after-seconds
                                              ::hidden?
                                              ::language-override
-                                             ::name
+                                             ::index-name
                                              :bson/partial-filter-expression
                                              ::sparse?
                                              ::sphere-version

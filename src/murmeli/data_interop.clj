@@ -242,7 +242,7 @@
            language-override
            max-boundary
            min-boundary
-           name
+           index-name
            partial-filter-expression
            sparse?
            sphere-version
@@ -261,10 +261,10 @@
       default-language          (.defaultLanguage default-language)
       expire-after-seconds      (.expireAfter (long expire-after-seconds) TimeUnit/SECONDS)
       (some? hidden?)           (.hidden (boolean hidden?))
-      language-override         (.languageOverride language-override)
+      language-override         (.languageOverride (name language-override))
       max-boundary              (.max (double max-boundary))
       min-boundary              (.min (double min-boundary))
-      name                      (.name name)
+      index-name                (.name index-name)
       partial-filter-expression (.partialFilterExpression partial-filter-expression)
       (some? sparse?)           (.sparse (boolean sparse?))
       sphere-version            (.sphereVersion (int sphere-version))

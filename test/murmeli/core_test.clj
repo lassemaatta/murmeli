@@ -333,25 +333,60 @@
       (is (= [id-index]
              (m/list-indexes conn coll))))
     (testing "creating indexes"
-      (m/create-index! conn coll {:foo 1} {:name    "my-index"
-                                           :unique? true
-                                           :sparse? true})
-      (m/create-index! conn coll {:foo.bar 1} {:name "my-index-2"})
-      (m/create-index! conn coll {:foo.quuz 1
-                                  :foo.quiz 1} {:name "my-index-3"})
+      (m/create-index! conn coll
+                       {:foo 1}
+                       {:background? true
+                        :index-name  "my-index"
+                        :sparse?     true
+                        :unique?     true})
+      (m/create-index! conn coll
+                       {:foo.bar 1}
+                       {:index-name "my-index-2"})
+      (m/create-index! conn coll
+                       {:foo.quuz 1
+                        :foo.quiz 1}
+                       {:index-name "my-index-3"})
+      (testing "create a text index"
+        (m/create-index! conn coll
+                         {:foo.text-1 "text"
+                          :foo.text-2 "text"}
+                         {:index-name        "my-index-4"
+                          :default-language  "fi"
+                          :language-override :my-lang
+                          :weights           {:foo.text-1 10
+                                              :foo.text-2 5}}))
+      (testing "index with a PFE"
+        (m/create-index! conn coll
+                         {:foo 1}
+                         {:index-name                "my-index-5"
+                          :partial-filter-expression {:bar {$gt "7"}}}))
       (is (= [id-index
-              {:name   "my-index"
-               :key    {:foo 1}
-               :unique true
-               :sparse true
-               :v      2}
-              {:name "my-index-2"
-               :key  {:foo.bar 1}
+              {:background true
+               :key        {:foo 1}
+               :name       "my-index"
+               :sparse     true
+               :unique     true
+               :v          2}
+              {:key  {:foo.bar 1}
+               :name "my-index-2"
                :v    2}
-              {:name "my-index-3"
-               :key  {:foo.quuz 1
+              {:key  {:foo.quuz 1
                       :foo.quiz 1}
-               :v    2}]
+               :name "my-index-3"
+               :v    2}
+              {:default_language  "fi"
+               :key               {:_fts  "text"
+                                   :_ftsx 1}
+               :language_override "my-lang"
+               :name              "my-index-4"
+               :textIndexVersion  3
+               :v                 2
+               :weights           {:foo.text-1 10
+                                   :foo.text-2 5}}
+              {:key                     {:foo 1}
+               :name                    "my-index-5"
+               :partialFilterExpression {:bar {:$gt "7"}}
+               :v                       2}]
              (m/list-indexes conn coll))))
     (testing "removing index"
       (testing "removing with wrong name fails"
@@ -360,6 +395,8 @@
                               (m/drop-index-by-name! conn coll "missing"))))
       (testing "removing with correct name works"
         (m/drop-index-by-name! conn coll "my-index")
+        (m/drop-index-by-name! conn coll "my-index-4")
+        (m/drop-index-by-name! conn coll "my-index-5")
         (is (= [id-index
                 {:name "my-index-2"
                  :key  {:foo.bar 1}
