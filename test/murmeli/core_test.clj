@@ -29,7 +29,8 @@
   (is (not (m/id? nil)))
   (is (not (m/id? "")))
   (is (m/id? "667c471cea82561061cb1a96"))
-  (is (m/id? (m/create-id))))
+  (is (m/id? (m/create-id)))
+  (is (m/object-id? (m/create-object-id))))
 
 (deftest connect-test
   (let [original-conn (test-utils/get-conn)]
@@ -72,22 +73,38 @@
           (is (nil? (m/drop-db! conn db-name)))
           (is (= 4 (count (get-db-names conn)))))))))
 
-(deftest coll-test
-  (let [conn   (-> (test-utils/get-conn)
-                   ;; Use a separate db for this tests so that we don't
-                   ;; see collections created in other tests
-                   (m/with-db "coll-test-db"))
-        coll-1 (get-coll)
-        coll-2 (get-coll)]
-    (is (= #{} (m/list-collection-names conn)))
-    (m/create-collection! conn coll-1)
-    (is (= #{coll-1} (m/list-collection-names conn)))
-    (m/create-collection! conn coll-2)
-    (is (= #{coll-1 coll-2} (m/list-collection-names conn)))
-    (m/drop-collection! conn coll-1)
-    (is (= #{coll-2} (m/list-collection-names conn)))
-    (m/drop-collection! conn coll-2)
-    (is (= #{} (m/list-collection-names conn)))))
+(deftest list-collection-names-test
+  (let [db-name "coll-test-db"
+        conn    (-> (test-utils/get-conn)
+                    ;; Use a separate db for this tests so that we don't
+                    ;; see collections created in other tests
+                    (m/with-db db-name))
+        coll-1  (get-coll)
+        coll-2  (get-coll)]
+    (m/drop-db! conn db-name)
+    (testing "basic stuff"
+      (is (= #{} (m/list-collection-names conn)))
+      (m/create-collection! conn coll-1)
+      (is (= #{coll-1} (m/list-collection-names conn)))
+      (m/create-collection! conn coll-2)
+      (is (= #{coll-1 coll-2} (m/list-collection-names conn)))
+      (m/drop-collection! conn coll-1)
+      (is (= #{coll-2} (m/list-collection-names conn)))
+      (m/drop-collection! conn coll-2)
+      (is (= #{} (m/list-collection-names conn))))
+    (testing "extra options"
+      (m/create-collection! conn coll-1)
+      (m/create-collection! conn coll-2)
+      (testing "batch size"
+        (is (= #{coll-1 coll-2} (m/list-collection-names conn :batch-size 1)))
+        (is (thrown-with-msg? MongoCommandException
+                              #"'batchSize' value must be >= 0"
+                              (m/list-collection-names conn :batch-size -1))))
+      (testing "max-time-ms"
+        (is (= #{coll-1 coll-2} (m/list-collection-names conn :max-time-ms 100))))
+      (testing "keywords?"
+        (is (= #{(name coll-1) (name coll-2)} (m/list-collection-names conn :keywords? false)))))
+    (m/drop-db! conn db-name)))
 
 (deftest simple-insert-test
   (testing "inserting document"
