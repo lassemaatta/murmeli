@@ -5,7 +5,7 @@
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.12.0"]
                  [org.clojure/tools.logging "1.3.0"]
-                 [org.mongodb/mongodb-driver-sync "5.3.0"]
+                 [org.mongodb/mongodb-driver-sync "5.3.1"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
   :profiles {:dev           {:dependencies   [;; Testcontainers for mongodb
