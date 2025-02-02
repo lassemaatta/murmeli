@@ -14,3 +14,4 @@ pom.xml.asc
 .lsp/.cache
 .clj-kondo/.cache
 .clj-kondo/*/*
+.cljdoc-preview/
