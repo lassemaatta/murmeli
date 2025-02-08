@@ -1,4 +1,6 @@
 (ns murmeli.impl.collection
+  "Collection implementation"
+  {:no-doc true}
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.convert :as c]
             [murmeli.impl.db :as db]

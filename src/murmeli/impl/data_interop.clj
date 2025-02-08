@@ -1,4 +1,5 @@
 (ns murmeli.impl.data-interop
+  "Collection of helper functions to convert clojure data to various Mongo API Java objects"
   (:require [murmeli.impl.convert :as c])
   (:import [com.mongodb Block
                         ClientSessionOptions
@@ -90,7 +91,7 @@
 
 (def ^:private api-version ServerApiVersion/V1)
 
-(defn make-hosts
+(defn- make-hosts
   [hosts]
   (->> hosts
        (mapv (fn [{:keys [^String host ^Long port]}]
@@ -117,6 +118,7 @@
           (some? invalid-hostname-allowed?) (.invalidHostNameAllowed (boolean invalid-hostname-allowed?)))))))
 
 (defn make-client-settings
+  {:no-doc true}
   ^MongoClientSettings
   [{:keys                      [cluster-settings
                                 credentials
@@ -149,6 +151,7 @@
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
 (defn make-client-session-options
+  {:no-doc true}
   ^ClientSessionOptions
   [{:keys [causally-consistent?
            default-timeout-ms
@@ -232,6 +235,7 @@
       true                      (.build))))
 
 (defn make-index-options
+  {:no-doc true}
   ^IndexOptions
   [{:keys [background?
            bits
@@ -276,6 +280,7 @@
       wildcard-projection       (.wildcardProjection wildcard-projection))))
 
 (defn make-index-bson
+  {:no-doc true}
   ^Bson [index-keys]
   (let [^List indexes (->> index-keys
                            (mapv (fn [[field-name index-type]]
@@ -292,6 +297,7 @@
       (Indexes/compoundIndex indexes))))
 
 (defn make-update-options
+  {:no-doc true}
   ^UpdateOptions
   [{:keys [array-filters
            bypass-validation?
@@ -314,6 +320,7 @@
         variables                  (.let variables)))))
 
 (defn make-replace-options
+  {:no-doc true}
   ^ReplaceOptions
   [{:keys [bypass-validation?
            collation-options
@@ -334,6 +341,7 @@
         variables                  (.let variables)))))
 
 (defn make-find-one-and-delete-options
+  {:no-doc true}
   ^FindOneAndDeleteOptions
   [{:keys [collation-options
            ^String comment
@@ -356,6 +364,7 @@
         variables   (.let variables)))))
 
 (defn make-find-one-and-replace-options
+  {:no-doc true}
   ^FindOneAndReplaceOptions
   [{:keys [bypass-validation?
            collation-options
@@ -386,6 +395,7 @@
         variables                  (.let variables)))))
 
 (defn make-find-one-and-update-options
+  {:no-doc true}
   ^FindOneAndUpdateOptions
   [{:keys [array-filters
            bypass-validation?
@@ -418,6 +428,7 @@
         variables                  (.let variables)))))
 
 (defn make-count-options
+  {:no-doc true}
   ^CountOptions
   [{:keys [collation-options
            ^String comment

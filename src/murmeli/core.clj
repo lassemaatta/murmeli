@@ -47,13 +47,13 @@
   * `cluster-settings` -- Map of cluster settings, see below
   * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
   * `keywords?` -- If true, deserialize map keys as keywords instead of strings
-  * `read-concern` -- Choose level of read isolation, see [[murmeli.data-interop/get-read-concern]]
-  * `read-preference` -- Choose preferred replica set members when reading, see [[murmeli.data-interop/get-read-preference]]
+  * `read-concern` -- Choose level of read isolation, see [[murmeli.impl.data-interop/get-read-concern]]
+  * `read-preference` -- Choose preferred replica set members when reading, see [[murmeli.impl.data-interop/get-read-preference]]
   * `retry-reads?` -- Retry reads if they fail due to a network error
   * `retry-writes?` -- Retry writes if they fail due to a network error
   * `ssl-settings` -- Map of SSL settings, see below
   * `uri` -- The connection string to use, eg. \"mongodb://[username:password@]host[:port1],...\"
-  * `write-concern` -- Acknowledgement of write operations, see [[murmeli.data-interop/get-write-concern]]
+  * `write-concern` -- Acknowledgement of write operations, see [[murmeli.impl.data-interop/get-write-concern]]
 
   The `cluster-settings` map:
   * `hosts` -- Sequence of maps with `host` and optionally `port`
@@ -166,7 +166,7 @@
   Options:
   * `background?` -- Create index in the background
   * `bits` -- 2d index location geodata hash precision bits
-  * `collation-options` -- Map of collation options, see [[murmeli.data-interop/make-collation]]
+  * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
   * `default-language` -- Text index language
   * `expire-after-seconds` -- TTL for removing indexed documents
   * `hidden?` -- Hide index from the query planner
@@ -257,7 +257,7 @@
   Options:
   * `array-filters` -- List of array filter documents
   * `bypass-validation?` -- If true, bypass document validation
-  * `collation-options` -- Map of collation options, see [[murmeli.data-interop/make-collation]]
+  * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
   * `comment` -- Operation comment string
   * `hint` -- Indexing hint document
   * `upsert?` -- If true, insert `changes` document if no existing document matches `query`
@@ -280,7 +280,7 @@
   Options:
   * `array-filters` -- List of array filter documents
   * `bypass-validation?` -- If true, bypass document validation
-  * `collation-options` -- Map of collation options, see [[murmeli.data-interop/make-collation]]
+  * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
   * `comment` -- Operation comment string
   * `hint` -- Indexing hint document
   * `upsert?` -- If true, insert `changes` document if no existing document matches `query`

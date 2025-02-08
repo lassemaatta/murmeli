@@ -1,4 +1,6 @@
 (ns murmeli.impl.db
+  "Database implementation"
+  {:no-doc true}
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
             [murmeli.impl.session :as session])

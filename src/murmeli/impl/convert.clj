@@ -1,4 +1,6 @@
 (ns murmeli.impl.convert
+  "Convert Mongo BSON to/from Clojure data."
+  {:no-doc true}
   (:import [clojure.lang APersistentMap
                          APersistentSet
                          APersistentVector

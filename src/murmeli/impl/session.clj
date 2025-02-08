@@ -1,4 +1,6 @@
 (ns murmeli.impl.session
+  "Session implementation"
+  {:no-doc true}
   (:require [murmeli.impl.client :as client]
             [murmeli.impl.data-interop :as di])
   (:import [com.mongodb.client ClientSession MongoClient]))

@@ -1,4 +1,6 @@
 (ns murmeli.impl.index
+  "Index implementation"
+  {:no-doc true}
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.collection :as collection]
             [murmeli.impl.convert :as c]

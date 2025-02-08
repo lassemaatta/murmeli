@@ -1,4 +1,6 @@
 (ns murmeli.impl.client
+  "Client implementation."
+  {:no-doc true}
   (:require [murmeli.impl.data-interop :as di])
   (:import [com.mongodb.client MongoClient MongoClients]))
 
