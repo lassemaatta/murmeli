@@ -360,6 +360,19 @@
                          {:foo 1}
                          {:index-name                "my-index-5"
                           :partial-filter-expression {:bar {$gt "7"}}}))
+      (testing "index with collation options"
+        (m/create-index! conn coll
+                         {:foo.bar 1}
+                         {:index-name        "my-index-6"
+                          :collation-options {:alternate         :shifted
+                                              :backwards?        false
+                                              :case-first        :upper
+                                              :case-sensitive?   true
+                                              :locale            "fi"
+                                              :max-variable      :space
+                                              :normalize?        true
+                                              :numeric-ordering? true
+                                              :strength          :primary}}))
       (is (= [id-index
               {:background true
                :key        {:foo 1}
@@ -386,7 +399,20 @@
               {:key                     {:foo 1}
                :name                    "my-index-5"
                :partialFilterExpression {:bar {:$gt "7"}}
-               :v                       2}]
+               :v                       2}
+              {:collation {:alternate       "shifted"
+                           :backwards       false
+                           :caseFirst       "upper"
+                           :caseLevel       true
+                           :locale          "fi"
+                           :maxVariable     "space"
+                           :normalization   true
+                           :numericOrdering true
+                           :strength        1
+                           :version         "57.1"}
+               :key       {:foo.bar 1}
+               :name      "my-index-6"
+               :v         2}]
              (m/list-indexes conn coll))))
     (testing "removing index"
       (testing "removing with wrong name fails"
@@ -397,6 +423,7 @@
         (m/drop-index-by-name! conn coll "my-index")
         (m/drop-index-by-name! conn coll "my-index-4")
         (m/drop-index-by-name! conn coll "my-index-5")
+        (m/drop-index-by-name! conn coll "my-index-6")
         (is (= [id-index
                 {:name "my-index-2"
                  :key  {:foo.bar 1}
