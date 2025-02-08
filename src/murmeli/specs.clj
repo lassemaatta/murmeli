@@ -2,9 +2,12 @@
   "Optional `clojure.spec`'s for `murmeli.*`."
   (:require [clojure.spec.alpha :as s]
             [clojure.string :as str]
-            [murmeli.convert :as mc]
             [murmeli.core :as m]
-            [murmeli.data-interop :as di])
+            [murmeli.impl.client :as client]
+            [murmeli.impl.convert :as mc]
+            [murmeli.impl.data-interop :as di]
+            [murmeli.impl.db :as db]
+            [murmeli.impl.session :as session])
   (:import [com.mongodb ClientSessionOptions
                         ConnectionString
                         MongoClientSettings
@@ -88,26 +91,26 @@
                                true         valid-collection?))))
 
 (defn db? [instance] (instance? MongoDatabase instance))
-(s/def ::m/db db?)
+(s/def ::db/db db?)
 
 (defn client? [instance] (instance? MongoClient instance))
-(s/def ::m/client client?)
+(s/def ::client/client client?)
 
 (defn session-options? [instance] (instance? ClientSessionOptions instance))
-(s/def ::m/session-options session-options?)
+(s/def ::session/session-options session-options?)
 
 (defn session? [instance] (instance? ClientSession instance))
-(s/def ::m/session session?)
+(s/def ::session/session session?)
 
 (s/def ::db-spec (s/merge (s/keys :opt-un [::database-name])
                           ::client-settings-options))
 
-(s/def ::conn (s/keys :req [::m/client]
-                      :opt [::m/session-options
-                            ::m/session]))
+(s/def ::conn (s/keys :req [::client/client]
+                      :opt [::session/session-options
+                            ::session/session]))
 
 (s/def ::conn-with-db (s/merge ::conn
-                               (s/keys :req [::m/db])))
+                               (s/keys :req [::db/db])))
 
 (s/fdef m/connect-client!
   :args (s/cat :db-spec ::db-spec)

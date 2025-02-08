@@ -1,5 +1,5 @@
-(ns murmeli.data-interop
-  (:require [murmeli.convert :as c])
+(ns murmeli.impl.data-interop
+  (:require [murmeli.impl.convert :as c])
   (:import [com.mongodb Block
                         ClientSessionOptions
                         ConnectionString

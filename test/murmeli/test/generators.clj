@@ -1,7 +1,7 @@
 (ns murmeli.test.generators
   (:require [clojure.spec.alpha :as s]
             [clojure.test.check.generators :as gen]
-            [murmeli.convert :as mc]
+            [murmeli.impl.convert :as mc]
             [murmeli.specs :as ms])
   (:import [org.bson.types ObjectId]))
 

@@ -2,7 +2,7 @@
   (:require [clojure.test :refer [are deftest is testing]]
             [clojure.test.check.clojure-test :refer [defspec]]
             [clojure.test.check.properties :as properties]
-            [murmeli.convert :as c]
+            [murmeli.impl.convert :as c]
             [murmeli.specs]
             [murmeli.test.generators :as mg])
   (:import [java.nio ByteBuffer]

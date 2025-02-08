@@ -1,4 +1,4 @@
-(ns murmeli.convert
+(ns murmeli.impl.convert
   (:import [clojure.lang APersistentMap
                          APersistentSet
                          APersistentVector

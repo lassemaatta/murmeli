@@ -1,4 +1,4 @@
-(ns murmeli.cursor
+(ns murmeli.impl.cursor
   "`MongoIterable` implements `java.lang.Iterable`, so we can give it directly
   to `transduce` or `reduce` as the `coll`. However, the cursor/iterator it
   returns _must_ be closed (according to the docs). To handle this, we can

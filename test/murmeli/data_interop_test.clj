@@ -3,7 +3,7 @@
             [clojure.spec.test.check :as-alias stc]
             [clojure.test :refer [deftest is]]
             [matcher-combinators.test]
-            [murmeli.data-interop :as di]
+            [murmeli.impl.data-interop :as di]
             [murmeli.specs :as ms]
             [murmeli.test.generators :as mg]))
 
