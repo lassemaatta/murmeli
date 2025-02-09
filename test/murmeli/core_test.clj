@@ -549,7 +549,9 @@
                             :b "y"}}]
                     out-plain))))
     (testing "coerce using xform"
-      (let [out-plain (m/find-all conn coll :xform (map coerce-my-record!))]
+      (let [out-plain (into []
+                            (map coerce-my-record!)
+                            (m/find-reducible conn coll))]
         (is (match? [{:_id m/id?
                       :set #{}
                       :vec []
@@ -561,22 +563,28 @@
                             :b :y}}]
                     out-plain))))
     (testing "coerce, filter and alter using xform"
-      (let [out-plain (m/find-all conn coll :xform (comp (map coerce-my-record!)
-                                                         (filter (comp seq :set))
-                                                         (map #(update % :map assoc :k :v))))]
+      (let [out-plain (into []
+                            (comp (map coerce-my-record!)
+                                  (filter (comp seq :set))
+                                  (map #(update % :map assoc :k :v)))
+                            (m/find-reducible conn coll))]
         (is (= [{:set #{"a" "b" "c"}
                  :vec [1 2 3]
                  :map {:a :x
                        :b :y
                        :k :v}}]
-               (mapv #(dissoc % :_id) out-plain)))))))
+               (mapv #(dissoc % :_id) out-plain)))))
+    (testing "example of run! with side-effect"
+      (run! (fn [item]
+              (println item))
+            (m/find-reducible conn coll)))))
 
 (deftest find-one-and-delete-test
-  (let [coll    (get-coll)
+  (let [coll (get-coll)
         conn (test-utils/get-conn)]
     (is (nil? (m/find-one-and-delete! conn coll {:foo 1})))
     (m/insert-many! conn coll [{:foo 1 :data "bar"}
-                                  {:foo 2 :data "quuz"}])
+                               {:foo 2 :data "quuz"}])
     (is (= 2 (m/count-collection conn coll)))
     (is (match? {:_id m/object-id? :foo 1 :data "bar"}
                 (m/find-one-and-delete! conn coll {:foo 1})))
@@ -586,11 +594,11 @@
     (is (zero? (m/count-collection conn coll)))))
 
 (deftest find-one-and-replace-test
-  (let [coll    (get-coll)
+  (let [coll (get-coll)
         conn (test-utils/get-conn)]
     (is (nil? (m/find-one-and-replace! conn coll {:foo 1} {:foo 4})))
     (m/insert-many! conn coll [{:foo 1 :data "bar"}
-                                  {:foo 2 :data "quuz"}])
+                               {:foo 2 :data "quuz"}])
     (is (= 2 (m/count-collection conn coll)))
 
     (testing "replace document and return original"
@@ -634,10 +642,25 @@
         conn (test-utils/get-conn)]
     (m/insert-many! conn coll [{:foo 1 :data "bar" :bar {:key 1} :quuz "this"}
                                {:foo 2 :data "quuz" :bar {:key 2} :quuz "this"}])
-
-    (is (= #{} (m/find-distinct conn coll :i-dont-exist)))
-    (is (= #{1 2} (m/find-distinct conn coll :foo)))
-    (is (= #{"1" "2"} (m/find-distinct conn coll :foo {:xform (map str)})))
-    (is (= #{"bar" "quuz"} (m/find-distinct conn coll :data)))
-    (is (= #{{:key 1} {:key 2}} (m/find-distinct conn coll :bar)))
-    (is (= #{"this"} (m/find-distinct conn coll :quuz)))))
+    (testing "find-distinct-reducible"
+      (is (= #{1 2}
+             (into #{} (m/find-distinct-reducible conn coll :foo))))
+      (is (= #{1 2}
+             (reduce conj #{} (m/find-distinct-reducible conn coll :foo))))
+      (is (= #{"1" "2"}
+             (reduce (fn [acc v]
+                       (conj acc (str v)))
+                     #{}
+                     (m/find-distinct-reducible conn coll :foo))))
+      (is (= #{"1" "2"}
+             (transduce
+               (map str)
+               conj
+               #{}
+               (m/find-distinct-reducible conn coll :foo)))))
+    (testing "find-distict"
+      (is (= #{} (m/find-distinct conn coll :i-dont-exist)))
+      (is (= #{1 2} (m/find-distinct conn coll :foo)))
+      (is (= #{"bar" "quuz"} (m/find-distinct conn coll :data)))
+      (is (= #{{:key 1} {:key 2}} (m/find-distinct conn coll :bar)))
+      (is (= #{"this"} (m/find-distinct conn coll :quuz))))))

@@ -302,12 +302,10 @@
 (s/def ::batch-size int?)
 (s/def ::max-time-ms int?)
 (s/def ::keywords? boolean?)
-(s/def ::xform fn?)
 
 (s/def ::find-all-options (s/keys* :opt-un [::query
                                             ::projection
                                             ::sort
-                                            ::xform
                                             ::limit
                                             ::skip
                                             ::batch-size

@@ -343,22 +343,55 @@
    collection]
   (query/estimated-count-collection conn collection))
 
+(defn find-distinct-reducible
+  "Find all distinct value of a field in a collection. Returns a set."
+  {:arglists '([conn collection field & {:keys [query
+                                                batch-size
+                                                max-time-ms
+                                                keywords?]}])}
+  [conn collection field & {:as options}]
+  (query/find-distinct-reducible conn collection field options))
+
 (defn find-distinct
   "Find all distinct value of a field in a collection. Returns a set."
   {:arglists '([conn collection field & {:keys [query
                                                 batch-size
-                                                xform
                                                 max-time-ms
                                                 keywords?]}])}
   [conn collection field & {:as options}]
   (query/find-distinct conn collection field options))
 
-;; TODO tests docstring
-(defn find-all
+(defn find-reducible
+  "Query for documents in the given collection.
+
+  Options:
+  * `query` -- Map describing the query to run
+  * `projection` -- Either a sequence of field names or a map of field names to projection types
+  * `sort` -- Map of field name to sort type
+  * `limit` -- Limit number of results to return
+  * `skip` -- Skip first N documents
+  * `batch-size` -- Fetch documents in N sized batches
+  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `keywords?` -- Decode map keys as keywords instead of strings
+
+  Returns a reducible (`IReduceInit`) that runs the query when reduced (with `reduce`,
+  `into`, `transduce`, `run!`..)"
   {:arglists '([conn collection & {:keys [query
                                           projection
                                           sort
-                                          xform
+                                          limit
+                                          skip
+                                          batch-size
+                                          max-time-ms
+                                          keywords?]}])}
+  [conn collection & {:as options}]
+  (query/find-reducible conn collection options))
+
+(defn find-all
+  "Like `find-plan`, but eagerly realizes all matches into a vector."
+  {:arglists '([conn collection & {:keys [query
+                                          projection
+                                          sort
                                           limit
                                           skip
                                           batch-size
@@ -441,6 +474,10 @@
   (query/find-one-and-update! conn collection query updates options))
 
 ;; Aggregation
+
+(defn aggregate-reducible!
+  [conn collection pipeline & { :as options}]
+  (query/aggregate-reducible! conn collection pipeline options))
 
 (defn aggregate!
   [conn collection pipeline & { :as options}]
