@@ -256,12 +256,19 @@
         (is (= [item-1 item-2 item-3]
                results)))
       (testing "projection"
-        (let [results (m/find-all conn coll :projection {:_id 1})]
-          (is (= [{:_id id} {:_id id-2} {:_id id-3}]
-                 results)))
-        (let [results (m/find-all conn coll :projection {:foo 1})]
-          (is (= [{:_id id :foo 123} {:_id id-2} {:_id id-3 :foo 200}]
-                 results))))
+        (testing "projection as a map"
+          (let [results (m/find-all conn coll :projection {:_id 1})]
+            (is (= [{:_id id} {:_id id-2} {:_id id-3}]
+                   results)))
+          (let [results (m/find-all conn coll :projection {:foo 1})]
+            (is (= [{:_id id :foo 123} {:_id id-2} {:_id id-3 :foo 200}]
+                   results))))
+        (testing "projection as a vec"
+          (let [results (m/find-all conn coll :projection [:foo :bar :baz])]
+            (is (= [{:_id id :foo 123}
+                    {:_id id-2 :bar "quuz"}
+                    {:_id id-3 :foo 200 :bar "aaaa"}]
+                   results)))))
       (testing "sorting"
         (let [results (m/find-all conn coll :sort (array-map :foo 1))]
           (is (= [item-2 item-1 item-3]

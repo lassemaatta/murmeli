@@ -218,6 +218,13 @@
       (log/debugf "distinct results: %d" (count res))
       res)))
 
+(defn preprocess-projection
+  [projection registry]
+  (when (seq projection)
+    (cond-> projection
+      (sequential? projection) (zipmap (repeat 1))
+      true                     (c/map->bson registry))))
+
 (defn find-all
   [{::session/keys [^ClientSession session] :as conn}
    collection
@@ -235,12 +242,12 @@
   {:pre [conn collection]}
   (log/debugf "find all; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
   (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+        registry   (.getCodecRegistry coll)
         query      (when (seq query)
-                     (c/map->bson query (.getCodecRegistry coll)))
-        projection (when (seq projection)
-                     (c/map->bson projection (.getCodecRegistry coll)))
+                     (c/map->bson query registry))
+        projection (preprocess-projection projection registry)
         sort       (when (seq sort)
-                     (c/map->bson sort (.getCodecRegistry coll)))
+                     (c/map->bson sort registry))
         it         ^FindIterable (cond
                                    (and query session) (.find coll session query PersistentHashMap)
                                    session             (.find coll session PersistentHashMap)
@@ -304,13 +311,14 @@
       :as   options}]
   {:pre [conn collection (seq query)]}
   (log/debugf "find one and delete; %s %s" collection options)
-  (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
-        registry (.getCodecRegistry coll)
-        query    (c/map->bson query registry)
-        options  (di/make-find-one-and-delete-options
+  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+        registry   (.getCodecRegistry coll)
+        query      (c/map->bson query registry)
+        projection (preprocess-projection projection registry)
+        options    (di/make-find-one-and-delete-options
                    (cond-> (or options {})
                      (seq hint)       (assoc :hint (c/map->bson hint registry))
-                     (seq projection) (assoc :projection (c/map->bson projection registry))
+                     (seq projection) (assoc :projection projection)
                      (seq sort)       (assoc :sort (c/map->bson sort registry))
                      (seq variables)  (assoc :variables (c/map->bson variables registry))))]
     (cond
@@ -329,15 +337,16 @@
       :as   options}]
   {:pre [conn collection (map? replacement) (map? query)]}
   (log/debugf "find one and replace; %s %s" collection options)
-  (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
-        registry (.getCodecRegistry coll)
-        query    (c/map->bson query registry)
-        options  (di/make-find-one-and-replace-options
-                   (cond-> (or options {})
-                     (seq hint)       (assoc :hint (c/map->bson hint registry))
-                     (seq projection) (assoc :projection (c/map->bson projection registry))
-                     (seq sort)       (assoc :sort (c/map->bson sort registry))
-                     (seq variables)  (assoc :variables (c/map->bson variables registry))))]
+  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+        registry   (.getCodecRegistry coll)
+        query      (c/map->bson query registry)
+        projection (preprocess-projection projection registry)
+        options    (di/make-find-one-and-replace-options
+                     (cond-> (or options {})
+                       (seq hint)       (assoc :hint (c/map->bson hint registry))
+                       (seq projection) (assoc :projection projection)
+                       (seq sort)       (assoc :sort (c/map->bson sort registry))
+                       (seq variables)  (assoc :variables (c/map->bson variables registry))))]
     (cond
       (and session options) (.findOneAndReplace coll session query replacement options)
       session               (.findOneAndReplace coll session query replacement)
@@ -354,17 +363,18 @@
       :as   options}]
   {:pre [conn collection (map? updates) (map? query)]}
   (log/debugf "find one and update; %s %s" collection options)
-  (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
-        registry (.getCodecRegistry coll)
-        query    (c/map->bson query registry)
-        updates  (c/map->bson updates registry)
-        options  (di/make-find-one-and-update-options
-                   (cond-> (or options {})
-                     (seq array-filters) (assoc :array-filters (mapv (fn [f] (c/map->bson f registry)) array-filters))
-                     (seq hint)          (assoc :hint (c/map->bson hint registry))
-                     (seq projection)    (assoc :projection (c/map->bson projection registry))
-                     (seq sort)          (assoc :sort (c/map->bson sort registry))
-                     (seq variables)     (assoc :variables (c/map->bson variables registry))))]
+  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+        registry   (.getCodecRegistry coll)
+        query      (c/map->bson query registry)
+        projection (preprocess-projection projection registry)
+        updates    (c/map->bson updates registry)
+        options    (di/make-find-one-and-update-options
+                     (cond-> (or options {})
+                       (seq array-filters) (assoc :array-filters (mapv (fn [f] (c/map->bson f registry)) array-filters))
+                       (seq hint)          (assoc :hint (c/map->bson hint registry))
+                       (seq projection)    (assoc :projection projection)
+                       (seq sort)          (assoc :sort (c/map->bson sort registry))
+                       (seq variables)     (assoc :variables (c/map->bson variables registry))))]
     (cond
       (and session options) (.findOneAndUpdate coll session query updates options)
       session               (.findOneAndUpdate coll session query updates)

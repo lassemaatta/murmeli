@@ -289,7 +289,10 @@
 
 (s/def ::query ::document)
 (s/def ::projection-val #{-1 1 true false})
-(s/def ::projection (s/map-of ::key ::projection-val))
+(s/def ::projection-map (s/map-of ::key ::projection-val))
+(s/def ::projection-list (s/coll-of ::key))
+(s/def ::projection (s/or :list ::projection-list
+                          :map ::projection-map))
 (s/def ::sort (s/map-of ::key any?
                         ;; "You can sort on a maximum of 32 keys."
                         :min-count 1
