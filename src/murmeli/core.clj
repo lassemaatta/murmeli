@@ -345,10 +345,11 @@
 
 (defn find-distinct-reducible
   "Find all distinct value of a field in a collection. Returns a set."
-  {:arglists '([conn collection field & {:keys [query
-                                                batch-size
+  {:arglists '([conn collection field & {:keys [batch-size
+                                                inner-f
+                                                keywords?
                                                 max-time-ms
-                                                keywords?]}])}
+                                                query]}])}
   [conn collection field & {:as options}]
   (query/find-distinct-reducible conn collection field options))
 
@@ -365,25 +366,27 @@
   "Query for documents in the given collection.
 
   Options:
-  * `query` -- Map describing the query to run
-  * `projection` -- Either a sequence of field names or a map of field names to projection types
-  * `sort` -- Map of field name to sort type
-  * `limit` -- Limit number of results to return
-  * `skip` -- Skip first N documents
   * `batch-size` -- Fetch documents in N sized batches
-  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `inner-f` -- Run `inner-f` function on each document when reducing
   * `keywords?` -- Decode map keys as keywords instead of strings
+  * `limit` -- Limit number of results to return
+  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `projection` -- Either a sequence of field names or a map of field names to projection types
+  * `query` -- Map describing the query to run
+  * `skip` -- Skip first N documents
+  * `sort` -- Map of field name to sort type
 
-  Returns a reducible (`IReduceInit`) that runs the query when reduced (with `reduce`,
-  `into`, `transduce`, `run!`..)"
-  {:arglists '([conn collection & {:keys [query
-                                          projection
-                                          sort
+  Returns a reducible (`IReduceInit`) that eagerly runs the query when reduced with a function
+  (using `reduce`, `into`, `transduce`, `run!`..)."
+  {:arglists '([conn collection & {:keys [batch-size
+                                          inner-f
+                                          keywords?
                                           limit
-                                          skip
-                                          batch-size
                                           max-time-ms
-                                          keywords?]}])}
+                                          projection
+                                          query
+                                          skip
+                                          sort]}])}
   [conn collection & {:as options}]
   (query/find-reducible conn collection options))
 

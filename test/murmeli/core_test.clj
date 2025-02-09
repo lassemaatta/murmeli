@@ -562,6 +562,23 @@
                       :map {:a :x
                             :b :y}}]
                     out-plain))))
+    (testing "inner-f and outer-f"
+      (let [out-plain (reduce conj
+                              []
+                              (m/find-reducible conn coll {:inner-f (fn [item]
+                                                                      (assoc item :foo true))}))]
+        (is (match? [{:_id m/id?
+                      :set []
+                      :vec []
+                      :map {}
+                      :foo true}
+                     {:_id m/id?
+                      :set ["a" "b" "c"]
+                      :vec [1 2 3]
+                      :map {:a "x"
+                            :b "y"}
+                      :foo true}]
+                    out-plain))))
     (testing "coerce, filter and alter using xform"
       (let [out-plain (into []
                             (comp (map coerce-my-record!)

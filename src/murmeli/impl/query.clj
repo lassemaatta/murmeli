@@ -201,6 +201,12 @@
             acc
             (recur acc)))))))
 
+(defn- wrap-reducer
+  [f inner-f]
+  (fn [acc v]
+    (let [inner (or inner-f identity)]
+      (f acc (inner v)))))
+
 (defn find-distinct-reducible
   [{::session/keys [^ClientSession session] :as conn}
    collection
@@ -208,6 +214,7 @@
    & {:keys [query
              batch-size
              max-time-ms
+             inner-f
              keywords?]
       :or   {keywords? true}
       :as   options}]
@@ -215,7 +222,8 @@
   (reify IReduceInit
     (reduce [_ f start]
       (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
-      (let [coll                 (collection/get-collection conn collection {:keywords? keywords?})
+      (let [f                    (wrap-reducer f inner-f)
+            coll                 (collection/get-collection conn collection {:keywords? keywords?})
             field-name           (name field)
             query                (when (seq query)
                                    (c/map->bson query (.getCodecRegistry coll)))
@@ -235,32 +243,33 @@
   (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
   (into #{} (find-distinct-reducible conn collection field options)))
 
-(defn preprocess-projection
+(defn- preprocess-projection
   [projection registry]
   (when (seq projection)
     (cond-> projection
       (sequential? projection) (zipmap (repeat 1))
       true                     (c/map->bson registry))))
 
-
 (defn find-reducible
   [{::session/keys [^ClientSession session] :as conn}
    collection
-   & {:keys [query
-             projection
-             sort
+   & {:keys [batch-size
+             inner-f
+             keywords?
              limit
-             skip
-             batch-size
              max-time-ms
-             keywords?]
+             projection
+             query
+             skip
+             sort]
       :or   {keywords? true}
       :as   options}]
   {:pre [conn collection]}
   (reify IReduceInit
     (reduce [_ f start]
       (log/debugf "find plan; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
-      (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+      (let [f          (wrap-reducer f inner-f)
+            coll       (collection/get-collection conn collection {:keywords? keywords?})
             registry   (.getCodecRegistry coll)
             query      (when (seq query)
                          (c/map->bson query registry))
@@ -410,6 +419,7 @@
    pipeline
    & {:keys [allow-disk-use?
              batch-size
+             inner-f
              keywords?
              max-time-ms]
       :or   {keywords? true}
@@ -419,7 +429,8 @@
     (reduce [_ f start]
       (log/debugf "aggregate; %s %s" collection
                   (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
-      (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
+      (let [f        (wrap-reducer f inner-f)
+            coll     (collection/get-collection conn collection {:keywords? keywords?})
             pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
             it       (cond
                        session (.aggregate coll session pipeline)
