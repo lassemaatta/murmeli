@@ -121,7 +121,18 @@
              (m/find-by-id conn coll (ObjectId. (str id)))))
       (let [id-2 (m/insert-one! conn coll {:foo 2
                                            :_id (m/create-id)})]
-        (is (m/id? id-2))))))
+        (is (m/id? id-2)))
+
+      (testing "insert with escape characters"
+        (testing "string values can contain NULLs"
+          (let [id  (m/insert-one! conn coll {"bar" "foo \0 asd"})
+                res (:bar (m/find-by-id conn coll id))]
+            (is (= res "foo \0 asd"))))
+        (testing "... but not field names as they are stored as C strings"
+          (is (thrown-with-msg?
+                RuntimeException
+                #"BSON cstring 'bar .{1}' is not valid because it contains a null character at index 4"
+                (m/insert-one! conn coll {"bar \0" "foo"}))))))))
 
 (deftest simple-insert-many-test
   (testing "inserting documents"
