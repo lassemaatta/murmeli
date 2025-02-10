@@ -346,7 +346,6 @@
 (defn find-distinct-reducible
   "Find all distinct value of a field in a collection. Returns a set."
   {:arglists '([conn collection field & {:keys [batch-size
-                                                inner-f
                                                 keywords?
                                                 max-time-ms
                                                 query]}])}
@@ -367,7 +366,6 @@
 
   Options:
   * `batch-size` -- Fetch documents in N sized batches
-  * `inner-f` -- Run `inner-f` function on each document when reducing
   * `keywords?` -- Decode map keys as keywords instead of strings
   * `limit` -- Limit number of results to return
   * `max-time-ms` -- Maximum execution time on server in milliseconds
@@ -379,7 +377,6 @@
   Returns a reducible (`IReduceInit`) that eagerly runs the query when reduced with a function
   (using `reduce`, `into`, `transduce`, `run!`..)."
   {:arglists '([conn collection & {:keys [batch-size
-                                          inner-f
                                           keywords?
                                           limit
                                           max-time-ms

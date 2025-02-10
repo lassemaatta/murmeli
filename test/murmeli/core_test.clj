@@ -562,11 +562,11 @@
                       :map {:a :x
                             :b :y}}]
                     out-plain))))
-    (testing "inner-f and outer-f"
+    (testing "add processing step with eduction"
       (let [out-plain (reduce conj
                               []
-                              (m/find-reducible conn coll {:inner-f (fn [item]
-                                                                      (assoc item :foo true))}))]
+                              (->> (m/find-reducible conn coll)
+                                   (eduction (map (fn [item] (assoc item :foo true))))))]
         (is (match? [{:_id m/id?
                       :set []
                       :vec []

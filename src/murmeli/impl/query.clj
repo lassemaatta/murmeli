@@ -201,12 +201,6 @@
             acc
             (recur acc)))))))
 
-(defn- wrap-reducer
-  [f inner-f]
-  (fn [acc v]
-    (let [inner (or inner-f identity)]
-      (f acc (inner v)))))
-
 (defn find-distinct-reducible
   [{::session/keys [^ClientSession session] :as conn}
    collection
@@ -214,7 +208,6 @@
    & {:keys [query
              batch-size
              max-time-ms
-             inner-f
              keywords?]
       :or   {keywords? true}
       :as   options}]
@@ -222,8 +215,7 @@
   (reify IReduceInit
     (reduce [_ f start]
       (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
-      (let [f                    (wrap-reducer f inner-f)
-            coll                 (collection/get-collection conn collection {:keywords? keywords?})
+      (let [coll                 (collection/get-collection conn collection {:keywords? keywords?})
             field-name           (name field)
             query                (when (seq query)
                                    (c/map->bson query (.getCodecRegistry coll)))
@@ -254,7 +246,6 @@
   [{::session/keys [^ClientSession session] :as conn}
    collection
    & {:keys [batch-size
-             inner-f
              keywords?
              limit
              max-time-ms
@@ -268,8 +259,7 @@
   (reify IReduceInit
     (reduce [_ f start]
       (log/debugf "find plan; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
-      (let [f          (wrap-reducer f inner-f)
-            coll       (collection/get-collection conn collection {:keywords? keywords?})
+      (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
             registry   (.getCodecRegistry coll)
             query      (when (seq query)
                          (c/map->bson query registry))
@@ -419,7 +409,6 @@
    pipeline
    & {:keys [allow-disk-use?
              batch-size
-             inner-f
              keywords?
              max-time-ms]
       :or   {keywords? true}
@@ -429,8 +418,7 @@
     (reduce [_ f start]
       (log/debugf "aggregate; %s %s" collection
                   (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
-      (let [f        (wrap-reducer f inner-f)
-            coll     (collection/get-collection conn collection {:keywords? keywords?})
+      (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
             pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
             it       (cond
                        session (.aggregate coll session pipeline)
