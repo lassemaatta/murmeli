@@ -354,6 +354,8 @@
 (s/def ::convertable (s/or :keyword simple-keyword?
                            :string string?
                            :int int?
+                           :double double?
+                           :float float?
                            :boolean boolean?
                            :inst inst?
                            :nil nil?
