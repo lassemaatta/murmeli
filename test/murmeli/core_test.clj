@@ -128,6 +128,10 @@
           (let [id  (m/insert-one! conn coll {"bar" "foo \0 asd"})
                 res (:bar (m/find-by-id conn coll id))]
             (is (= res "foo \0 asd"))))
+        (testing "and we can choose to sanitize them"
+          (let [id  (m/insert-one! conn coll {"bar" "foo \0 asd"} {:sanitize-strings? true})
+                res (:bar (m/find-by-id conn coll id))]
+            (is (= res "foo  asd"))))
         (testing "... but not field names as they are stored as C strings"
           (is (thrown-with-msg?
                 RuntimeException

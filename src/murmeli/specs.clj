@@ -244,10 +244,15 @@
                :collection ::collection
                :index-name ::index-name))
 
+(s/def ::insert-one-options (s/keys* :opt-un [::allow-qualified?
+                                              ::keywords?
+                                              ::sanitize-strings?]))
+
 (s/fdef m/insert-one!
   :args (s/cat :conn ::conn-with-db
                :collection ::collection
-               :doc ::document))
+               :doc ::document
+               :options ::insert-one-options))
 
 (s/def ::documents (s/coll-of ::document
                               :min-count 1))
@@ -304,6 +309,7 @@
 (s/def ::max-time-ms int?)
 (s/def ::keywords? boolean?)
 (s/def ::allow-qualified? boolean?)
+(s/def ::sanitize-strings? boolean?)
 
 (s/def ::find-all-options (s/keys* :opt-un [::allow-qualified?
                                             ::batch-size
@@ -312,6 +318,7 @@
                                             ::max-time-ms
                                             ::projection
                                             ::query
+                                            ::sanitize-strings?
                                             ::skip
                                             ::sort]))
 
@@ -326,6 +333,7 @@
                                             ::keywords?
                                             ::projection
                                             ::query
+                                            ::sanitize-strings?
                                             ::throw-on-multiple?
                                             ::warn-on-multiple?]))
 
@@ -336,7 +344,8 @@
 
 (s/def ::find-by-id-options (s/keys* :opt-un [::allow-qualified?
                                               ::keywords?
-                                              ::projection]))
+                                              ::projection
+                                              ::sanitize-strings?]))
 
 (s/fdef m/find-by-id
   :args (s/cat :conn ::conn-with-db

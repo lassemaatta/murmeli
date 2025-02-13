@@ -247,6 +247,16 @@
     (decode [_this ^BsonReader reader ^DecoderContext _ctx]
       (symbol (.readString reader)))))
 
+(def sanitizing-string-codec
+  "A `Codec` for `String` which sanitizes NULLs.
+  This isn't stricly necessary (anymore) due to https://github.com/mongodb/mongo-java-driver/pull/786."
+  (reify Codec
+    (getEncoderClass [_this] String)
+    (^void encode [_this ^BsonWriter writer s ^EncoderContext _ctx]
+     (.writeString writer (.replaceAll ^String s "\0" "")))
+    (decode [_this ^BsonReader reader ^DecoderContext _ctx]
+      (.readString reader))))
+
 (defn object-codec
   "A `Codec` for `Object`."
   [^CodecRegistry registry]
@@ -262,7 +272,7 @@
 
 (defn- clojure-provider
   "Instantiate a `CodecProvider`, which can provide `Codec`s for various Clojure data structures"
-  [opts]
+  [{:keys [sanitize-strings?] :as opts}]
   (reify CodecProvider
     (^Codec get [_this ^Class clazz ^CodecRegistry registry]
      (when clazz
@@ -270,6 +280,8 @@
          (= Object clazz)                            (object-codec registry)
          (= Keyword clazz)                           (keyword-codec opts)
          (= Symbol clazz)                            (symbol-codec opts)
+         (and sanitize-strings?
+              (= String clazz))                      sanitizing-string-codec
          (.isAssignableFrom APersistentMap clazz)    (map-codec registry opts)
          (.isAssignableFrom APersistentSet clazz)    (set-codec registry)
          (.isAssignableFrom APersistentVector clazz) (vector-codec registry))))))
@@ -278,9 +290,11 @@
   "Construct a `CodecRegistry` for converting between Java classes and BSON
   Options:
   - `keywords?`: Decode map keys as keywords instead of strings
-  - `allow-qualified?`: Accept qualified idents (keywords or symbols), even though we discard the namespace"
-  {:arglists '([{:keys [keywords?
-                        allow-qualified?]}])}
+  - `allow-qualified?`: Accept qualified idents (keywords or symbols), even though we discard the namespace
+  - `sanitize-strings?`: Remove NULL characters from strings"
+  {:arglists '([{:keys [allow-qualified?
+                        keywords?
+                        sanitize-strings?]}])}
   ^CodecRegistry [opts]
   (CodecRegistries/fromRegistries
     ^"[Lorg.bson.codecs.configuration.CodecRegistry;"
