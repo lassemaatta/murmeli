@@ -69,7 +69,8 @@
   []
   (-> (db-spec)
       m/connect-client!
-      (m/with-db "test-db")))
+      (m/with-db "test-db")
+      (m/with-default-registry)))
 
 (defn db-fixture
   [test-fn]

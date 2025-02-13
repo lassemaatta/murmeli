@@ -93,6 +93,14 @@
   {:pre [database-name]}
   (db/with-db conn database-name))
 
+(defn with-registry
+  [conn registry]
+  (db/with-registry conn registry))
+
+(defn with-default-registry
+  [conn]
+  (db/with-default-registry conn))
+
 (defn list-dbs
   "List all databases as documents.
   Returned documents contain keys like `:name`, `:sizeOnDisk`, `:empty`."

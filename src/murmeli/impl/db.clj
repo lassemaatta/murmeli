@@ -3,9 +3,11 @@
   {:no-doc true}
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
-            [murmeli.impl.session :as session])
+            [murmeli.impl.session :as session]
+            [murmeli.impl.convert :as c])
   (:import [clojure.lang PersistentHashMap]
-           [com.mongodb.client ClientSession MongoClient MongoDatabase]))
+           [com.mongodb.client ClientSession MongoClient MongoDatabase]
+           [org.bson.codecs.configuration CodecRegistry]))
 
 (set! *warn-on-reflection* true)
 
@@ -28,6 +30,20 @@
       (log/debugf "Loading database %s" database-name)
       (assoc conn ::db (get-database conn database-name)))
     conn))
+
+(defn with-registry
+  [{::keys [^MongoDatabase db] :as conn}
+   ^CodecRegistry registry]
+  {:pre [conn db registry]}
+  (assoc conn ::db (.withCodecRegistry db registry)))
+
+(defn with-default-registry
+  [conn]
+  (with-registry conn (c/registry {:keywords? true})))
+
+(defn registry
+  ^CodecRegistry [{::keys [^MongoDatabase db]}]
+  (.getCodecRegistry db))
 
 (defn list-dbs
   [{::client/keys  [^MongoClient client]
