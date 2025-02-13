@@ -25,7 +25,9 @@
                      BsonRegularExpression
                      BsonString
                      BsonType
+                     BsonValue
                      BsonWriter
+                     Document
                      UuidRepresentation]
            [org.bson.codecs BsonValueCodecProvider
                             Codec
@@ -43,11 +45,50 @@
   [^String id]
   (boolean (and (string? id) (ObjectId/isValid id))))
 
+(defn ->object-id
+  "Coerce value to an `ObjectId`."
+  ^ObjectId [value]
+  (cond
+    (instance? ObjectId value)     value
+    (instance? BsonObjectId value) (.getValue ^BsonObjectId value)
+    (string? value)                (ObjectId. ^String value)
+    :else                          (throw (ex-info "Not an object-id" {:value value}))))
+
+(defn object-id->bson
+  ^BsonObjectId [^ObjectId id]
+  (BsonObjectId. id))
+
+(defn bson-value->document-id
+  "The inserted ID is either a `BsonObjectId` or `BsonString`"
+  [^BsonValue v]
+  (let [t (.getBsonType v)]
+    (cond
+      (= t BsonType/STRING)    (-> v .asString .getValue)
+      (= t BsonType/OBJECT_ID) (-> v .asObjectId .getValue))))
+
 (defn map->bson
   "Convert a map to a `Bson`, which can produce a `BsonDocument`."
   ^BsonDocumentWrapper [m ^CodecRegistry registry]
   {:pre [(map? m) registry]}
   (BsonDocumentWrapper/asBsonDocument m registry))
+
+(defn map->document
+  "Convert a map to a `Document`."
+  ^Document [m ^CodecRegistry registry]
+  (let [bson   (map->bson m registry)
+        codec  (.get registry Document)
+        reader (.asBsonReader bson)
+        ctx    (-> (DecoderContext/builder) .build)]
+    (.decode codec reader ctx)))
+
+(defn document->map
+  "Convert a `Document` to a map."
+  [^Document doc ^CodecRegistry registry]
+  (let [bson   (.toBsonDocument doc BsonDocument registry)
+        codec  (.get registry PersistentHashMap)
+        reader (.asBsonReader bson)
+        ctx    (-> (DecoderContext/builder) .build)]
+    (.decode codec reader ctx)))
 
 (def overrides
   "Instead of decoding values as Bson* instances, use these overrides"
@@ -220,7 +261,7 @@
   Options:
   - `keywords?`: Decode map keys as keywords instead of strings"
   {:arglists '([{:keys [keywords?]}])}
-  [opts]
+  ^CodecRegistry [opts]
   (CodecRegistries/fromRegistries
     ^"[Lorg.bson.codecs.configuration.CodecRegistry;"
     (into-array CodecRegistry

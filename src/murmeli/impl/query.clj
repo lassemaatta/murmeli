@@ -12,18 +12,9 @@
                                FindIterable
                                MongoIterable]
            [java.util List]
-           [java.util.concurrent TimeUnit]
-           [org.bson BsonType BsonValue]))
+           [java.util.concurrent TimeUnit]))
 
 (set! *warn-on-reflection* true)
-
-(defn- bson-value->document-id
-  "The inserted ID is either a `BsonObjectId` or `BsonString`"
-  [^BsonValue v]
-  (let [t (.getBsonType v)]
-    (cond
-      (= t BsonType/STRING)    (-> v .asString .getValue)
-      (= t BsonType/OBJECT_ID) (-> v .asObjectId .getValue))))
 
 ;; Insertion
 
@@ -38,7 +29,7 @@
         result (if session
                  (.insertOne coll session doc)
                  (.insertOne coll doc))]
-    (bson-value->document-id (.getInsertedId result))))
+    (c/bson-value->document-id (.getInsertedId result))))
 
 (defn insert-many!
   "Insert multiple documents into a collection.
@@ -57,7 +48,7 @@
                  (.insertMany coll docs))]
     (->> (.getInsertedIds result)
          (sort-by key)
-         (mapv (comp bson-value->document-id val)))))
+         (mapv (comp c/bson-value->document-id val)))))
 
 ;; Updates
 
