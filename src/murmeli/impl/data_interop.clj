@@ -13,6 +13,7 @@
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
+           [com.mongodb.client.gridfs.model GridFSDownloadOptions GridFSUploadOptions]
            [com.mongodb.client.model Collation
                                      CollationAlternate
                                      CollationCaseFirst
@@ -30,6 +31,7 @@
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
            [java.util List]
            [java.util.concurrent TimeUnit]
+           [org.bson Document]
            [org.bson.conversions Bson]))
 
 (set! *warn-on-reflection* true)
@@ -447,3 +449,19 @@
         limit       (.limit (int limit))
         max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
         skip        (.skip (int skip))))))
+
+(defn make-gridfs-upload-options
+  {:no-doc true}
+  ^GridFSUploadOptions
+  [{:keys [chunk-size-bytes
+           ^Document doc]}]
+  (cond-> (GridFSUploadOptions.)
+    chunk-size-bytes (.chunkSizeBytes (int chunk-size-bytes))
+    doc              (.metadata doc)))
+
+(defn make-gridfs-download-options
+  {:no-doc true}
+  ^GridFSDownloadOptions
+  [{:keys [revision]}]
+  (cond-> (GridFSDownloadOptions.)
+    revision (.revision (int revision))))
