@@ -388,7 +388,7 @@
   (query/find-reducible conn collection options))
 
 (defn find-all
-  "Like `find-plan`, but eagerly realizes all matches into a vector."
+  "Like `find-reducible`, but eagerly realizes all matches into a vector."
   {:arglists '([conn collection & {:keys [query
                                           projection
                                           sort

@@ -258,7 +258,7 @@
   {:pre [conn collection]}
   (reify IReduceInit
     (reduce [_ f start]
-      (log/debugf "find plan; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
+      (log/debugf "find reducible; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
       (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
             registry   (.getCodecRegistry coll)
             query      (when (seq query)
