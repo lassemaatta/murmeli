@@ -4,6 +4,7 @@
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.collection :as collection]
             [murmeli.impl.convert :as c]
+            [murmeli.impl.cursor :as cursor]
             [murmeli.impl.data-interop :as di]
             [murmeli.impl.session :as session])
   (:import [clojure.lang IReduceInit PersistentHashMap]
@@ -181,17 +182,6 @@
   (-> (collection/get-collection conn collection)
       .estimatedDocumentCount))
 
-(defn- consume
-  [f start ^MongoIterable iterable]
-  (with-open [it (.cursor iterable)]
-    (loop [acc start]
-      (if-not (.hasNext it)
-        acc
-        (let [acc (f acc (.next it))]
-          (if (reduced? acc)
-            acc
-            (recur acc)))))))
-
 (defn find-distinct-reducible
   [{::session/keys [^ClientSession session] :as conn}
    collection
@@ -218,7 +208,7 @@
                                    :else               (.distinct coll field-name Object))]
         (when batch-size (.batchSize it (int batch-size)))
         (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-        (consume f start it)))))
+        (cursor/consume f start it)))))
 
 (defn find-distinct
   [conn collection field & {:as options}]
@@ -269,7 +259,7 @@
         (when sort (.sort it sort))
         (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
         ;; Eagerly consume the results, but without chunking
-        (consume f start it)))))
+        (cursor/consume f start it)))))
 
 (defn find-all
   [conn collection & {:as options}]
@@ -417,7 +407,7 @@
         (when batch-size (.batchSize it (int batch-size)))
         (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
         (when allow-disk-use? (.allowDiskUse it (boolean allow-disk-use?)))
-        (consume f start it)))))
+        (cursor/consume f start it)))))
 
 (defn aggregate!
   [conn collection pipeline & {:as options}]
