@@ -7,11 +7,8 @@
             [murmeli.impl.cursor :as cursor]
             [murmeli.impl.data-interop :as di]
             [murmeli.impl.session :as session])
-  (:import [clojure.lang IReduceInit PersistentHashMap]
-           [com.mongodb.client ClientSession
-                               DistinctIterable
-                               FindIterable
-                               MongoIterable]
+  (:import [clojure.lang PersistentHashMap]
+           [com.mongodb.client ClientSession DistinctIterable FindIterable]
            [java.util List]
            [java.util.concurrent TimeUnit]))
 
@@ -193,22 +190,20 @@
       :or   {keywords? true}
       :as   options}]
   {:pre [conn collection field]}
-  (reify IReduceInit
-    (reduce [_ f start]
-      (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
-      (let [coll                 (collection/get-collection conn collection {:keywords? keywords?})
-            field-name           (name field)
-            query                (when (seq query)
-                                   (c/map->bson query (.getCodecRegistry coll)))
-            ^DistinctIterable it (cond
-                                   ;; We don't know the type of the distinct field so use `Object`
-                                   (and session query) (.distinct coll session field-name query Object)
-                                   session             (.distinct coll session field-name Object)
-                                   query               (.distinct coll field-name query Object)
-                                   :else               (.distinct coll field-name Object))]
-        (when batch-size (.batchSize it (int batch-size)))
-        (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-        (cursor/consume f start it)))))
+  (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
+  (let [coll                 (collection/get-collection conn collection {:keywords? keywords?})
+        field-name           (name field)
+        query                (when (seq query)
+                               (c/map->bson query (.getCodecRegistry coll)))
+        ^DistinctIterable it (cond
+                               ;; We don't know the type of the distinct field so use `Object`
+                               (and session query) (.distinct coll session field-name query Object)
+                               session             (.distinct coll session field-name Object)
+                               query               (.distinct coll field-name query Object)
+                               :else               (.distinct coll field-name Object))]
+    (when batch-size (.batchSize it (int batch-size)))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+    (cursor/->reducible it)))
 
 (defn find-distinct
   [conn collection field & {:as options}]
@@ -237,29 +232,26 @@
       :or   {keywords? true}
       :as   options}]
   {:pre [conn collection]}
-  (reify IReduceInit
-    (reduce [_ f start]
-      (log/debugf "find reducible; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
-      (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
-            registry   (.getCodecRegistry coll)
-            query      (when (seq query)
-                         (c/map->bson query registry))
-            projection (preprocess-projection projection registry)
-            sort       (when (seq sort)
-                         (c/map->bson sort registry))
-            it         ^FindIterable (cond
-                                       (and query session) (.find coll session query PersistentHashMap)
-                                       session             (.find coll session PersistentHashMap)
-                                       query               (.find coll query PersistentHashMap)
-                                       :else               (.find coll PersistentHashMap))]
-        (when limit (.limit it (int limit)))
-        (when skip (.skip it (int skip)))
-        (when batch-size (.batchSize it (int batch-size)))
-        (when projection (.projection it projection))
-        (when sort (.sort it sort))
-        (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-        ;; Eagerly consume the results, but without chunking
-        (cursor/consume f start it)))))
+  (log/debugf "find reducible; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
+  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+        registry   (.getCodecRegistry coll)
+        query      (when (seq query)
+                     (c/map->bson query registry))
+        projection (preprocess-projection projection registry)
+        sort       (when (seq sort)
+                     (c/map->bson sort registry))
+        it         ^FindIterable (cond
+                                   (and query session) (.find coll session query PersistentHashMap)
+                                   session             (.find coll session PersistentHashMap)
+                                   query               (.find coll query PersistentHashMap)
+                                   :else               (.find coll PersistentHashMap))]
+    (when limit (.limit it (int limit)))
+    (when skip (.skip it (int skip)))
+    (when batch-size (.batchSize it (int batch-size)))
+    (when projection (.projection it projection))
+    (when sort (.sort it sort))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+    (cursor/->reducible it)))
 
 (defn find-all
   [conn collection & {:as options}]
@@ -395,19 +387,17 @@
       :or   {keywords? true}
       :as   options}]
   {:pre [conn collection (sequential? pipeline)]}
-  (reify IReduceInit
-    (reduce [_ f start]
-      (log/debugf "aggregate; %s %s" collection
-                  (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
-      (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
-            pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
-            it       (cond
-                       session (.aggregate coll session pipeline)
-                       :else   (.aggregate coll pipeline))]
-        (when batch-size (.batchSize it (int batch-size)))
-        (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-        (when allow-disk-use? (.allowDiskUse it (boolean allow-disk-use?)))
-        (cursor/consume f start it)))))
+  (log/debugf "aggregate; %s %s" collection
+              (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
+  (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
+        pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
+        it       (cond
+                   session (.aggregate coll session pipeline)
+                   :else   (.aggregate coll pipeline))]
+    (when batch-size (.batchSize it (int batch-size)))
+    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+    (when allow-disk-use? (.allowDiskUse it (boolean allow-disk-use?)))
+    (cursor/->reducible it)))
 
 (defn aggregate!
   [conn collection pipeline & {:as options}]

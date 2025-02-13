@@ -5,7 +5,6 @@
   (:require [murmeli.impl.client :as client]
             [murmeli.impl.collection :as collection]
             [murmeli.impl.convert :as c]
-            [murmeli.impl.cursor]
             [murmeli.impl.db :as db]
             [murmeli.impl.index :as index]
             [murmeli.impl.query :as query]
