@@ -42,7 +42,8 @@
       (let [c (get (deref *containers) image)]
         (when (and (realized? c) (not retain-containers?))
           (log/infof "Stopping container %s for tests" image)
-          (tc/stop! (force c))))
+          (tc/stop! (force c))
+          (swap! *containers dissoc image)))
       (log/infof "Finished with %s" image))))
 
 (defn get-mongo-port
