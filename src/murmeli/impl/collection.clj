@@ -24,15 +24,18 @@
 (defn get-collection
   (^MongoCollection
    [conn collection]
-   (get-collection conn collection {}))
+   (get-collection conn collection nil))
   (^MongoCollection
    [{::db/keys [^MongoDatabase db] :as conn} collection opts]
-   {:pre [db collection opts]}
-   (let [registry-opts (merge (select-keys conn [:keywords?])
-                              opts)]
-     (-> db
-         (.getCollection (name collection) PersistentHashMap)
-         (.withCodecRegistry (c/registry registry-opts))))))
+   {:pre [db collection]}
+   (let [opts          (select-keys opts [:keywords?
+                                          :allow-qualified?])
+         registry-opts (when (seq opts)
+                         (merge (select-keys conn [:keywords?
+                                                   :allow-qualified?])
+                                opts))]
+     (cond-> (.getCollection db (name collection) PersistentHashMap)
+       (seq registry-opts) (.withCodecRegistry (c/registry registry-opts))))))
 
 (defn list-collection-names
   [{::db/keys      [^MongoDatabase db]

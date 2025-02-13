@@ -179,7 +179,8 @@
                :body (s/* any?)))
 
 
-(s/def ::key (s/or :kw simple-keyword? :str ::non-blank-str))
+(s/def ::key (s/or :kw keyword?
+                   :str ::non-blank-str))
 
 (s/def ::index-type #{"2d"
                       "2dsphere"
@@ -302,15 +303,17 @@
 (s/def ::batch-size int?)
 (s/def ::max-time-ms int?)
 (s/def ::keywords? boolean?)
+(s/def ::allow-qualified? boolean?)
 
-(s/def ::find-all-options (s/keys* :opt-un [::query
-                                            ::projection
-                                            ::sort
-                                            ::limit
-                                            ::skip
+(s/def ::find-all-options (s/keys* :opt-un [::allow-qualified?
                                             ::batch-size
+                                            ::keywords?
+                                            ::limit
                                             ::max-time-ms
-                                            ::keywords?]))
+                                            ::projection
+                                            ::query
+                                            ::skip
+                                            ::sort]))
 
 (s/fdef m/find-all
   :args (s/cat :conn ::conn-with-db
@@ -319,19 +322,21 @@
 
 (s/def ::warn-on-multiple? boolean?)
 (s/def ::throw-on-multiple? boolean?)
-(s/def ::find-one-options (s/keys* :opt-un [::query
-                                            ::projection
+(s/def ::find-one-options (s/keys* :opt-un [::allow-qualified?
                                             ::keywords?
-                                            ::warn-on-multiple?
-                                            ::throw-on-multiple?]))
+                                            ::projection
+                                            ::query
+                                            ::throw-on-multiple?
+                                            ::warn-on-multiple?]))
 
 (s/fdef m/find-one
   :args (s/cat :conn ::conn-with-db
                :collection ::collection
                :options ::find-one-options))
 
-(s/def ::find-by-id-options (s/keys* :opt-un [::projection
-                                              ::keywords?]))
+(s/def ::find-by-id-options (s/keys* :opt-un [::allow-qualified?
+                                              ::keywords?
+                                              ::projection]))
 
 (s/fdef m/find-by-id
   :args (s/cat :conn ::conn-with-db
@@ -351,7 +356,8 @@
 
 (s/def ::regex regex?)
 
-(s/def ::convertable (s/or :keyword simple-keyword?
+(s/def ::convertable (s/or :keyword keyword?
+                           :symbol symbol?
                            :string string?
                            :int int?
                            :double double?

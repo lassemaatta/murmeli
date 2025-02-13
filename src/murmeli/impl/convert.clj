@@ -6,7 +6,8 @@
                          APersistentVector
                          Keyword
                          PersistentHashMap
-                         PersistentVector]
+                         PersistentVector
+                         Symbol]
            [com.mongodb MongoClientSettings]
            [java.util Date]
            [java.util.regex Pattern]
@@ -117,12 +118,15 @@
 
 (defn map-codec
   "Build `Codec` for `APersistentMap`."
-  ^Codec [^CodecRegistry registry {:keys [keywords?]}]
+  ^Codec [^CodecRegistry registry {:keys [keywords?
+                                          allow-qualified?]}]
   (reify Codec
     (getEncoderClass [_this] APersistentMap)
     (^void encode [_this ^BsonWriter writer m ^EncoderContext ctx]
      (.writeStartDocument writer)
      (run! (fn [[k v]]
+             (when (and (qualified-ident? k) (not allow-qualified?))
+               (throw (ex-info "Cannot serialize qualified map keys" {:k k})))
              (.writeName writer (name k))
              (if (nil? v)
                (.writeNull writer)
@@ -219,16 +223,29 @@
         (.readEndArray reader)
         xs))))
 
-(def keyword-codec
+(defn keyword-codec
   "A `Codec` for `Keyword`."
+  [{:keys [allow-qualified?]}]
   (reify Codec
     (getEncoderClass [_this] Keyword)
     (^void encode [_this ^BsonWriter writer k ^EncoderContext _ctx]
-     (when (qualified-keyword? k)
+     (when (and (qualified-keyword? k) (not allow-qualified?))
        (throw (ex-info "Cannot serialize qualified keywords" {:k k})))
      (.writeString writer (name k)))
     (decode [_this ^BsonReader reader ^DecoderContext _ctx]
       (keyword (.readString reader)))))
+
+(defn symbol-codec
+  "A `Codec` for `Symbol`."
+  [{:keys [allow-qualified?]}]
+  (reify Codec
+    (getEncoderClass [_this] Symbol)
+    (^void encode [_this ^BsonWriter writer sym ^EncoderContext _ctx]
+     (when (and (qualified-symbol? sym) (not allow-qualified?))
+       (throw (ex-info "Cannot serialize qualified symbols" {:sym sym})))
+     (.writeString writer (name sym)))
+    (decode [_this ^BsonReader reader ^DecoderContext _ctx]
+      (symbol (.readString reader)))))
 
 (defn object-codec
   "A `Codec` for `Object`."
@@ -251,7 +268,8 @@
      (when clazz
        (cond
          (= Object clazz)                            (object-codec registry)
-         (= Keyword clazz)                           keyword-codec
+         (= Keyword clazz)                           (keyword-codec opts)
+         (= Symbol clazz)                            (symbol-codec opts)
          (.isAssignableFrom APersistentMap clazz)    (map-codec registry opts)
          (.isAssignableFrom APersistentSet clazz)    (set-codec registry)
          (.isAssignableFrom APersistentVector clazz) (vector-codec registry))))))
@@ -259,8 +277,10 @@
 (defn registry
   "Construct a `CodecRegistry` for converting between Java classes and BSON
   Options:
-  - `keywords?`: Decode map keys as keywords instead of strings"
-  {:arglists '([{:keys [keywords?]}])}
+  - `keywords?`: Decode map keys as keywords instead of strings
+  - `allow-qualified?`: Accept qualified idents (keywords or symbols), even though we discard the namespace"
+  {:arglists '([{:keys [keywords?
+                        allow-qualified?]}])}
   ^CodecRegistry [opts]
   (CodecRegistries/fromRegistries
     ^"[Lorg.bson.codecs.configuration.CodecRegistry;"

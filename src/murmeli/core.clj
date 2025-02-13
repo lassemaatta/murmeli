@@ -43,6 +43,7 @@
   Returns a connection (map).
 
   Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `cluster-settings` -- Map of cluster settings, see below
   * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
   * `keywords?` -- If true, deserialize map keys as keywords instead of strings
@@ -171,6 +172,7 @@
   * `index-keys` -- Map of index name to index type (1, -1, 2d, 2dsphere, text)
 
   Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `background?` -- Create index in the background
   * `bits` -- 2d index location geodata hash precision bits
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
@@ -193,7 +195,8 @@
   {:arglists '([conn
                 collection
                 index-keys
-                & {:keys [background?
+                & {:keys [allow-qualified?
+                          background?
                           bits
                           collation-options
                           default-language
@@ -245,16 +248,26 @@
 (defn insert-one!
   "Insert a single document into a collection
   If the document does not contain an `_id` field, one will be generated (by default an `ObjectId`).
+
+  Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
+
   Returns the `_id` of the inserted document (`String` or `ObjectId`)."
-  [conn collection doc]
-  (query/insert-one! conn collection doc))
+  {:arglists '([conn collection doc & {:keys [allow-qualified?]}])}
+  [conn collection doc & {:as options}]
+  (query/insert-one! conn collection doc options))
 
 (defn insert-many!
   "Insert multiple documents into a collection.
   If the documents do not contain `_id` fields, one will be generated (by default an `ObjectId`).
+
+  Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
+
   Returns the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
-  [conn collection docs]
-  (query/insert-many! conn collection docs))
+  {:arglists '([conn collection docs & {:keys [allow-qualified?]}])}
+  [conn collection docs & {:as options}]
+  (query/insert-many! conn collection docs options))
 
 ;; Updates
 
@@ -262,6 +275,7 @@
   "Find document matching `query` and apply `changes` to it.
 
   Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `array-filters` -- List of array filter documents
   * `bypass-validation?` -- If true, bypass document validation
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
@@ -271,7 +285,8 @@
   * `variables` -- Top-level variable documents
 
   Returns a map describing if a match was found and if it was actually altered."
-  {:arglists '([conn collection query changes & {:keys [array-filters
+  {:arglists '([conn collection query changes & {:keys [allow-qualified?
+                                                        array-filters
                                                         bypass-validation?
                                                         collation-options
                                                         comment
@@ -285,6 +300,7 @@
   "Find document(s) matching `query` and apply `changes` to them.
 
   Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `array-filters` -- List of array filter documents
   * `bypass-validation?` -- If true, bypass document validation
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
@@ -294,7 +310,8 @@
   * `variables` -- Top-level variable documents
 
   Returns the number of matched and updated documents."
-  {:arglists '([conn collection query changes & {:keys [array-filters
+  {:arglists '([conn collection query changes & {:keys [allow-qualified?
+                                                        array-filters
                                                         bypass-validation?
                                                         collation-options
                                                         comment
@@ -309,10 +326,12 @@
 (defn replace-one!
   "Find document(s) matching `query` and replace the first one.
   Returns a map describing if a match was found and if it was actually altered."
-  {:arglists '([conn collection query changes & {:keys [bypass-validation?
+  {:arglists '([conn collection query changes & {:keys [allow-qualified?
+                                                        bypass-validation?
                                                         collation-options
                                                         comment
                                                         hint
+                                                        keywords?
                                                         upsert?
                                                         variables]}])}
   [conn collection query replacement & {:as options}]
@@ -322,24 +341,26 @@
 
 ;; TODO tests docstring
 (defn delete-one!
-  [conn collection query]
-  (query/delete-one! conn collection query))
+  [conn collection query & {:as options}]
+  (query/delete-one! conn collection query options))
 
 ;; TODO tests docstring
 (defn delete-many!
-  [conn collection query]
-  (query/delete-many! conn collection query))
+  [conn collection query & {:as options}]
+  (query/delete-many! conn collection query options))
 
 ;; Queries
 
 (defn count-collection
   "Count the number of documents in a collection"
-  {:arglists '([conn collection & {:keys [query
+  {:arglists '([conn collection & {:keys [allow-qualified?
                                           collation-options
                                           comment
                                           hint
+                                          keywords?
                                           limit
                                           max-time-ms
+                                          query
                                           skip]}])}
   [conn collection & {:as options}]
   (query/count-collection conn collection options))
@@ -352,7 +373,8 @@
 
 (defn find-distinct-reducible
   "Find all distinct value of a field in a collection. Returns a set."
-  {:arglists '([conn collection field & {:keys [batch-size
+  {:arglists '([conn collection field & {:keys [allow-qualified?
+                                                batch-size
                                                 keywords?
                                                 max-time-ms
                                                 query]}])}
@@ -361,10 +383,11 @@
 
 (defn find-distinct
   "Find all distinct value of a field in a collection. Returns a set."
-  {:arglists '([conn collection field & {:keys [query
+  {:arglists '([conn collection field & {:keys [allow-qualified?
                                                 batch-size
+                                                keywords?
                                                 max-time-ms
-                                                keywords?]}])}
+                                                query]}])}
   [conn collection field & {:as options}]
   (query/find-distinct conn collection field options))
 
@@ -372,6 +395,7 @@
   "Query for documents in the given collection.
 
   Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `batch-size` -- Fetch documents in N sized batches
   * `keywords?` -- Decode map keys as keywords instead of strings
   * `limit` -- Limit number of results to return
@@ -383,7 +407,8 @@
 
   Returns a reducible (`IReduceInit`) that eagerly runs the query when reduced with a function
   (using `reduce`, `into`, `transduce`, `run!`..)."
-  {:arglists '([conn collection & {:keys [batch-size
+  {:arglists '([conn collection & {:keys [allow-qualified?
+                                          batch-size
                                           keywords?
                                           limit
                                           max-time-ms
@@ -396,14 +421,15 @@
 
 (defn find-all
   "Like `find-reducible`, but eagerly realizes all matches into a vector."
-  {:arglists '([conn collection & {:keys [query
-                                          projection
-                                          sort
-                                          limit
-                                          skip
+  {:arglists '([conn collection & {:keys [allow-qualified?
                                           batch-size
+                                          keywords?
+                                          limit
                                           max-time-ms
-                                          keywords?]}])}
+                                          projection
+                                          query
+                                          skip
+                                          sort]}])}
   [conn collection & {:as options}]
   (query/find-all conn collection options))
 
@@ -412,18 +438,20 @@
 
   By default will warn & throw if query produces more than
   one result."
-  {:arglists '([conn collection & {:keys [query
-                                          projection
+  {:arglists '([conn collection & {:keys [allow-qualified?
                                           keywords?
-                                          warn-on-multiple?
-                                          throw-on-multiple?]}])}
+                                          projection
+                                          query
+                                          throw-on-multiple?
+                                          warn-on-multiple?]}])}
   [conn collection & {:as options}]
   (query/find-one conn collection options))
 
 (defn find-by-id
   "Like `find-one`, but fetches a single document by id."
-  {:arglists '([conn collection id & {:keys [projection
-                                             keywords?]}])}
+  {:arglists '([conn collection id & {:keys [allow-qualified?
+                                             keywords?
+                                             projection]}])}
   [conn collection id & {:as options}]
   (query/find-by-id conn collection id options))
 
@@ -447,7 +475,8 @@
   "Find a document and replace it.
   Returns the document, or ´nil´ if none found. The `return` argument controls
   whether we return the document before or after the replacement."
-  {:arglists '([conn collection query replacement & {:keys [bypass-validation?
+  {:arglists '([conn collection query replacement & {:keys [allow-qualified?
+                                                            bypass-validation?
                                                             collation-options
                                                             comment
                                                             hint
@@ -465,7 +494,8 @@
   "Find a document and update it.
   Returns the document, or ´nil´ if none found. The `return` argument controls
   whether we return the document before or after the replacement."
-  {:arglists '([conn collection query updates & {:keys [array-filters
+  {:arglists '([conn collection query updates & {:keys [allow-qualified?
+                                                        array-filters
                                                         bypass-validation?
                                                         collation-options
                                                         comment

@@ -23,7 +23,7 @@
       :as   options}]
   {:pre [conn collection (map? index-keys)]}
   (log/debugf "create index; %s %s %s" collection index-keys options)
-  (let [coll             (collection/get-collection conn collection)
+  (let [coll             (collection/get-collection conn collection options)
         registry         (.getCodecRegistry coll)
         index-keys       (di/make-index-bson index-keys)
         ^IndexOptions io (cond-> options
@@ -49,7 +49,7 @@
   (log/debugf "list indexes; %s" (select-keys options [:batch-size
                                                        :max-time-ms
                                                        :keywords?]))
-  (let [coll                    (collection/get-collection conn collection {:keywords? keywords?})
+  (let [coll                    (collection/get-collection conn collection options)
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session PersistentHashMap)
                                   (.listIndexes coll PersistentHashMap))]

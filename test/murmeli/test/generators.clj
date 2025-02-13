@@ -13,7 +13,8 @@
 
 (def regex-gen (gen/return #"foo"))
 
-(def registry (mc/registry {:keywords? true}))
+(def registry (mc/registry {:keywords?        true
+                            :allow-qualified? true}))
 
 (def doc-gen (binding [s/*recursion-limit* 1]
                (s/gen ::ms/document {::ms/object-id (constantly object-id-gen)

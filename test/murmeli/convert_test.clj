@@ -67,6 +67,26 @@
     (let [in  {:foo [:bar]}
           out (:foo (roundtrip in))]
       (is (= ["bar"] out))))
+  (testing "qualified keywords"
+    (is (thrown-with-msg? RuntimeException
+                          #"Cannot serialize qualified map keys"
+                          (roundtrip {:foo/bar 1})))
+    (is (thrown-with-msg? RuntimeException
+                          #"Cannot serialize qualified keywords"
+                          (roundtrip {:foo :bar/baz})))
+    (is (= {:bar "nom"}
+           (roundtrip (c/registry {:keywords? true :allow-qualified? true})
+                      {:foo/bar :quuz/nom}))))
+  (testing "qualified symbols"
+    (is (thrown-with-msg? RuntimeException
+                          #"Cannot serialize qualified map keys"
+                          (roundtrip {'foo/bar 1})))
+    (is (thrown-with-msg? RuntimeException
+                          #"Cannot serialize qualified symbols"
+                          (roundtrip {:foo 'bar/baz})))
+    (is (= {:bar "nom"}
+           (roundtrip (c/registry {:keywords? true :allow-qualified? true})
+                      {'foo/bar 'quuz/nom}))))
   (testing "list -> JSON array -> vector"
     (let [in            {:l '(1 2 3)
                          :r (range 1 3)}

@@ -19,10 +19,11 @@
 (defn insert-one!
   [{::session/keys [^ClientSession session] :as conn}
    collection
-   doc]
+   doc
+   & {:as options}]
   {:pre [conn collection (map? doc)]}
   (log/debugf "insert one; %s %s" collection (:_id doc))
-  (let [coll   (collection/get-collection conn collection)
+  (let [coll   (collection/get-collection conn collection options)
         ;; TODO: add `InsertOneOptions` support
         result (if session
                  (.insertOne coll session doc)
@@ -30,16 +31,14 @@
     (c/bson-value->document-id (.getInsertedId result))))
 
 (defn insert-many!
-  "Insert multiple documents into a collection.
-  If the documents do not contain `_id` fields, one will be generated (by default an `ObjectId`).
-  Returns the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
   [{::session/keys [^ClientSession session] :as conn}
    collection
-   docs]
+   docs
+   & {:as options}]
   {:pre [conn collection (seq docs) (every? map? docs)]}
   (log/debugf "insert many; %s %s" collection (count docs))
   (let [docs   ^List (vec docs)
-        coll   (collection/get-collection conn collection)
+        coll   (collection/get-collection conn collection options)
         ;; TODO: add `InsertManyOptions` support
         result (if session
                  (.insertMany coll session docs)
@@ -58,7 +57,7 @@
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
   (log/debugf "update one; %s %s" collection options)
-  (let [coll    (collection/get-collection conn collection)
+  (let [coll    (collection/get-collection conn collection options)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
         ;; TODO: array-filters should be BSON
@@ -83,7 +82,7 @@
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
   (log/debugf "update many; %s %s" collection options)
-  (let [coll    (collection/get-collection conn collection)
+  (let [coll    (collection/get-collection conn collection options)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
         ;; TODO: array-filters should be BSON
@@ -107,7 +106,7 @@
    & {:as options}]
   {:pre [conn collection (map? query) (map? replacement)]}
   (log/debugf "replace one; %s %s" collection options)
-  (let [coll    (collection/get-collection conn collection)
+  (let [coll    (collection/get-collection conn collection options)
         filter  (c/map->bson query (.getCodecRegistry coll))
         options (di/make-replace-options (or options {}))
         result  (cond
@@ -125,10 +124,11 @@
 (defn delete-one!
   [{::session/keys [^ClientSession session] :as conn}
    collection
-   query]
+   query
+   & {:as options}]
   {:pre [conn collection (map? query)]}
   (log/debugf "delete one; %s" collection)
-  (let [coll   (collection/get-collection conn collection)
+  (let [coll   (collection/get-collection conn collection options)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteOne coll session query)
@@ -139,10 +139,11 @@
 (defn delete-many!
   [{::session/keys [^ClientSession session] :as conn}
    collection
-   query]
+   query
+   & {:as options}]
   {:pre [conn collection (map? query)]}
   (log/debugf "delete many; %s" collection)
-  (let [coll   (collection/get-collection conn collection)
+  (let [coll   (collection/get-collection conn collection options)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteMany coll session query)
@@ -157,7 +158,7 @@
    collection
    & {:keys [query hint] :as options}]
   {:pre [conn collection]}
-  (let [coll     (collection/get-collection conn collection)
+  (let [coll     (collection/get-collection conn collection options)
         registry (.getCodecRegistry coll)
         query    (when query
                    (c/map->bson query registry))
@@ -185,13 +186,11 @@
    field
    & {:keys [query
              batch-size
-             max-time-ms
-             keywords?]
-      :or   {keywords? true}
+             max-time-ms]
       :as   options}]
   {:pre [conn collection field]}
   (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
-  (let [coll                 (collection/get-collection conn collection {:keywords? keywords?})
+  (let [coll                 (collection/get-collection conn collection options)
         field-name           (name field)
         query                (when (seq query)
                                (c/map->bson query (.getCodecRegistry coll)))
@@ -222,18 +221,16 @@
   [{::session/keys [^ClientSession session] :as conn}
    collection
    & {:keys [batch-size
-             keywords?
              limit
              max-time-ms
              projection
              query
              skip
              sort]
-      :or   {keywords? true}
       :as   options}]
   {:pre [conn collection]}
   (log/debugf "find reducible; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
-  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+  (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (when (seq query)
                      (c/map->bson query registry))
@@ -274,7 +271,7 @@
         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
         cnt       (if (or warn-on-multiple? throw-on-multiple?) -2 -1)
         options   (-> options
-                      (select-keys [:query :projection :keywords?])
+                      (select-keys [:query :projection :keywords? :allow-qualified?])
                       (assoc :limit cnt :batch-size 2))
         results   (find-all conn collection options)
         multiple? (< 1 (count results))]
@@ -299,21 +296,19 @@
   [{::session/keys [^ClientSession session] :as conn}
    collection
    query
-   & {:keys [hint projection sort variables keywords?]
-      :or   {keywords? true}
-      :as   options}]
+   & {:keys [hint projection sort variables] :as options}]
   {:pre [conn collection (seq query)]}
   (log/debugf "find one and delete; %s %s" collection options)
-  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+  (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (c/map->bson query registry)
         projection (preprocess-projection projection registry)
         options    (di/make-find-one-and-delete-options
-                   (cond-> (or options {})
-                     (seq hint)       (assoc :hint (c/map->bson hint registry))
-                     (seq projection) (assoc :projection projection)
-                     (seq sort)       (assoc :sort (c/map->bson sort registry))
-                     (seq variables)  (assoc :variables (c/map->bson variables registry))))]
+                     (cond-> (or options {})
+                       (seq hint)       (assoc :hint (c/map->bson hint registry))
+                       (seq projection) (assoc :projection projection)
+                       (seq sort)       (assoc :sort (c/map->bson sort registry))
+                       (seq variables)  (assoc :variables (c/map->bson variables registry))))]
     (cond
       (and session options) (.findOneAndDelete coll session query options)
       session               (.findOneAndDelete coll session query)
@@ -325,12 +320,10 @@
    collection
    query
    replacement
-   & {:keys [hint projection sort variables keywords?]
-      :or   {keywords? true}
-      :as   options}]
+   & {:keys [hint projection sort variables] :as options}]
   {:pre [conn collection (map? replacement) (map? query)]}
   (log/debugf "find one and replace; %s %s" collection options)
-  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+  (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (c/map->bson query registry)
         projection (preprocess-projection projection registry)
@@ -351,12 +344,10 @@
    collection
    query
    updates
-   & {:keys [array-filters hint projection sort variables keywords?]
-      :or   {keywords? true}
-      :as   options}]
+   & {:keys [array-filters hint projection sort variables] :as options}]
   {:pre [conn collection (map? updates) (map? query)]}
   (log/debugf "find one and update; %s %s" collection options)
-  (let [coll       (collection/get-collection conn collection {:keywords? keywords?})
+  (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (c/map->bson query registry)
         projection (preprocess-projection projection registry)
@@ -382,14 +373,12 @@
    pipeline
    & {:keys [allow-disk-use?
              batch-size
-             keywords?
              max-time-ms]
-      :or   {keywords? true}
       :as   options}]
   {:pre [conn collection (sequential? pipeline)]}
   (log/debugf "aggregate; %s %s" collection
               (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
-  (let [coll     (collection/get-collection conn collection {:keywords? keywords?})
+  (let [coll     (collection/get-collection conn collection options)
         pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
         it       (cond
                    session (.aggregate coll session pipeline)

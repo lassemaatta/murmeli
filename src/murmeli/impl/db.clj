@@ -39,7 +39,8 @@
 
 (defn with-default-registry
   [conn]
-  (with-registry conn (c/registry {:keywords? true})))
+  (with-registry conn (c/registry {:keywords?        true
+                                   :allow-qualified? false})))
 
 (defn registry
   ^CodecRegistry [{::keys [^MongoDatabase db]}]
