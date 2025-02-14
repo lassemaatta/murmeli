@@ -286,6 +286,10 @@
          (.isAssignableFrom APersistentSet clazz)    (set-codec registry)
          (.isAssignableFrom APersistentVector clazz) (vector-codec registry))))))
 
+(def registry-options-keys #{:allow-qualified?
+                             :keywords?
+                             :sanitize-strings?})
+
 (defn registry
   "Construct a `CodecRegistry` for converting between Java classes and BSON
   Options:

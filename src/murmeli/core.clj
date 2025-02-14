@@ -202,11 +202,12 @@
                           default-language
                           expire-after-seconds
                           hidden?
+                          index-name
                           language-override
                           max-boundary
                           min-boundary
-                          index-name
                           partial-filter-expression
+                          sanitize-strings?
                           sparse?
                           sphere-version
                           storage-engine
@@ -253,7 +254,8 @@
   * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
 
   Returns the `_id` of the inserted document (`String` or `ObjectId`)."
-  {:arglists '([conn collection doc & {:keys [allow-qualified?]}])}
+  {:arglists '([conn collection doc & {:keys [allow-qualified?
+                                              sanitize-strings?]}])}
   [conn collection doc & {:as options}]
   (query/insert-one! conn collection doc options))
 
@@ -265,7 +267,8 @@
   * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
 
   Returns the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
-  {:arglists '([conn collection docs & {:keys [allow-qualified?]}])}
+  {:arglists '([conn collection docs & {:keys [allow-qualified?
+                                               sanitize-strings?]}])}
   [conn collection docs & {:as options}]
   (query/insert-many! conn collection docs options))
 
@@ -316,6 +319,7 @@
                                                         collation-options
                                                         comment
                                                         hint
+                                                        sanitize-strings?
                                                         upsert?
                                                         variables]}])}
   [conn collection query changes & {:as options}]
@@ -332,6 +336,7 @@
                                                         comment
                                                         hint
                                                         keywords?
+                                                        sanitize-strings?
                                                         upsert?
                                                         variables]}])}
   [conn collection query replacement & {:as options}]
@@ -361,6 +366,7 @@
                                           limit
                                           max-time-ms
                                           query
+                                          sanitize-strings?
                                           skip]}])}
   [conn collection & {:as options}]
   (query/count-collection conn collection options))
@@ -377,7 +383,8 @@
                                                 batch-size
                                                 keywords?
                                                 max-time-ms
-                                                query]}])}
+                                                query
+                                                sanitize-strings?]}])}
   [conn collection field & {:as options}]
   (query/find-distinct-reducible conn collection field options))
 
@@ -387,7 +394,8 @@
                                                 batch-size
                                                 keywords?
                                                 max-time-ms
-                                                query]}])}
+                                                query
+                                                sanitize-strings?]}])}
   [conn collection field & {:as options}]
   (query/find-distinct conn collection field options))
 
@@ -414,6 +422,7 @@
                                           max-time-ms
                                           projection
                                           query
+                                          sanitize-strings?
                                           skip
                                           sort]}])}
   [conn collection & {:as options}]
@@ -428,6 +437,7 @@
                                           max-time-ms
                                           projection
                                           query
+                                          sanitize-strings?
                                           skip
                                           sort]}])}
   [conn collection & {:as options}]
@@ -442,6 +452,7 @@
                                           keywords?
                                           projection
                                           query
+                                          sanitize-strings?
                                           throw-on-multiple?
                                           warn-on-multiple?]}])}
   [conn collection & {:as options}]
@@ -451,7 +462,8 @@
   "Like `find-one`, but fetches a single document by id."
   {:arglists '([conn collection id & {:keys [allow-qualified?
                                              keywords?
-                                             projection]}])}
+                                             projection
+                                             sanitize-strings?]}])}
   [conn collection id & {:as options}]
   (query/find-by-id conn collection id options))
 
@@ -460,12 +472,14 @@
 (defn find-one-and-delete!
   "Find a document and remove it.
   Returns the document, or ´nil´ if none found."
-  {:arglists '([conn collection query & {:keys [collation-options
+  {:arglists '([conn collection query & {:keys [allow-qualified?
+                                                collation-options
                                                 comment
+                                                hint
                                                 keywords?
                                                 max-time-ms
-                                                hint
                                                 projection
+                                                sanitize-strings?
                                                 sort
                                                 variables]}])}
   [conn collection query & {:as options}]
@@ -484,6 +498,7 @@
                                                             max-time-ms
                                                             projection
                                                             return
+                                                            sanitize-strings?
                                                             sort
                                                             upsert?
                                                             variables]}])}
@@ -504,6 +519,7 @@
                                                         max-time-ms
                                                         projection
                                                         return
+                                                        sanitize-strings?
                                                         sort
                                                         upsert?
                                                         variables]}])}

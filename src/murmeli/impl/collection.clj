@@ -28,13 +28,9 @@
   (^MongoCollection
    [{::db/keys [^MongoDatabase db] :as conn} collection opts]
    {:pre [db collection]}
-   (let [opts          (select-keys opts [:keywords?
-                                          :allow-qualified?
-                                          :sanitize-strings?])
+   (let [opts          (select-keys opts c/registry-options-keys)
          registry-opts (when (seq opts)
-                         (merge (select-keys conn [:keywords?
-                                                   :allow-qualified?
-                                                   :sanitize-strings?])
+                         (merge (select-keys conn c/registry-options-keys)
                                 opts))]
      (cond-> (.getCollection db (name collection) PersistentHashMap)
        (seq registry-opts) (.withCodecRegistry (c/registry registry-opts))))))

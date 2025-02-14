@@ -122,10 +122,8 @@
 (defn make-client-settings
   {:no-doc true}
   ^MongoClientSettings
-  [{:keys                      [allow-qualified?
-                                cluster-settings
+  [{:keys                      [cluster-settings
                                 credentials
-                                keywords?
                                 read-concern
                                 read-preference
                                 retry-reads?
@@ -135,7 +133,8 @@
                                 write-concern]
     {:keys [username
             auth-db
-            ^String password]} :credentials}]
+            ^String password]} :credentials
+    :as                        options}]
   (cond-> (MongoClientSettings/builder)
     true                   (.serverApi (-> (ServerApi/builder)
                                            (.version api-version)
@@ -149,8 +148,7 @@
     (seq credentials)      (.credential (MongoCredential/createScramSha256Credential username auth-db (.toCharArray password)))
     (seq cluster-settings) (.applyToClusterSettings (make-cluster-settings cluster-settings))
     (seq ssl-settings)     (.applyToSslSettings (make-ssl-settings ssl-settings))
-    true                   (.codecRegistry (c/registry {:keywords?        keywords?
-                                                        :allow-qualified? allow-qualified?}))
+    true                   (.codecRegistry (c/registry options))
     true                   (.build)))
 
 ;; See https://www.mongodb.com/docs/manual/core/read-isolation-consistency-recency/
