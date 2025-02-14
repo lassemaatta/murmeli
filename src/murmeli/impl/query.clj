@@ -199,9 +199,10 @@
                                (and session query) (.distinct coll session field-name query Object)
                                session             (.distinct coll session field-name Object)
                                query               (.distinct coll field-name query Object)
-                               :else               (.distinct coll field-name Object))]
-    (when batch-size (.batchSize it (int batch-size)))
-    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+                               :else               (.distinct coll field-name Object))
+        it                   (cond-> it
+                               batch-size  (.batchSize (int batch-size))
+                               max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
     (cursor/->reducible it)))
 
 (defn find-distinct
@@ -241,13 +242,14 @@
                                    (and query session) (.find coll session query PersistentHashMap)
                                    session             (.find coll session PersistentHashMap)
                                    query               (.find coll query PersistentHashMap)
-                                   :else               (.find coll PersistentHashMap))]
-    (when limit (.limit it (int limit)))
-    (when skip (.skip it (int skip)))
-    (when batch-size (.batchSize it (int batch-size)))
-    (when projection (.projection it projection))
-    (when sort (.sort it sort))
-    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+                                   :else               (.find coll PersistentHashMap))
+        it         (cond-> it
+                     limit       (.limit (int limit))
+                     skip        (.skip (int skip))
+                     batch-size  (.batchSize (int batch-size))
+                     projection  (.projection projection)
+                     sort        (.sort sort)
+                     max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
     (cursor/->reducible it)))
 
 (defn find-all
@@ -379,13 +381,15 @@
   (log/debugf "aggregate; %s %s" collection
               (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
   (let [coll     (collection/get-collection conn collection options)
-        pipeline ^List (mapv (fn [m] (c/map->bson m (.getCodecRegistry coll))) pipeline)
+        registry (.getCodecRegistry coll)
+        pipeline ^List (mapv (fn [m] (c/map->bson m registry)) pipeline)
         it       (cond
                    session (.aggregate coll session pipeline)
-                   :else   (.aggregate coll pipeline))]
-    (when batch-size (.batchSize it (int batch-size)))
-    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-    (when allow-disk-use? (.allowDiskUse it (boolean allow-disk-use?)))
+                   :else   (.aggregate coll pipeline))
+        it       (cond-> it
+                   batch-size      (.batchSize (int batch-size))
+                   max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+                   allow-disk-use? (.allowDiskUse (boolean allow-disk-use?)))]
     (cursor/->reducible it)))
 
 (defn aggregate!
