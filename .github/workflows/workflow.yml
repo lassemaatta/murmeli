@@ -31,3 +31,9 @@ jobs:
           restore-keys: cljdeps-
       - name: Test
         run: lein test
+      - name: Deploy
+        env:
+          # Provide environment variables used to deploy.
+          CLOJARS_USERNAME: ${{ secrets.CLOJARS_USERNAME }}
+          CLOJARS_PASSWORD: ${{ secrets.CLOJARS_PASSWORD }}
+        run: lein deploy clojars

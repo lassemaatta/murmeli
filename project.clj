@@ -1,4 +1,4 @@
-(defproject murmeli "0.1.0-SNAPSHOT"
+(defproject com.github.lassemaatta/murmeli "0.1.0-SNAPSHOT"
   :description "A simple clojure wrapper for the MongoDB Java driver"
   :url "https://github.com/lassemaatta/murmeli"
   :license {:name "European Union Public Licence v. 1.2"
@@ -8,6 +8,10 @@
                  [org.mongodb/mongodb-driver-sync "5.3.1"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
+  :deploy-repositories [["clojars"  {:url           "https://clojars.org/repo"
+                                     :sign-releases false
+                                     :username      :env/clojars_username
+                                     :password      :env/clojars_password}]]
   :profiles {:dev           {:dependencies   [;; Testcontainers for mongodb
                                               [clj-test-containers "0.7.4"]
                                               [org.testcontainers/mongodb "1.17.6"]
