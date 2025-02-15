@@ -2,6 +2,10 @@
 
 [![Build status](https://github.com/lassemaatta/murmeli/actions/workflows/workflow.yml/badge.svg)](https://github.com/lassemaatta/murmeli/actions)
 
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.lassemaatta/murmeli.svg)](https://clojars.org/com.github.lassemaatta/murmeli)
+
+[![cljdoc badge](https://cljdoc.org/badge/com.github.lassemaatta/murmeli)](https://cljdoc.org/d/com.github.lassemaatta/murmeli)
+
 A relative thin wrapper around the _modern API_ of the 5.x MongoDB Java _sync_ [driver](https://www.mongodb.com/docs/drivers/java/sync/v5.3/).
 
 Status: alpha
