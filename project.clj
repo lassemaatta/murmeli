@@ -1,4 +1,4 @@
-(defproject com.github.lassemaatta/murmeli "0.1.0"
+(defproject com.github.lassemaatta/murmeli "0.1.1-SNAPSHOT"
   :description "A simple clojure wrapper for the MongoDB Java driver"
   :url "https://github.com/lassemaatta/murmeli"
   :license {:name "European Union Public Licence v. 1.2"
