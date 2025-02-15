@@ -197,11 +197,6 @@
                                max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
     (cursor/->reducible it)))
 
-(defn find-distinct
-  [conn collection field & {:as options}]
-  {:pre [conn collection field]}
-  (into #{} (find-distinct-reducible conn collection field options)))
-
 (defn- preprocess-projection
   [projection registry]
   (when (seq projection)
@@ -242,11 +237,6 @@
                      max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
     (cursor/->reducible it)))
 
-(defn find-all
-  [conn collection & {:as options}]
-  {:pre [conn collection]}
-  (into [] (find-reducible conn collection options)))
-
 (defn find-one
   [conn
    collection
@@ -263,7 +253,7 @@
         options   (-> options
                       (select-keys [:query :projection :keywords? :allow-qualified?])
                       (assoc :limit cnt :batch-size 2))
-        results   (find-all conn collection options)
+        results   (into [] (find-reducible conn collection options))
         multiple? (< 1 (count results))]
     ;; Check if the query really did produce a single result, or did we (accidentally?)
     ;; match multiple documents?
@@ -372,8 +362,3 @@
                    max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
                    allow-disk-use? (.allowDiskUse (boolean allow-disk-use?)))]
     (cursor/->reducible it)))
-
-(defn aggregate!
-  [conn collection pipeline & {:as options}]
-  {:pre [conn collection (sequential? pipeline)]}
-  (into [] (aggregate-reducible! conn collection pipeline options)))

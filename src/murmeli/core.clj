@@ -471,7 +471,7 @@
                                                 query
                                                 sanitize-strings?]}])}
   [conn collection field & {:as options}]
-  (let [values (query/find-distinct conn collection field options)]
+  (let [values (into #{} (query/find-distinct-reducible conn collection field options))]
     (log/debugf "Distinct query for field '%s' in collection '%s' found %d unique values." field collection (count values))
     values))
 
@@ -517,7 +517,7 @@
                                           skip
                                           sort]}])}
   [conn collection & {:as options}]
-  (let [documents (query/find-all conn collection options)]
+  (let [documents (into [] (query/find-reducible conn collection options))]
     (log/debugf "Query for collection '%s' found %d documents." collection (count documents))
     documents))
 
@@ -620,6 +620,6 @@
 (defn aggregate!
   "Like `aggregate-reducible!`, but eagerly executes the aggregation and returns a vector of documents."
   [conn collection pipeline & { :as options}]
-  (let [documents (query/aggregate! conn collection pipeline options)]
+  (let [documents (into [] (query/aggregate-reducible! conn collection pipeline options))]
     (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))
     documents))
