@@ -41,8 +41,6 @@
 (defn connect-client!
   "Connects to a Mongo instance as described by the `db-spec` by constructing a client connection.
 
-  Returns a connection (map).
-
   Options:
   * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `cluster-settings` -- Map of cluster settings, see below
@@ -61,7 +59,9 @@
 
   The `ssl-settings` map:
   * `enabled?` -- Enable SSL
-  * `invalid-hostname-allowed?` -- Allow invalid hostnames"
+  * `invalid-hostname-allowed?` -- Allow invalid hostnames
+
+  Returns a connection (map)."
   {:arglists '([{:keys [cluster-settings
                         credentials
                         keywords?
@@ -103,8 +103,8 @@
   (db/with-default-registry conn))
 
 (defn list-dbs
-  "List all databases as documents.
-  Returned documents contain keys like `:name`, `:sizeOnDisk`, `:empty`."
+  "Query all the databases as documents.
+  Returns a vector of maps, where each map contains keys like `:name`, `:sizeOnDisk`, `:empty`."
   [conn]
   (let [documents (db/list-dbs conn)]
     (log/debugf "Database query found '%s' documents." (count documents))
@@ -112,7 +112,8 @@
 
 (defn drop-db!
   "Drop the given database.
-  Does nothing, if the database does not exist. Returns `nil`."
+  Does nothing, if the database does not exist.
+  Returns `nil`."
   [conn database-name]
   (db/drop-db! conn database-name)
   (log/debugf "Dropped database '%s'." database-name))
@@ -120,18 +121,21 @@
 ;; Collections
 
 (defn create-collection!
-  "Creates a collection."
+  "Creates a collection.
+  Returns `nil`."
   [conn collection]
   (collection/create-collection! conn collection)
   (log/debugf "Created collection '%s'." collection))
 
 (defn list-collection-names
-  "Returns a set of collection names in the current database.
+  "Query the collections names in the database.
 
   Options:
   * `batch-size` -- Number of documents per batch
   * `max-time-ms` -- Maximum execution time on server in milliseconds
-  * `keywords?` -- If true, return collection names as keywords"
+  * `keywords?` -- If true, return collection names as keywords
+
+  Returns a set of collection names."
   {:arglists '([conn & {:keys [batch-size
                                max-time-ms
                                keywords?]}])}
@@ -141,7 +145,9 @@
     documents))
 
 (defn drop-collection!
-  "Drop the given collection from the database"
+  "Drop the given collection from the database.
+
+  Returns `nil`."
   [conn collection]
   (collection/drop-collection! conn collection)
   (log/debugf "Dropped collection '%s'." collection))
@@ -199,7 +205,9 @@
   * `unique?` -- Create a unique index
   * `version` -- The index version number
   * `weights` -- Map of text index field weights
-  * `wildcard-projection` -- Map of fields to include/exclude in a wildcard index"
+  * `wildcard-projection` -- Map of fields to include/exclude in a wildcard index
+
+  Returns the name of the created index."
   {:arglists '([conn
                 collection
                 index-keys
@@ -233,7 +241,9 @@
     index-name))
 
 (defn list-indexes
-  "List indexes in the given collection."
+  "Query all indexes in the given collection.
+
+  Returns a vector of maps, where each map contains keys like `:name`, `:key`,..."
   {:arglists '([conn
                 collection
                 & {:keys [batch-size
@@ -245,16 +255,23 @@
     documents))
 
 (defn drop-all-indexes!
+  "Drop all indexes (except for `_id`) in the given collection.
+
+  Returns `nil`."
   [conn collection]
   (index/drop-all-indexes! conn collection)
   (log/debugf "Dropped all indexes from '%s'." collection))
 
 (defn drop-index!
+  "Drop a specific index (as per the keys) in the given collection.
+  Returns `nil`."
   [conn collection index-keys]
   (index/drop-index! conn collection index-keys)
   (log/debugf "Dropped index from '%s'." collection))
 
 (defn drop-index-by-name!
+  "Drop a specific index (as per the name) in the given collection.
+  Returns `nil`."
   [conn collection index-name]
   (index/drop-index-by-name! conn collection index-name)
   (log/debugf "Dropped index '%s' from '%s'." index-name collection))
@@ -283,7 +300,7 @@
   Options:
   * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
 
-  Returns the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
+  Returns a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
   {:arglists '([conn collection docs & {:keys [allow-qualified?
                                                sanitize-strings?]}])}
   [conn collection docs & {:as options}]
@@ -306,7 +323,9 @@
   * `upsert?` -- If true, insert `changes` document if no existing document matches `query`
   * `variables` -- Top-level variable documents
 
-  Returns a map describing if a match was found and if it was actually altered."
+  Returns a map, where
+  * `:matched` -- Number of documents matched.
+  * `:modified` -- Number of documents modified."
   {:arglists '([conn collection query changes & {:keys [allow-qualified?
                                                         array-filters
                                                         bypass-validation?
@@ -333,7 +352,9 @@
   * `upsert?` -- If true, insert `changes` document if no existing document matches `query`
   * `variables` -- Top-level variable documents
 
-  Returns the number of matched and updated documents."
+  Returns a map, where
+  * `:matched` -- Number of documents matched.
+  * `:modified` -- Number of documents modified."
   {:arglists '([conn collection query changes & {:keys [allow-qualified?
                                                         array-filters
                                                         bypass-validation?
@@ -352,7 +373,10 @@
 
 (defn replace-one!
   "Find document(s) matching `query` and replace the first one.
-  Returns a map describing if a match was found and if it was actually altered."
+
+  Returns a map, where
+  * `:matched` -- Number of documents matched.
+  * `:modified` -- Number of documents modified."
   {:arglists '([conn collection query changes & {:keys [allow-qualified?
                                                         bypass-validation?
                                                         collation-options
@@ -369,15 +393,23 @@
 
 ;; Deletes
 
-;; TODO tests docstring
 (defn delete-one!
+  "Delete a single document based on the given collection and query.
+
+  Returns a map, where
+  * `:acknowledged?` -- True if the deletion was acknowledged.
+  * `:count` -- Number of documents deleted."
   [conn collection query & {:as options}]
   (let [response (query/delete-one! conn collection query options)]
     (log/debugf "Deleted document (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
     response))
 
-;; TODO tests docstring
 (defn delete-many!
+  "Delete document(s) based on the given collection and query.
+
+  Returns a map, where
+  * `:acknowledged?` -- True if the deletion was acknowledged.
+  * `:count` -- Number of documents deleted."
   [conn collection query & {:as options}]
   (let [response (query/delete-many! conn collection query options)]
     (log/debugf "Deleted document(s) (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
@@ -386,7 +418,9 @@
 ;; Queries
 
 (defn count-collection
-  "Count the number of documents in a collection"
+  "Count the number of documents in a collection.
+
+  Returns the number of documents."
   {:arglists '([conn collection & {:keys [allow-qualified?
                                           collation-options
                                           comment
@@ -403,7 +437,9 @@
     c))
 
 (defn estimated-count-collection
-  "Gets an estimate of the count of documents in a collection using collection metadata."
+  "Estimate the number of documents in a collection.
+
+  Returns the number of documents."
   [conn
    collection]
   (let [c (query/estimated-count-collection conn collection)]
@@ -411,7 +447,10 @@
     c))
 
 (defn find-distinct-reducible
-  "Find all distinct value of a field in a collection. Returns a set."
+  "Find all distinct value of a field in a collection.
+
+  Returns a reducible (`IReduceInit`), which can be reduced (using `reduce`, `into`,
+  `transduce`, `run!`..) to execute the query and produce the distinct values."
   {:arglists '([conn collection field & {:keys [allow-qualified?
                                                 batch-size
                                                 keywords?
@@ -422,7 +461,9 @@
   (query/find-distinct-reducible conn collection field options))
 
 (defn find-distinct
-  "Find all distinct value of a field in a collection. Returns a set."
+  "Find all distinct value of a field in a collection.
+
+  Returns a set containing the distinct values."
   {:arglists '([conn collection field & {:keys [allow-qualified?
                                                 batch-size
                                                 keywords?
@@ -448,8 +489,8 @@
   * `skip` -- Skip first N documents
   * `sort` -- Map of field name to sort type
 
-  Returns a reducible (`IReduceInit`) that eagerly runs the query when reduced with a function
-  (using `reduce`, `into`, `transduce`, `run!`..)."
+  Returns a reducible (`IReduceInit`), which can be reduced (using `reduce`, `into`,
+  `transduce`, `run!`..). to execute the query and produce the matched documents."
   {:arglists '([conn collection & {:keys [allow-qualified?
                                           batch-size
                                           keywords?
@@ -483,8 +524,7 @@
 (defn find-one
   "Like `find-all`, but fetches a single document
 
-  By default will warn & throw if query produces more than
-  one result."
+  By default will warn & throw if query produces more than one result."
   {:arglists '([conn collection & {:keys [allow-qualified?
                                           keywords?
                                           projection
@@ -510,7 +550,8 @@
 
 (defn find-one-and-delete!
   "Find a document and remove it.
-  Returns the document, or ´nil´ if none found."
+
+  Returns the document, or `nil` if none found."
   {:arglists '([conn collection query & {:keys [allow-qualified?
                                                 collation-options
                                                 comment
@@ -526,7 +567,8 @@
 
 (defn find-one-and-replace!
   "Find a document and replace it.
-  Returns the document, or ´nil´ if none found. The `return` argument controls
+
+  Returns the document, or `nil` if none found. The `return` argument controls
   whether we return the document before or after the replacement."
   {:arglists '([conn collection query replacement & {:keys [allow-qualified?
                                                             bypass-validation?
@@ -568,10 +610,15 @@
 ;; Aggregation
 
 (defn aggregate-reducible!
+  "Execute an aggregation pipelien on a collection.
+
+  Returns a reducible (`IReduceInit`), which can be reduced (using `reduce`, `into`,
+  `transduce`, `run!`..) to execute the aggregation and produce the results."
   [conn collection pipeline & { :as options}]
   (query/aggregate-reducible! conn collection pipeline options))
 
 (defn aggregate!
+  "Like `aggregate-reducible!`, but eagerly executes the aggregation and returns a vector of documents."
   [conn collection pipeline & { :as options}]
   (let [documents (query/aggregate! conn collection pipeline options)]
     (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))
