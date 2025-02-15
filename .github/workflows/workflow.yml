@@ -1,0 +1,33 @@
+# ./.github/workflows/workflow.yml
+name: MurmeliCI
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the project repository.
+      - name: Checkout
+        uses: actions/checkout@v3
+      # Install the desired Java version.
+      - name: Prepare java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "zulu"
+          java-version: "17"
+      # Setup Leiningen. Also supports setting up other commonly used tools.
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@13.1
+        with:
+          lein: 2.11.2
+      # Enable cache so our actions run faster.
+      - name: Cache clojure dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2/repository
+          key: cljdeps-${{ hashFiles('project.clj') }}
+          restore-keys: cljdeps-
+      - name: Test
+        run: lein test
