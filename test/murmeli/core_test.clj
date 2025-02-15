@@ -1,9 +1,10 @@
 (ns murmeli.core-test
   (:require [clojure.spec.test.alpha :as stest]
             [clojure.test :as test :refer [deftest is testing]]
+            [matcher-combinators.matchers :as matchers]
             [matcher-combinators.test]
             [murmeli.core :as m]
-            [murmeli.operators :refer [$exists $gt $jsonSchema $lt $set]]
+            [murmeli.operators :refer [$exists $group $gt $jsonSchema $lt $match $project $set $sum]]
             [murmeli.specs]
             [murmeli.test.utils :as test-utils]
             [murmeli.validators.schema :as vs]
@@ -685,3 +686,56 @@
       (is (= #{"bar" "quuz"} (m/find-distinct conn coll :data)))
       (is (= #{{:key 1} {:key 2}} (m/find-distinct conn coll :bar)))
       (is (= #{"this"} (m/find-distinct conn coll :quuz))))))
+
+(deftest aggregate-test
+  (let [conn (test-utils/get-conn)
+        usal {:country  "Spain"
+              :city     "Salamanca"
+              :name     "USAL"
+              :location {:type        "Point"
+                         :coordinates [-5.6722512,17 40.9607792]}
+              :students [{ :year 2014 :number 24774 }
+                         { :year 2015 :number 23166 }
+                         { :year 2016 :number 21913 }
+                         { :year 2017 :number 21715 }]}
+        upsa {:country  "Spain"
+              :city     "Salamanca"
+              :name     "UPSA"
+              :location {:type        "Point"
+                         :coordinates [-5.6691191,17 40.9631732]}
+              :students [{ :year 2014 :number 4788 }
+                         { :year 2015 :number 4821 }
+                         { :year 2016 :number 6550 }
+                         { :year 2017 :number 6125 }]}]
+    (testing "insert test data"
+      (m/drop-collection! conn :universities)
+      (m/drop-collection! conn :courses)
+      (m/insert-many! conn :universities [usal upsa])
+      (m/insert-many! conn
+                      :courses
+                      [{:university "USAL"
+                        :name       "Computer Science"
+                        :level      "Excellent"}
+                       {:university "USAL"
+                        :name       "Electronics"
+                        :level      "Intermediate"}
+                       {:university "USAL"
+                        :name       "Communication"
+                        :level      "Excellent"}]))
+    (testing "$match"
+      (is (match? [(assoc usal :_id m/object-id?)
+                   (assoc upsa :_id m/object-id?)]
+                  (m/aggregate! conn :universities [{$match {:country "Spain"
+                                                             :city    "Salamanca"}}]))))
+    (testing "$project"
+      (is (= [(dissoc usal :students :location)
+              (dissoc upsa :students :location)]
+             (m/aggregate! conn :universities [{$project {:_id     0
+                                                          :country 1
+                                                          :city    1
+                                                          :name    1}}]))))
+    (testing "$group"
+      (is (match? (matchers/in-any-order [{:_id "UPSA" :totaldocs 1}
+                                          {:_id "USAL" :totaldocs 1}])
+                  (m/aggregate! conn :universities [{$group {:_id       "$name"
+                                                             :totaldocs {$sum 1}}}]))))))
