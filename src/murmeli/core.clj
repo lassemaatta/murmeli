@@ -2,7 +2,8 @@
   "Murmeli MongoDB driver
 
   [Javadoc](https://www.mongodb.com/docs/drivers/java/sync/current/)"
-  (:require [murmeli.impl.client :as client]
+  (:require [clojure.tools.logging :as log]
+            [murmeli.impl.client :as client]
             [murmeli.impl.collection :as collection]
             [murmeli.impl.convert :as c]
             [murmeli.impl.db :as db]
@@ -105,20 +106,24 @@
   "List all databases as documents.
   Returned documents contain keys like `:name`, `:sizeOnDisk`, `:empty`."
   [conn]
-  (db/list-dbs conn))
+  (let [documents (db/list-dbs conn)]
+    (log/debugf "Database query found '%s' documents." (count documents))
+    documents))
 
 (defn drop-db!
   "Drop the given database.
   Does nothing, if the database does not exist. Returns `nil`."
   [conn database-name]
-  (db/drop-db! conn database-name))
+  (db/drop-db! conn database-name)
+  (log/debugf "Dropped database '%s'." database-name))
 
 ;; Collections
 
 (defn create-collection!
   "Creates a collection."
   [conn collection]
-  (collection/create-collection! conn collection))
+  (collection/create-collection! conn collection)
+  (log/debugf "Created collection '%s'." collection))
 
 (defn list-collection-names
   "Returns a set of collection names in the current database.
@@ -131,12 +136,15 @@
                                max-time-ms
                                keywords?]}])}
   [conn & {:as options}]
-  (collection/list-collection-names conn options))
+  (let [documents (collection/list-collection-names conn options)]
+    (log/debugf "Collection names query found %d collections." (count documents))
+    documents))
 
 (defn drop-collection!
   "Drop the given collection from the database"
   [conn collection]
-  (collection/drop-collection! conn collection))
+  (collection/drop-collection! conn collection)
+  (log/debugf "Dropped collection '%s'." collection))
 
 ;; Transactions / Sessions
 
@@ -220,7 +228,9 @@
    collection
    index-keys
    & {:as options}]
-  (index/create-index! conn collection index-keys options))
+  (let [index-name (index/create-index! conn collection index-keys options)]
+    (log/debugf "Created index '%s' on '%s'." index-name collection)
+    index-name))
 
 (defn list-indexes
   "List indexes in the given collection."
@@ -230,19 +240,24 @@
                           max-time-ms
                           keywords?]}])}
   [conn collection & {:as options}]
-  (index/list-indexes conn collection options))
+  (let [documents (index/list-indexes conn collection options)]
+    (log/debugf "Index query on '%s' found '%s' indexes." collection (count documents))
+    documents))
 
 (defn drop-all-indexes!
   [conn collection]
-  (index/drop-all-indexes! conn collection))
+  (index/drop-all-indexes! conn collection)
+  (log/debugf "Dropped all indexes from '%s'." collection))
 
 (defn drop-index!
   [conn collection index-keys]
-  (index/drop-index! conn collection index-keys))
+  (index/drop-index! conn collection index-keys)
+  (log/debugf "Dropped index from '%s'." collection))
 
 (defn drop-index-by-name!
   [conn collection index-name]
-  (index/drop-index-by-name! conn collection index-name))
+  (index/drop-index-by-name! conn collection index-name)
+  (log/debugf "Dropped index '%s' from '%s'." index-name collection))
 
 ;; Insertion
 
@@ -257,7 +272,9 @@
   {:arglists '([conn collection doc & {:keys [allow-qualified?
                                               sanitize-strings?]}])}
   [conn collection doc & {:as options}]
-  (query/insert-one! conn collection doc options))
+  (let [id (query/insert-one! conn collection doc options)]
+    (log/debugf "Inserted document to '%s' with id '%s'." collection id)
+    id))
 
 (defn insert-many!
   "Insert multiple documents into a collection.
@@ -270,7 +287,9 @@
   {:arglists '([conn collection docs & {:keys [allow-qualified?
                                                sanitize-strings?]}])}
   [conn collection docs & {:as options}]
-  (query/insert-many! conn collection docs options))
+  (let [ids (query/insert-many! conn collection docs options)]
+    (log/debugf "Inserted %d documents to '%s'." (count ids) collection)
+    ids))
 
 ;; Updates
 
@@ -297,7 +316,9 @@
                                                         upsert?
                                                         variables]}])}
   [conn collection query changes & {:as options}]
-  (query/update-one! conn collection query changes options))
+  (let [response (query/update-one! conn collection query changes options)]
+    (log/debugf "Updated document (modified: %d, matched %d)." (:modified response) (:matched response))
+    response))
 
 (defn update-many!
   "Find document(s) matching `query` and apply `changes` to them.
@@ -323,7 +344,9 @@
                                                         upsert?
                                                         variables]}])}
   [conn collection query changes & {:as options}]
-  (query/update-many! conn collection query changes options))
+  (let [response (query/update-many! conn collection query changes options)]
+    (log/debugf "Updated document(s) (modified: %d, matched %d)." (:modified response) (:matched response))
+    response))
 
 ;; Replace
 
@@ -340,19 +363,25 @@
                                                         upsert?
                                                         variables]}])}
   [conn collection query replacement & {:as options}]
-  (query/replace-one! conn collection query replacement options))
+  (let [response (query/replace-one! conn collection query replacement options)]
+    (log/debugf "Replaced document (modified: %d, matched %d)." (:modified response) (:matched response))
+    response))
 
 ;; Deletes
 
 ;; TODO tests docstring
 (defn delete-one!
   [conn collection query & {:as options}]
-  (query/delete-one! conn collection query options))
+  (let [response (query/delete-one! conn collection query options)]
+    (log/debugf "Deleted document (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
+    response))
 
 ;; TODO tests docstring
 (defn delete-many!
   [conn collection query & {:as options}]
-  (query/delete-many! conn collection query options))
+  (let [response (query/delete-many! conn collection query options)]
+    (log/debugf "Deleted document(s) (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
+    response))
 
 ;; Queries
 
@@ -369,13 +398,17 @@
                                           sanitize-strings?
                                           skip]}])}
   [conn collection & {:as options}]
-  (query/count-collection conn collection options))
+  (let [c (query/count-collection conn collection options)]
+    (log/debugf "Collection '%s' has %d documents." collection c)
+    c))
 
 (defn estimated-count-collection
   "Gets an estimate of the count of documents in a collection using collection metadata."
   [conn
    collection]
-  (query/estimated-count-collection conn collection))
+  (let [c (query/estimated-count-collection conn collection)]
+    (log/debugf "Collection '%s' has approximately %d documents." collection c)
+    c))
 
 (defn find-distinct-reducible
   "Find all distinct value of a field in a collection. Returns a set."
@@ -397,7 +430,9 @@
                                                 query
                                                 sanitize-strings?]}])}
   [conn collection field & {:as options}]
-  (query/find-distinct conn collection field options))
+  (let [values (query/find-distinct conn collection field options)]
+    (log/debugf "Distinct query for field '%s' in collection '%s' found %d unique values." field collection (count values))
+    values))
 
 (defn find-reducible
   "Query for documents in the given collection.
@@ -441,7 +476,9 @@
                                           skip
                                           sort]}])}
   [conn collection & {:as options}]
-  (query/find-all conn collection options))
+  (let [documents (query/find-all conn collection options)]
+    (log/debugf "Query for collection '%s' found %d documents." collection (count documents))
+    documents))
 
 (defn find-one
   "Like `find-all`, but fetches a single document
@@ -456,7 +493,9 @@
                                           throw-on-multiple?
                                           warn-on-multiple?]}])}
   [conn collection & {:as options}]
-  (query/find-one conn collection options))
+  (let [documents (query/find-one conn collection options)]
+    (log/debugf "Find-one query for collection '%s' found %d documents." collection (count documents))
+    documents))
 
 (defn find-by-id
   "Like `find-one`, but fetches a single document by id."
@@ -534,4 +573,6 @@
 
 (defn aggregate!
   [conn collection pipeline & { :as options}]
-  (query/aggregate! conn collection pipeline options))
+  (let [documents (query/aggregate! conn collection pipeline options)]
+    (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))
+    documents))

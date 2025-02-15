@@ -22,7 +22,6 @@
    doc
    & {:as options}]
   {:pre [conn collection (map? doc)]}
-  (log/debugf "insert one; %s %s" collection (:_id doc))
   (let [coll   (collection/get-collection conn collection options)
         ;; TODO: add `InsertOneOptions` support
         result (if session
@@ -36,7 +35,6 @@
    docs
    & {:as options}]
   {:pre [conn collection (seq docs) (every? map? docs)]}
-  (log/debugf "insert many; %s %s" collection (count docs))
   (let [docs   ^List (vec docs)
         coll   (collection/get-collection conn collection options)
         ;; TODO: add `InsertManyOptions` support
@@ -56,7 +54,6 @@
    changes
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
-  (log/debugf "update one; %s %s" collection options)
   (let [coll    (collection/get-collection conn collection options)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
@@ -81,7 +78,6 @@
    changes
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
-  (log/debugf "update many; %s %s" collection options)
   (let [coll    (collection/get-collection conn collection options)
         filter  (c/map->bson query (.getCodecRegistry coll))
         updates (c/map->bson changes (.getCodecRegistry coll))
@@ -105,7 +101,6 @@
    replacement
    & {:as options}]
   {:pre [conn collection (map? query) (map? replacement)]}
-  (log/debugf "replace one; %s %s" collection options)
   (let [coll    (collection/get-collection conn collection options)
         filter  (c/map->bson query (.getCodecRegistry coll))
         options (di/make-replace-options (or options {}))
@@ -127,7 +122,6 @@
    query
    & {:as options}]
   {:pre [conn collection (map? query)]}
-  (log/debugf "delete one; %s" collection)
   (let [coll   (collection/get-collection conn collection options)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
@@ -142,7 +136,6 @@
    query
    & {:as options}]
   {:pre [conn collection (map? query)]}
-  (log/debugf "delete many; %s" collection)
   (let [coll   (collection/get-collection conn collection options)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
@@ -189,7 +182,6 @@
              max-time-ms]
       :as   options}]
   {:pre [conn collection field]}
-  (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
   (let [coll                 (collection/get-collection conn collection options)
         field-name           (name field)
         query                (when (seq query)
@@ -208,7 +200,6 @@
 (defn find-distinct
   [conn collection field & {:as options}]
   {:pre [conn collection field]}
-  (log/debugf "find distinct; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms]))
   (into #{} (find-distinct-reducible conn collection field options)))
 
 (defn- preprocess-projection
@@ -230,7 +221,6 @@
              sort]
       :as   options}]
   {:pre [conn collection]}
-  (log/debugf "find reducible; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
   (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (when (seq query)
@@ -255,7 +245,6 @@
 (defn find-all
   [conn collection & {:as options}]
   {:pre [conn collection]}
-  (log/debugf "find all; %s %s" collection (select-keys options [:keywords? :batch-size :max-time-ms :limit :skip]))
   (into [] (find-reducible conn collection options)))
 
 (defn find-one
@@ -267,7 +256,6 @@
              throw-on-multiple? true}
       :as   options}]
   {:pre [conn collection]}
-  (log/debugf "find one; %s %s" collection (select-keys options [:keywords? :warn-on-multiple? :throw-on-multiple?]))
   (let [;; "A negative limit is similar to a positive limit but closes the cursor after
         ;; returning a single batch of results."
         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
@@ -277,7 +265,6 @@
                       (assoc :limit cnt :batch-size 2))
         results   (find-all conn collection options)
         multiple? (< 1 (count results))]
-    (log/debugf "find one results: %d" (count results))
     ;; Check if the query really did produce a single result, or did we (accidentally?)
     ;; match multiple documents?
     (when (and multiple? warn-on-multiple?)
@@ -289,7 +276,6 @@
 (defn find-by-id
   [conn collection id & {:as options}]
   {:pre [conn collection id]}
-  (log/debugf "find by id; %s %s %s" collection id (select-keys options [:keywords?]))
   (find-one conn collection (assoc options :query {:_id id})))
 
 ;; Find one and - API
@@ -300,7 +286,6 @@
    query
    & {:keys [hint projection sort variables] :as options}]
   {:pre [conn collection (seq query)]}
-  (log/debugf "find one and delete; %s %s" collection options)
   (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (c/map->bson query registry)
@@ -324,7 +309,6 @@
    replacement
    & {:keys [hint projection sort variables] :as options}]
   {:pre [conn collection (map? replacement) (map? query)]}
-  (log/debugf "find one and replace; %s %s" collection options)
   (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (c/map->bson query registry)
@@ -348,7 +332,6 @@
    updates
    & {:keys [array-filters hint projection sort variables] :as options}]
   {:pre [conn collection (map? updates) (map? query)]}
-  (log/debugf "find one and update; %s %s" collection options)
   (let [coll       (collection/get-collection conn collection options)
         registry   (.getCodecRegistry coll)
         query      (c/map->bson query registry)
@@ -378,8 +361,6 @@
              max-time-ms]
       :as   options}]
   {:pre [conn collection (sequential? pipeline)]}
-  (log/debugf "aggregate; %s %s" collection
-              (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
   (let [coll     (collection/get-collection conn collection options)
         registry (.getCodecRegistry coll)
         pipeline ^List (mapv (fn [m] (c/map->bson m registry)) pipeline)
@@ -395,6 +376,4 @@
 (defn aggregate!
   [conn collection pipeline & {:as options}]
   {:pre [conn collection (sequential? pipeline)]}
-  (log/debugf "aggregate; %s %s" collection
-              (select-keys options [:keywords? :allow-disk-use? :batch-size :max-time-ms]))
   (into [] (aggregate-reducible! conn collection pipeline options)))

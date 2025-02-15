@@ -4,7 +4,8 @@
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
             [murmeli.impl.session :as session]
-            [murmeli.impl.convert :as c])
+            [murmeli.impl.convert :as c]
+            [murmeli.impl.cursor :as cursor])
   (:import [clojure.lang PersistentHashMap]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
            [org.bson.codecs.configuration CodecRegistry]))
@@ -49,11 +50,10 @@
 (defn list-dbs
   [{::client/keys  [^MongoClient client]
     ::session/keys [^ClientSession session]}]
-  (log/debugf "list databases")
   (let [it (cond
              session (.listDatabases client session PersistentHashMap)
              :else   (.listDatabases client PersistentHashMap))]
-    (into [] it)))
+    (into [] (cursor/->reducible it))))
 
 (defn drop-db!
   [{::session/keys [^ClientSession session]

@@ -1,9 +1,9 @@
 (ns murmeli.impl.index
   "Index implementation"
   {:no-doc true}
-  (:require [clojure.tools.logging :as log]
-            [murmeli.impl.collection :as collection]
+  (:require [murmeli.impl.collection :as collection]
             [murmeli.impl.convert :as c]
+            [murmeli.impl.cursor :as cursor]
             [murmeli.impl.data-interop :as di]
             [murmeli.impl.session :as session])
   (:import [clojure.lang PersistentHashMap]
@@ -22,7 +22,6 @@
              weights]
       :as   options}]
   {:pre [conn collection (map? index-keys)]}
-  (log/debugf "create index; %s %s %s" collection index-keys options)
   (let [coll             (collection/get-collection conn collection options)
         registry         (.getCodecRegistry coll)
         index-keys       (di/make-index-bson index-keys)
@@ -41,21 +40,17 @@
   [{::session/keys [^ClientSession session] :as conn}
    collection
    & {:keys [batch-size
-             max-time-ms
-             keywords?]
-      :or   {keywords? true}
+             max-time-ms]
       :as   options}]
   {:pre [conn collection]}
-  (log/debugf "list indexes; %s" (select-keys options [:batch-size
-                                                       :max-time-ms
-                                                       :keywords?]))
   (let [coll                    (collection/get-collection conn collection options)
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session PersistentHashMap)
-                                  (.listIndexes coll PersistentHashMap))]
-    (when batch-size (.batchSize it (int batch-size)))
-    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
-    (into [] it)))
+                                  (.listIndexes coll PersistentHashMap))
+        it                      (cond-> it
+                                  batch-size  (.batchSize (int batch-size))
+                                  max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
+    (into [] (cursor/->reducible it))))
 
 (defn drop-all-indexes!
   [{::session/keys [^ClientSession session] :as conn}

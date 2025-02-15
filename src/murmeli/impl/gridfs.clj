@@ -1,7 +1,6 @@
 (ns murmeli.impl.gridfs
   (:refer-clojure :exclude [find])
-  (:require [clojure.tools.logging :as log]
-            [murmeli.impl.convert :as c]
+  (:require [murmeli.impl.convert :as c]
             [murmeli.impl.cursor :as cursor]
             [murmeli.impl.data-interop :as di]
             [murmeli.impl.db :as db]
@@ -115,7 +114,6 @@
              skip
              sort]}]
   {:pre [conn bucket]}
-  (log/debugf "gfs find;")
   (let [registry  (db/registry conn)
         query     (when query
                     (c/map->bson query registry))

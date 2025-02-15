@@ -1,8 +1,8 @@
 (ns murmeli.impl.collection
   "Collection implementation"
   {:no-doc true}
-  (:require [clojure.tools.logging :as log]
-            [murmeli.impl.convert :as c]
+  (:require [murmeli.impl.convert :as c]
+            [murmeli.impl.cursor :as cursor]
             [murmeli.impl.db :as db]
             [murmeli.impl.session :as session])
   (:import [clojure.lang PersistentHashMap]
@@ -42,20 +42,21 @@
    & {:keys [batch-size
              max-time-ms
              keywords?]
-      :or   {keywords? true}
-      :as   options}]
+      :or   {keywords? true}}]
   {:pre [conn]}
-  (log/debugf "list collection names; %s" options)
   (let [it (cond
              session (.listCollectionNames db session)
-             :else   (.listCollectionNames db))]
-    ;; TODO: add `filter` parameter
-    ;; TODO: add `authorizedCollections` parameter
-    (when batch-size (.batchSize it (int batch-size)))
-    (when max-time-ms (.maxTime it (long max-time-ms) TimeUnit/MILLISECONDS))
+             :else   (.listCollectionNames db))
+        ;; TODO: add `filter` parameter
+        ;; TODO: add `authorizedCollections` parameter
+        it (cond-> it
+             batch-size  (.batchSize (int batch-size))
+             max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))
+        r  (cursor/->reducible it)]
+    ;; TODO separate -reducible variant?
     (if keywords?
-      (into #{} (map keyword) it)
-      (into #{} it))))
+      (into #{} (map keyword) r)
+      (into #{} r))))
 
 (defn drop-collection!
   [{::session/keys [^ClientSession session] :as conn}
