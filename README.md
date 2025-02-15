@@ -1,6 +1,6 @@
 # Murmeli, a Clojure wrapper for the MongoDB Java driver
 
-![Build status](https://github.com/lassemaatta/murmeli/.github/workflows/workflow.yml/badge.svg)
+[![Build status](https://github.com/lassemaatta/murmeli/.github/workflows/workflow.yml/badge.svg)](https://github.com/lassemaatta/murmeli/actions)
 
 A relative thin wrapper around the _modern API_ of the 5.x MongoDB Java _sync_ [driver](https://www.mongodb.com/docs/drivers/java/sync/v5.3/).
 
