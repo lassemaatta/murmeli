@@ -21,7 +21,7 @@
                              :resource-paths ["test-resources"]
                              :jvm-opts       ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
              :repl          {:jvm-opts ["-Dmurmeli.repl=true"]}
-             :gen-doc-tests {:test-paths   ["target/test-doc-blocks/test"]
+             :gen-doc-tests {:test-paths   ^:replace ["target/test-doc-blocks/test"]
                              :dependencies [[com.github.lread/test-doc-blocks "1.1.20"]]}}
   :aliases  {"run-doc-tests" ^{:doc "Generate, then run, tests from doc code blocks"}
              ["with-profile" "+gen-doc-tests" "do"

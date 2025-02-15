@@ -1,6 +1,6 @@
 # Murmeli, a Clojure wrapper for the MongoDB Java driver
 
-Wraps version 5.1 of the MongoDB Java [driver](https://www.mongodb.com/docs/drivers/java/sync/v5.1/).
+A relative thin wrapper around the _modern API_ of the 5.x MongoDB Java _sync_ [driver](https://www.mongodb.com/docs/drivers/java/sync/v5.3/).
 
 Status: alpha
 
@@ -8,16 +8,32 @@ Status: alpha
 
 Download from https://github.com/lassemaatta/murmeli.
 
+## Features
+
+Supports the majority of the [modern API](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/index.html).
+
+(Proof-of-Concept) Supports transactions.
+
+(Proof-of-Concept) Supports transforming [plumatic/schema](https://github.com/plumatic/schema) structures into draft 4 JSON [schemas](https://www.mongodb.com/docs/manual/reference/operator/query/jsonSchema/#json-schema).
+
+## Unsupported features
+
+The [reactive streams API](https://www.mongodb.com/docs/languages/java/reactive-streams-driver/current/) is not supported.
+
+The [legacy API](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-legacy/index.html) is not supported.
+
+Deprecated constructs of the modern API (e.g., [MapReduce](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoCollection.html#mapReduce(com.mongodb.client.ClientSession,java.lang.String,java.lang.String))) are not supported.
+
+## Some Design/Implementation Decisions
+
+Use `:pre` conditions to check mandatory parameters.
+
+Avoid lazyness. Use [IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java) as the root construct for queries. It gives us better control wrt. cleaning up cursors and offers better performance. Caller can use e.g. [eduction](https://github.com/clojure/clojure/blob/ce55092f2b2f5481d25cff6205470c1335760ef6/src/clj/clojure/core.clj#L7762) to slap more processing steps before reducing the result.
+
 ## TODO
 
-- Various connection options (SSL etc)
-- Update documents functionality
- - replace
- - find* methods
-- Aggregation
 - Strict / loose JSON schema construction (ie. whether to throw if schema can't be fully represented)
 - Support for specifying JSON schema validation for a collection
-- GridFS
 - ...
 
 ## Examples
@@ -27,10 +43,10 @@ Download from https://github.com/lassemaatta/murmeli.
 ```clojure
 (require '[murmeli.core :as m])
 
-(def db-spec (-> {:uri           "mongodb://localhost:27017"
-                  :database-name "some-database"}
-                 m/connect-client!
-                 m/with-db)) ;; or (m/with-db "another-database")
+(def conn (-> {:uri       "mongodb://localhost:27017"
+               :keywords? true}
+              m/connect-client!
+              (m/with-db "some-database")))
 
 ;; A random collection name for the examples below
 (def coll :some-collection)
@@ -39,17 +55,17 @@ Download from https://github.com/lassemaatta/murmeli.
 ### Inserting documents
 
 ```clojure
-(m/insert-many! db-spec coll [{:counter 1
-                               :name    "bar"}
-                              {:counter  2
-                               :name     "quuz"
-                               :location "somewhere"}
-                              {:counter  3
-                               :name     "asdf"
-                               :location [123 456]}
-                              {:name    "no counter here"
-                               :aliases ["foo" "bar"]}
-                              {:foo "bar"}])
+(m/insert-many! conn coll [{:counter 1
+                            :name    "bar"}
+                           {:counter  2
+                            :name     "quuz"
+                            :location "somewhere"}
+                           {:counter  3
+                            :name     "asdf"
+                            :location [123 456]}
+                           {:name    "no counter here"
+                            :aliases ["foo" "bar"]}
+                           {:foo "bar"}])
 ```
 
 ### Query options
@@ -59,7 +75,7 @@ Query options can be supplied as keyword arguments
 ```clojure
 (require '[murmeli.operators :refer [$exists $jsonSchema]])
 
-(-> (m/find-all db-spec coll :query {:counter {$exists 1}} :projection [:name :counter] :limit 10)
+(-> (m/find-all conn coll :query {:counter {$exists 1}} :projection [:name :counter] :limit 10)
     count)
 ;; => 3
 ```
@@ -67,9 +83,9 @@ Query options can be supplied as keyword arguments
 or as a trailing map
 
 ```clojure
-(-> (m/find-all db-spec coll {:query      {:counter {$exists 1}}
-                              :projection [:name :counter]
-                              :limit      10})
+(-> (m/find-all conn coll {:query      {:counter {$exists 1}}
+                           :projection [:name :counter]
+                           :limit      10})
     count)
 ;; => 3
 ```
@@ -81,7 +97,7 @@ or as a trailing map
 (require '[schema.core :as s :refer [defschema]])
 
 (defschema MySchema
-  {(s/optional-key :_id)      s/Str
+  {(s/optional-key :_id)      (s/pred #(instance? org.bson.types.ObjectId %))
    :name                      s/Str
    (s/optional-key :counter)  s/Int
    (s/optional-key :aliases)  #{s/Str}
@@ -91,7 +107,7 @@ or as a trailing map
 
 (def json-schema (vs/schema->json-schema MySchema))
 
-(-> (m/find-all db-spec coll :query {$jsonSchema json-schema})
+(-> (m/find-all conn coll :query {$jsonSchema json-schema})
     count)
 ;; => 4
 ```
@@ -99,40 +115,41 @@ or as a trailing map
 ### Transactions
 
 ```clojure
-(m/count-collection db-spec coll)
+(m/count-collection conn coll)
 ;; => 5
 
-(m/with-session [db-spec (m/with-client-session-options db-spec {:read-preference :nearest})]
-  (m/insert-one! db-spec coll {:name "foo"})
-  (m/insert-one! db-spec coll {:name "quuz"}))
+(m/with-session [conn (m/with-client-session-options conn {:read-preference :nearest})]
+  (m/insert-one! conn coll {:name "foo"})
+  (m/insert-one! conn coll {:name "quuz"}))
 
-(m/count-collection db-spec coll)
+(m/count-collection conn coll)
 ;; => 7
 
 (try
-  (m/with-session [db-spec (m/with-client-session-options db-spec {:read-preference :nearest})]
-    (m/insert-one! db-spec coll {:name "another"})
-    (m/insert-one! db-spec coll {:name "one"})
+  (m/with-session [conn (m/with-client-session-options conn {:read-preference :nearest})]
+    (m/insert-one! conn coll {:name "another"})
+    (m/insert-one! conn coll {:name "one"})
     ;; Something goes wrong within `with-session`
     (throw (RuntimeException. "oh noes")))
   (catch Exception _
     ;; Rollback occurs
     nil))
 
-(m/count-collection db-spec coll)
+(m/count-collection conn coll)
 ;; => 7
 ```
 
-### Transforming documents eagerly
+### Adding processing steps to the reducible
 
 ```clojure
 (require '[schema.coerce :as sc])
 
 (def coerce-my-record! (sc/coercer! MySchema sc/json-coercion-matcher))
 
-(def by-schema (m/find-all db-spec coll {:query {$jsonSchema json-schema}
-                                         :xform (comp (map coerce-my-record!)
-                                                      (filter (comp seq :aliases)))}))
+(def by-schema (->> (m/find-reducible conn coll {:query {$jsonSchema json-schema}})
+                    (eduction (map coerce-my-record!)
+                              (filter (comp seq :aliases)))
+                    (into [])))
 
 (count by-schema)
 ;; => 1
@@ -144,7 +161,39 @@ or as a trailing map
 ### Cleanup
 
 ```clojure
-(m/drop-db! db-spec "some-database")
+(m/drop-db! conn "some-database")
+```
+
+## Development
+
+### Linting
+
+Initialize [clj-kondo](https://github.com/clj-kondo/clj-kondo) cache for the project:
+
+```shell
+bb run init-kondo!
+```
+
+Lint the project:
+
+```shell
+bb run lint
+```
+
+### Tests
+
+Unit tests:
+
+```shell
+lein test
+```
+
+Check code examples in this `README.md`:
+
+```shell
+docker compose -f docker/docker-compose.yml up -d
+
+lein run-doc-tests
 ```
 
 ## License

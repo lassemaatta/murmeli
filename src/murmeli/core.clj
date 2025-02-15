@@ -449,8 +449,8 @@
 (defn find-distinct-reducible
   "Find all distinct value of a field in a collection.
 
-  Returns a reducible (`IReduceInit`), which can be reduced (using `reduce`, `into`,
-  `transduce`, `run!`..) to execute the query and produce the distinct values."
+  Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to execute the query and produce the distinct values."
   {:arglists '([conn collection field & {:keys [allow-qualified?
                                                 batch-size
                                                 keywords?
@@ -489,8 +489,8 @@
   * `skip` -- Skip first N documents
   * `sort` -- Map of field name to sort type
 
-  Returns a reducible (`IReduceInit`), which can be reduced (using `reduce`, `into`,
-  `transduce`, `run!`..). to execute the query and produce the matched documents."
+  Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..). to execute the query and produce the matched documents."
   {:arglists '([conn collection & {:keys [allow-qualified?
                                           batch-size
                                           keywords?
@@ -505,7 +505,7 @@
   (query/find-reducible conn collection options))
 
 (defn find-all
-  "Like `find-reducible`, but eagerly realizes all matches into a vector."
+  "Like [[find-reducible]], but eagerly realizes all matches into a vector."
   {:arglists '([conn collection & {:keys [allow-qualified?
                                           batch-size
                                           keywords?
@@ -522,9 +522,9 @@
     documents))
 
 (defn find-one
-  "Like `find-all`, but fetches a single document
+  "Like [[find-all]], but fetches a single document
 
-  By default will warn & throw if query produces more than one result."
+  By default will warn & throw if the query produces more than one document."
   {:arglists '([conn collection & {:keys [allow-qualified?
                                           keywords?
                                           projection
@@ -538,7 +538,7 @@
     documents))
 
 (defn find-by-id
-  "Like `find-one`, but fetches a single document by id."
+  "Like [[find-one]], but fetches a single document by id."
   {:arglists '([conn collection id & {:keys [allow-qualified?
                                              keywords?
                                              projection
@@ -612,13 +612,14 @@
 (defn aggregate-reducible!
   "Execute an aggregation pipelien on a collection.
 
-  Returns a reducible (`IReduceInit`), which can be reduced (using `reduce`, `into`,
-  `transduce`, `run!`..) to execute the aggregation and produce the results."
+  Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`,...)
+  to execute the aggregation and produce the resulting documents."
   [conn collection pipeline & { :as options}]
   (query/aggregate-reducible! conn collection pipeline options))
 
 (defn aggregate!
-  "Like `aggregate-reducible!`, but eagerly executes the aggregation and returns a vector of documents."
+  "Like [[aggregate-reducible!]], but eagerly executes the aggregation and returns a vector of documents."
   [conn collection pipeline & { :as options}]
   (let [documents (into [] (query/aggregate-reducible! conn collection pipeline options))]
     (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))

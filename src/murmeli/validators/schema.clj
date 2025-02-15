@@ -1,5 +1,7 @@
 (ns murmeli.validators.schema
-  "Draft 4 JSON schema support for plumatic/schema
+  "Draft 4 JSON schema support for plumatic/schema.
+
+  Quite experimental and subject to change.
 
   Note that the JSON schema which MongoDB supports is not identical
   to the standard Draft 4 specification:
@@ -95,15 +97,17 @@
      :uniqueItems true
      :items       (mapv to-schema this)})
   IPersistentList
-  (-to-schema [[wrapper-type schema & args] _]
-    (case wrapper-type
-      eq          {:enum [schema]}
-      maybe       (to-schema schema {:null? true})
-      named       (to-schema schema {:description (first args)})
-      constrained (to-schema schema {:description (when (string? (first args))
-                                                    (first args))})
-      pred        (throw (ex-info "Cannot represent arbitrary predicates as JSON schema"
-                                  {:pred schema}))))
+  (-to-schema [[wrapper-type schema & args] {:keys [id?]}]
+    (if id?
+      {:bsonType :objectId}
+      (case wrapper-type
+        eq          {:enum [schema]}
+        maybe       (to-schema schema {:null? true})
+        named       (to-schema schema {:description (first args)})
+        constrained (to-schema schema {:description (when (string? (first args))
+                                                      (first args))})
+        pred        (throw (ex-info "Cannot represent arbitrary predicates as JSON schema"
+                                    {:pred schema})))))
   IPersistentMap
   (-to-schema [this _]
     (let [required    (some->> (keys this)

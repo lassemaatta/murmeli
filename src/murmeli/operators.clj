@@ -306,13 +306,16 @@
 
 ;;; API
 
-(def operators (->> 'murmeli.operators
-                    ns-publics
-                    keys
-                    (map name)
-                    (filter (fn [s] (str/starts-with? s "$")))
-                    set))
+(def operators
+  "The set of supported operators"
+  (->> 'murmeli.operators
+       ns-publics
+       keys
+       (map name)
+       (filter (fn [s] (str/starts-with? s "$")))
+       set))
 
 (defn operator?
+  "Check if given string matches a known operator."
   [s]
   (contains? operators s))

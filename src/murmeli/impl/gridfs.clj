@@ -1,4 +1,6 @@
 (ns murmeli.impl.gridfs
+  "GridFS implementation"
+  {:no-doc true}
   (:refer-clojure :exclude [find])
   (:require [murmeli.impl.convert :as c]
             [murmeli.impl.cursor :as cursor]
