@@ -14,20 +14,29 @@
                         TransactionOptions
                         WriteConcern]
            [com.mongodb.client.gridfs.model GridFSDownloadOptions GridFSUploadOptions]
-           [com.mongodb.client.model Collation
+           [com.mongodb.client.model ChangeStreamPreAndPostImagesOptions
+                                     ClusteredIndexOptions
+                                     Collation
                                      CollationAlternate
                                      CollationCaseFirst
                                      CollationMaxVariable
                                      CollationStrength
                                      CountOptions
+                                     CreateCollectionOptions
                                      FindOneAndDeleteOptions
                                      FindOneAndReplaceOptions
                                      FindOneAndUpdateOptions
+                                     IndexOptionDefaults
                                      IndexOptions
                                      Indexes
                                      ReplaceOptions
                                      ReturnDocument
-                                     UpdateOptions]
+                                     TimeSeriesGranularity
+                                     TimeSeriesOptions
+                                     UpdateOptions
+                                     ValidationAction
+                                     ValidationLevel
+                                     ValidationOptions]
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
            [java.util List]
            [java.util.concurrent TimeUnit]
@@ -465,3 +474,121 @@
   [{:keys [revision]}]
   (cond-> (GridFSDownloadOptions.)
     revision (.revision (int revision))))
+
+(defn make-change-stream-options
+  {:no-doc true}
+  ^ChangeStreamPreAndPostImagesOptions
+  [{:keys [enabled?]}]
+  (when (some? enabled?)
+    (ChangeStreamPreAndPostImagesOptions. (boolean enabled?))))
+
+(defn make-clustered-index-options
+  {:no-doc true}
+  ^ClusteredIndexOptions
+  [{:keys [index-key
+           index-name
+           unique?]}]
+  (when index-key
+    (cond-> (ClusteredIndexOptions. index-key (boolean unique?))
+      index-name (.name index-name))))
+
+(defn make-index-option-defaults
+  {:no-doc true}
+  ^IndexOptionDefaults
+  [{:keys [storage-engine]}]
+  (when storage-engine
+    (-> (IndexOptionDefaults.)
+        (.storageEngine storage-engine))))
+
+(defn get-granularity
+  {:no-doc true}
+  ^TimeSeriesGranularity [granularity]
+  (case granularity
+    :hours   TimeSeriesGranularity/HOURS
+    :minutes TimeSeriesGranularity/MINUTES
+    :seconds TimeSeriesGranularity/SECONDS))
+
+(defn make-time-series-options
+  {:no-doc true}
+  ^TimeSeriesOptions
+  [{:keys [bucket-max-span-seconds
+           bucket-rounding-seconds
+           granularity
+           meta-field
+           time-field]}]
+  (when time-field
+    (cond-> (TimeSeriesOptions. time-field)
+      ;; Using seconds is a compromise but it looks like `TimeSeriesOptions`
+      ;; internally converts the time units to seconds.
+      bucket-max-span-seconds (.bucketMaxSpan (long bucket-max-span-seconds) TimeUnit/SECONDS)
+      bucket-rounding-seconds (.bucketRounding (long bucket-rounding-seconds) TimeUnit/SECONDS)
+      meta-field              (.metaField meta-field)
+      granularity             (.granularity (get-granularity granularity)))))
+
+(defn get-validation-action
+  {:no-doc true}
+  ^ValidationAction [action]
+  (case action
+    :error ValidationAction/ERROR
+    :warn  ValidationAction/WARN))
+
+(defn get-validation-level
+  {:no-doc true}
+  ^ValidationLevel [level]
+  (case level
+    :strict   ValidationLevel/STRICT
+    :moderate ValidationLevel/MODERATE
+    :off      ValidationLevel/OFF))
+
+(defn make-validation-options
+  {:no-doc true}
+  ^ValidationOptions
+  [{:keys [validation-action
+           validation-level
+           validator]}]
+  (when (or validation-action validation-level validator)
+    (cond-> (ValidationOptions.)
+      validation-action (.validationAction (get-validation-action validation-action))
+      validation-level  (.validationLevel (get-validation-level validation-level))
+      validator         (.validator validator))))
+
+(defn make-create-collection-options
+  {:no-doc true}
+  ^CreateCollectionOptions
+  [{:keys [capped?
+           change-stream-options
+           clustered-index-options
+           collation-options
+           encrypted-fields
+           expire-after-seconds
+           index-option-defaults-options
+           max-documents
+           size-in-bytes
+           storage-engine-options
+           time-series-options
+           validation-options]}]
+  (let [change-stream   (when (seq change-stream-options)
+                          (make-change-stream-options change-stream-options))
+        clustered-index (when (seq clustered-index-options)
+                          (make-clustered-index-options clustered-index-options))
+        collation       (when (seq collation-options)
+                          (make-collation collation-options))
+        index-option    (when (seq index-option-defaults-options)
+                          (make-index-option-defaults index-option-defaults-options))
+        time-series     (when (seq time-series-options)
+                          (make-time-series-options time-series-options))
+        validation      (when (seq validation-options)
+                          (make-validation-options validation-options))]
+    (cond-> (CreateCollectionOptions.)
+      (some? capped?)        (.capped (boolean capped?))
+      change-stream          (.changeStreamPreAndPostImagesOptions change-stream)
+      clustered-index        (.clusteredIndexOptions clustered-index)
+      collation              (.collation collation)
+      encrypted-fields       (.encryptedFields encrypted-fields)
+      expire-after-seconds   (.expireAfter (long expire-after-seconds) TimeUnit/SECONDS)
+      index-option           (.indexOptionDefaults index-option)
+      max-documents          (.maxDocuments (long max-documents))
+      size-in-bytes          (.sizeInBytes (long size-in-bytes))
+      storage-engine-options (.storageEngineOptions storage-engine-options)
+      time-series            (.timeSeriesOptions time-series)
+      validation             (.validationOptions validation))))

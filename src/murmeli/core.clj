@@ -123,8 +123,8 @@
 (defn create-collection!
   "Creates a collection.
   Returns `nil`."
-  [conn collection]
-  (collection/create-collection! conn collection)
+  [conn collection & {:as options}]
+  (collection/create-collection! conn collection options)
   (log/debugf "Created collection '%s'." collection))
 
 (defn list-collection-names

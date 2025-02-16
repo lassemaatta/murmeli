@@ -16,14 +16,20 @@
                         ReadPreference
                         WriteConcern]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
-           [com.mongodb.client.model Collation
+           [com.mongodb.client.model ChangeStreamPreAndPostImagesOptions
+                                     ClusteredIndexOptions
+                                     Collation
                                      CountOptions
+                                     CreateCollectionOptions
                                      FindOneAndDeleteOptions
                                      FindOneAndReplaceOptions
                                      FindOneAndUpdateOptions
+                                     IndexOptionDefaults
                                      IndexOptions
                                      ReplaceOptions
-                                     UpdateOptions]
+                                     TimeSeriesOptions
+                                     UpdateOptions
+                                     ValidationOptions]
            [java.util.regex Pattern]
            [org.bson BsonValue]
            [org.bson.codecs.configuration CodecRegistry]
@@ -199,7 +205,7 @@
 (s/def ::background? boolean?)
 (s/def ::bits ::integer)
 (s/def ::default-language ::non-blank-str)
-(s/def ::expire-after-seconds int?)
+(s/def ::expire-after-seconds pos-int?)
 (s/def ::index-name ::non-blank-str)
 (s/def ::partial-filter-expression ::document)
 (s/def :bson/partial-filter-expression ::bson)
@@ -665,3 +671,111 @@
 (s/fdef di/make-count-options
   :args (s/cat :options ::make-count-options)
   :ret (s/nilable count-options?))
+
+(s/def ::change-stream-options (s/keys :opt-un [::enabled?]))
+
+(defn change-stream-options?
+  [object]
+  (instance? ChangeStreamPreAndPostImagesOptions object))
+
+(s/fdef di/make-change-stream-options
+  :args (s/cat :options ::change-stream-options)
+  :ret (s/nilable change-stream-options?))
+
+(s/def ::index-key ::bson)
+
+(s/def ::clustered-index-options (s/keys :opt-un [::index-key
+                                                  ::index-name
+                                                  ::unique?]))
+
+(defn clustered-index-options?
+  [object]
+  (instance? ClusteredIndexOptions object))
+
+(s/fdef di/make-clustered-index-options
+  :args (s/cat :options ::clustered-index-options)
+  :ret (s/nilable clustered-index-options?))
+
+(s/def ::storage-engine ::bson)
+(s/def ::index-option-defaults-options (s/keys :opt-un [::storage-engine]))
+
+(defn index-option-defaults?
+  [object]
+  (instance? IndexOptionDefaults object))
+
+(s/fdef di/make-index-option-defaults
+  :args (s/cat :options ::index-option-defaults-options)
+  :ret (s/nilable index-option-defaults?))
+
+(s/def ::bucket-max-span-seconds pos-int?)
+(s/def ::bucket-rounding-seconds pos-int?)
+(s/def ::granularity #{:hours :minutes :seconds})
+(s/def ::meta-field ::non-blank-str)
+(s/def ::time-field ::non-blank-str)
+
+(defn valid-time-series-options?
+  [{:keys [granularity
+           bucket-max-span-seconds
+           bucket-rounding-seconds]}]
+  ;; granularity XOR bucket-*-seconds
+  (not (and granularity (or bucket-max-span-seconds
+                            bucket-rounding-seconds))))
+
+(s/def ::time-series-options (s/and (s/keys :opt-un [::bucket-max-span-seconds
+                                                     ::bucket-rounding-seconds
+                                                     ::granularity
+                                                     ::meta-field
+                                                     ::time-field])
+                                    valid-time-series-options?))
+
+(defn time-series-options?
+  [object]
+  (instance? TimeSeriesOptions object))
+
+(s/fdef di/make-time-series-options
+  :args (s/cat :options ::time-series-options)
+  :ret (s/nilable time-series-options?))
+
+
+(s/def ::validation-action #{:error :warn})
+(s/def ::validation-level #{:strict :moderate :off})
+(s/def ::validator ::bson)
+
+(s/def ::validation-options (s/keys :opt-un [::validation-action
+                                             ::validation-level
+                                             ::validator]))
+
+(defn validation-options?
+  [object]
+  (instance? ValidationOptions object))
+
+(s/fdef di/make-validation-options
+  :args (s/cat :options ::validation-options)
+  :ret (s/nilable validation-options?))
+
+(s/def ::capped? boolean?)
+(s/def ::encrypted-fields ::bson)
+(s/def ::max-documents pos-int?)
+(s/def ::size-in-bytes pos-int?)
+(s/def ::storage-engine-options ::bson)
+
+(s/def ::make-create-collection-options (s/keys :opt-un [::capped?
+                                                         ::change-stream-options
+                                                         ::clustered-index-options
+                                                         ::collation-options
+                                                         ::encrypted-fields
+                                                         ::expire-after-seconds
+                                                         ::index-option-defaults-options
+                                                         ::max-documents
+                                                         ::size-in-bytes
+                                                         ::storage-engine-options
+                                                         ::time-series-options
+                                                         ::validation-options]))
+
+(defn create-collection-options?
+  [object]
+  (instance? CreateCollectionOptions object))
+
+(s/fdef di/make-create-collection-options
+  :args (s/cat :options ::make-create-collection-options)
+  :ret (s/nilable create-collection-options?))

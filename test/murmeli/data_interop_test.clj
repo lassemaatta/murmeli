@@ -96,3 +96,43 @@
                             ;; Generating the BSON can get expensive, so drop
                             ;; the number of test runs from 1k to 50
                             ::stc/opts {:num-tests 100}}))))
+
+(deftest make-change-stream-options-test
+  (is (match? passed
+              (stest/check `di/make-change-stream-options))))
+
+(deftest make-clustered-index-options-test
+  (is (match? passed
+              (stest/check `di/make-clustered-index-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 50
+                            ::stc/opts {:num-tests 100}}))))
+
+(deftest make-index-option-defaults-test
+  (is (match? passed
+              (stest/check `di/make-index-option-defaults
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 50
+                            ::stc/opts {:num-tests 100}}))))
+
+(deftest make-time-series-options-test
+  (is (match? passed
+              (stest/check `di/make-time-series-options))))
+
+(deftest make-validation-options-test
+  (is (match? passed
+              (stest/check `di/make-validation-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 50
+                            ::stc/opts {:num-tests 100}}))))
+
+(deftest make-create-collection-options-test
+  (is (match? passed
+              (stest/check `di/make-create-collection-options
+                           {:gen       {::ms/bson (constantly mg/bson-gen)}
+                            ;; Generating the BSON can get expensive, so drop
+                            ;; the number of test runs from 1k to 50
+                            ::stc/opts {:num-tests 100}}))))

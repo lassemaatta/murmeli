@@ -3,6 +3,7 @@
   {:no-doc true}
   (:require [murmeli.impl.convert :as c]
             [murmeli.impl.cursor :as cursor]
+            [murmeli.impl.data-interop :as di]
             [murmeli.impl.db :as db]
             [murmeli.impl.session :as session])
   (:import [clojure.lang PersistentHashMap]
@@ -14,12 +15,16 @@
 (defn create-collection!
   [{::db/keys      [^MongoDatabase db]
     ::session/keys [^ClientSession session]}
-   collection]
+   collection
+   & {:as options}]
   {:pre [db collection]}
-  ;; TODO: Add support for `CreateCollectionOptions`
-  (cond
-    session (.createCollection db session (name collection))
-    :else   (.createCollection db (name collection))))
+  (let [options (when (seq options)
+                  (di/make-create-collection-options options))]
+    (cond
+      (and session options) (.createCollection db session (name collection) options)
+      session               (.createCollection db session (name collection))
+      options               (.createCollection db (name collection) options)
+      :else                 (.createCollection db (name collection)))))
 
 (defn get-collection
   (^MongoCollection
