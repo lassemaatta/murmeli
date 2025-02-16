@@ -21,6 +21,8 @@
                            [test-utils/container-fixture
                             test-utils/db-fixture]))
 
+(test/use-fixtures :each test-utils/reset-db-fixture)
+
 (defn get-coll
   "Return a random unique collection name for a test"
   []
@@ -58,31 +60,29 @@
                        (->> (m/list-dbs conn)
                             (map :name)
                             (into #{})))]
-    (is (= 4 (count (get-db-names conn))))
+    (testing "initial state"
+      ;; note that `test-db` does not exist yet, it was just
+      ;; created lazily by the test fixture
+      (is (= 3 (count (get-db-names conn)))))
     (testing "dropping an unknown db does nothing"
       (is (nil? (m/drop-db! conn (str (random-uuid))))))
     (testing "create db with coll and drop it"
       (let [db-name "my-new-db"
             conn    (m/with-db conn db-name)
             coll    (get-coll)]
-        (is (= 4 (count (get-db-names conn)))
+        (is (= 3 (count (get-db-names conn)))
             "Retrieving a database does not create it")
         (m/create-collection! conn coll)
         (let [db-names (get-db-names conn)]
-          (is (= 5 (count db-names)))
+          (is (= 4 (count db-names)))
           (is (contains? db-names db-name))
           (is (nil? (m/drop-db! conn db-name)))
-          (is (= 4 (count (get-db-names conn)))))))))
+          (is (= 3 (count (get-db-names conn)))))))))
 
 (deftest list-collection-names-test
-  (let [db-name "coll-test-db"
-        conn    (-> (test-utils/get-conn)
-                    ;; Use a separate db for this tests so that we don't
-                    ;; see collections created in other tests
-                    (m/with-db db-name))
+  (let [conn    (test-utils/get-conn)
         coll-1  (get-coll)
         coll-2  (get-coll)]
-    (m/drop-db! conn db-name)
     (testing "basic stuff"
       (is (= #{} (m/list-collection-names conn)))
       (m/create-collection! conn coll-1)
@@ -104,8 +104,7 @@
       (testing "max-time-ms"
         (is (= #{coll-1 coll-2} (m/list-collection-names conn :max-time-ms 100))))
       (testing "keywords?"
-        (is (= #{(name coll-1) (name coll-2)} (m/list-collection-names conn :keywords? false)))))
-    (m/drop-db! conn db-name)))
+        (is (= #{(name coll-1) (name coll-2)} (m/list-collection-names conn :keywords? false)))))))
 
 (deftest simple-insert-test
   (testing "inserting document"

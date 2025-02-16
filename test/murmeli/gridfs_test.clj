@@ -18,6 +18,8 @@
                            [test-utils/container-fixture
                             test-utils/db-fixture]))
 
+(test/use-fixtures :each test-utils/reset-db-fixture)
+
 (defn str->stream
   [^String s]
   (-> s .getBytes io/input-stream))
@@ -82,8 +84,7 @@
                       :filename    "plain-file-with-meta.txt"
                       :length      36
                       :upload-date inst?}]
-                    (into [] results)))))
-    (gfs/drop-bucket! conn)))
+                    (into [] results)))))))
 
 (deftest upload-download-test
   (let [conn (-> (test-utils/get-conn)
@@ -116,8 +117,7 @@
             (let [{:keys [input-stream file]} (gfs/download-stream conn {:filename filename})]
               (is (instance? InputStream input-stream))
               (is (= contents (slurp input-stream)))
-              (is (match? expected-file file)))))))
-    (gfs/drop-bucket! conn)))
+              (is (match? expected-file file)))))))))
 
 (deftest delete-test
   (let [conn (-> (test-utils/get-conn)
@@ -139,8 +139,7 @@
           (let [results (into [] (gfs/find conn {:query {:_id id}}))]
             (is (zero? (count results))))
           (let [results (into [] (gfs/find conn {:query {:filename filename}}))]
-            (is (zero? (count results)))))))
-    (gfs/drop-bucket! conn)))
+            (is (zero? (count results)))))))))
 
 (deftest drop-bucket-test
   (testing "custom bucket in conn"

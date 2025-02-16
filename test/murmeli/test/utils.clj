@@ -68,9 +68,7 @@
 (defn connect!
   []
   (-> (db-spec)
-      m/connect-client!
-      (m/with-db "test-db")
-      (m/with-default-registry)))
+      m/connect-client!))
 
 (defn db-fixture
   [test-fn]
@@ -85,3 +83,16 @@
   []
   (or *conn*
       (throw (ex-info "Mongo DB connection not running" {}))))
+
+(defn- reset-db!
+  [conn]
+  ;; Make sure test db is empty before running tests
+  (m/drop-db! conn "test-db")
+  (-> conn
+      (m/with-db "test-db")
+      (m/with-default-registry)))
+
+(defn reset-db-fixture
+  [test-fn]
+  (binding [*conn* (reset-db! (get-conn))]
+    (test-fn)))
