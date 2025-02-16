@@ -8,10 +8,10 @@
 
 (defn create-bucket
   {:arglists '([conn]
-               [conn & {:keys [chunk-size-bytes
-                               read-concern
-                               read-preference
-                               timeout-ms]}])}
+               [conn bucket-name & {:keys [chunk-size-bytes
+                                           read-concern
+                                           read-preference
+                                           timeout-ms]}])}
   ([conn]
    (create-bucket conn nil))
   ([conn
@@ -32,11 +32,18 @@
   ([conn bucket-name & {:as options}]
    (gfs/with-bucket conn bucket-name options)))
 
-;; TODO: should have bucket parameter
 (defn drop-bucket!
-  [conn]
-  (gfs/drop-bucket! conn)
-  (log/debugf "Dropped bucket '%s'" (.getBucketName ^GridFSBucket (::gfs/bucket conn))))
+  "Drop data associated with the bucket from the database.
+
+  If no explicit `bucket-or-bucket-name` is given, the implicit
+  bucket in the `conn` is dropped.
+
+  Returns `nil`."
+  ([conn]
+   (drop-bucket! conn (::gfs/bucket conn)))
+  ([conn bucket-or-bucket-name]
+   (let [dropped-bucket (gfs/drop-bucket! conn bucket-or-bucket-name)]
+     (log/debugf "Dropped bucket '%s'" (.getBucketName ^GridFSBucket dropped-bucket)))))
 
 (defn upload-stream!
   {:arglists '([conn filename source & {:keys [id

@@ -143,7 +143,50 @@
     (gfs/drop-bucket! conn)))
 
 (deftest drop-bucket-test
-  (testing "custom bucket"
+  (testing "custom bucket in conn"
     (let [conn (-> (test-utils/get-conn)
                    (gfs/with-bucket "my-bucket"))]
-      (gfs/drop-bucket! conn))))
+
+      (testing "upload file"
+        (gfs/upload-stream! conn "dummy.txt" (str->stream "foo"))
+        (is (= 1 (count (into [] (gfs/find conn))))
+            "bucket contains a single file"))
+      (gfs/drop-bucket! conn)
+      (is (zero? (count (into [] (gfs/find conn))))
+          "no files after dropping bucket")))
+
+  (testing "delete other bucket"
+    (let [conn (-> (test-utils/get-conn)
+                   (gfs/with-bucket "my-bucket-2"))]
+
+      (testing "upload file"
+        (gfs/upload-stream! conn "dummy.txt" (str->stream "foo"))
+        (is (= 1 (count (into [] (gfs/find conn))))
+            "bucket contains a single file"))
+
+      (testing "create and delete some other bucket by instance"
+        (let [conn (gfs/with-bucket conn "other-bucket")]
+          (testing "upload file"
+            (gfs/upload-stream! conn "dummy-2.txt" (str->stream "foo"))
+            (is (= 1 (count (into [] (gfs/find conn))))
+                "bucket contains a single file"))
+
+          (let [bucket (gfs/create-bucket conn "other-bucket")]
+            (gfs/drop-bucket! conn bucket)
+
+            (is (zero? (count (into [] (gfs/find conn))))
+                "file in other-bucket removed"))))
+
+      (testing "create and delete some other bucket by name"
+        (let [bucket-name "yet-another-bucket"
+              conn        (gfs/with-bucket conn bucket-name)]
+          (testing "upload file"
+            (gfs/upload-stream! conn "dummy-3.txt" (str->stream "foo"))
+            (is (= 1 (count (into [] (gfs/find conn))))
+                "bucket contains a single file"))
+          (gfs/drop-bucket! conn bucket-name)
+          (is (zero? (count (into [] (gfs/find conn))))
+              "file in yet-another-bucket removed")))
+
+      (is (= 1 (count (into [] (gfs/find conn))))
+          "original file in bucket"))))

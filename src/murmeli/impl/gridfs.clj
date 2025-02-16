@@ -39,12 +39,25 @@
    (assoc conn ::bucket (create-bucket conn bucket-name options))))
 
 (defn drop-bucket!
-  [{::session/keys [^ClientSession session]
-    ::keys         [^GridFSBucket bucket]}]
-  {:pre [bucket]}
-  (cond
-    session (.drop bucket session)
-    :else   (.drop bucket)))
+  ([{::keys [bucket] :as conn}]
+   (drop-bucket! conn bucket))
+  ([{::session/keys [^ClientSession session] :as conn}
+    bucket-or-bucket-name]
+   {:pre [conn bucket-or-bucket-name]}
+   (let [^GridFSBucket bucket (cond
+                                ;; Bucket name given?
+                                (string? bucket-or-bucket-name)
+                                (create-bucket conn bucket-or-bucket-name)
+                                ;; Bucket instance given?
+                                (instance? GridFSBucket bucket-or-bucket-name)
+                                bucket-or-bucket-name
+                                :else
+                                (throw (ex-info "Not a bucker nor a bucket name"
+                                                {:bucket bucket-or-bucket-name})))]
+     (cond
+       session (.drop bucket session)
+       :else   (.drop bucket))
+     bucket)))
 
 (defn upload-stream!
   [{::session/keys [^ClientSession session]
