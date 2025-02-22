@@ -1,5 +1,5 @@
 (ns murmeli.validators.schema-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [murmeli.validators.schema :as validator]
             [schema.core :as s :refer [defschema]]))
 
@@ -27,17 +27,26 @@
                                    "g"   {:bsonType :string}
                                    "h"   {:bsonType :string}
                                    "i"   {:bsonType :string}
-                                   "j"   {:bsonType :string, :format :uuid}}
+                                   "j"   {:bsonType :string
+                                          :format   :uuid}}
             :additionalProperties false}
            schema))))
 
 (deftest id-test
-  (is (=  {:bsonType             :object
-           :additionalProperties false
-           :required             ["_id"]
-           :properties           {"_id" {:bsonType :objectId}}}
-          (validator/schema->json-schema
-            {:_id s/Str}))))
+  (testing "assign ObjectId _id by default"
+    (is (=  {:bsonType             :object
+             :additionalProperties false
+             :required             ["_id"]
+             :properties           {"_id" {:bsonType :objectId}}}
+            (validator/schema->json-schema
+              {}))))
+  (testing "schema may specify an alternate type for _id"
+    (is (=  {:bsonType             :object
+             :additionalProperties false
+             :required             ["_id"]
+             :properties           {"_id" {:bsonType :string}}}
+            (validator/schema->json-schema
+              {:_id s/Str})))))
 
 (deftest collection-test
   (is (= {:bsonType             :object

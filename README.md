@@ -103,7 +103,7 @@ or as a trailing map
 (require '[schema.core :as s :refer [defschema]])
 
 (defschema MySchema
-  {(s/optional-key :_id)      (s/pred #(instance? org.bson.types.ObjectId %))
+  {(s/optional-key :_id)      vs/ObjectId
    :name                      s/Str
    (s/optional-key :counter)  s/Int
    (s/optional-key :aliases)  #{s/Str}

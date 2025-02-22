@@ -17,6 +17,10 @@
 
 (set! *warn-on-reflection* true)
 
+(def ObjectId
+  "ObjectId instance"
+  (s/pred (fn [o] (instance? org.bson.types.ObjectId o)) 'objectId?))
+
 (declare to-schema)
 
 (defprotocol ToJsonKey
@@ -43,11 +47,11 @@
 
 (extend-protocol ToJsonSchema
   Symbol
-  (-to-schema [this {:keys [id?
-                            null?
+  (-to-schema [this {:keys [null?
                             description]}]
     (cond-> (case this
               Any      {}
+              ObjectId {:bsonType :objectId}
               Bool     {:bsonType :bool}
               Int      {:bsonType :long}
               Num      {:bsonType :number}
@@ -59,9 +63,6 @@
                         :format   :uuid}
               Inst     {:bsonType :date}
               {:bsonType :symbol})
-      ;; If the key corresponding to this value is `_id`,
-      ;; report this as ObjectId
-      id?         (assoc :bsonType :objectId)
       ;; Are we wrapped in a `s/maybe`?
       null?       (update :bsonType (fn [other]
                                       [:null other]))
@@ -106,8 +107,10 @@
         named       (to-schema schema {:description (first args)})
         constrained (to-schema schema {:description (when (string? (first args))
                                                       (first args))})
-        pred        (throw (ex-info "Cannot represent arbitrary predicates as JSON schema"
-                                    {:pred schema})))))
+        pred        (case schema
+                      objectId? {:bsonType :objectId}
+                      (throw (ex-info "Cannot represent arbitrary predicates as JSON schema"
+                                      {:pred schema}))))))
   IPersistentMap
   (-to-schema [this _]
     (let [required    (some->> (keys this)
@@ -119,7 +122,7 @@
           props       (some->> this
                                (keep (fn [[k v]]
                                        (when-let [k (-to-key k)]
-                                         [k (to-schema v {:id? (= k "_id")})])))
+                                         [k (to-schema v)])))
                                (into {}))
           ;; Contains open keys like `s/Str`?
           additional? (boolean (some->> (keys this)
@@ -145,7 +148,7 @@
   (-> schema
       ;; Make sure the root document mentions `_id`, otherwise
       ;; we won't match any documents (unless `additionalProperties` is true)
-      (assoc :_id s/Str)
+      (update :_id (fnil identity ObjectId))
       ;; Expand schema to make it easier to parse
       s/explain
       to-schema))
