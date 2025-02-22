@@ -207,4 +207,13 @@
                  :bar {s/Int s/Keyword}
                  :baz s/Str
                  :quuz s/Int
-                 :flor s/Uuid)}))))
+                 :flor s/Uuid)})))
+  (is (= {:bsonType             :object
+          :additionalProperties false
+          :required             ["_id" "a"]
+          :properties           {"a"   {:allOf [{:bsonType :string}
+                                                {:bsonType :string
+                                                 :format   :uuid}]}
+                                 "_id" {:bsonType :objectId}}}
+         (validator/schema->json-schema
+           {:a (s/both s/Str s/Uuid)}))))
