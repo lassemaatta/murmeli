@@ -14,6 +14,30 @@
 
 (set! *warn-on-reflection* true)
 
+(defn- preprocess-projection
+  [projection registry]
+  (when (seq projection)
+    (cond-> projection
+      (sequential? projection) (zipmap (repeat 1))
+      true                     (c/map->bson registry))))
+
+(defn- preprocess-options
+  "Several API methods have similar options which require similar preprocessing"
+  [{:keys [array-filters
+           hint
+           projection
+           sort
+           variables]
+    :as   options}
+   registry]
+  (cond-> (or options {})
+    (seq array-filters) (assoc :array-filters (mapv (fn [f] (c/map->bson f registry)) array-filters))
+    (seq hint)          (assoc :hint (c/map->bson hint registry))
+    (seq projection)    (assoc :projection (preprocess-projection projection registry))
+    (seq sort)          (assoc :sort (c/map->bson sort registry))
+    (seq variables)     (assoc :variables (c/map->bson variables registry))
+    true                not-empty))
+
 ;; Insertion
 
 (defn insert-one!
@@ -54,17 +78,18 @@
    changes
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
-  (let [coll    (collection/get-collection conn collection options)
-        filter  (c/map->bson query (.getCodecRegistry coll))
-        updates (c/map->bson changes (.getCodecRegistry coll))
-        ;; TODO: array-filters should be BSON
-        ;; TODO: variables should be BSON
-        options (di/make-update-options (or options {}))
-        result  (cond
-                  (and session options) (.updateOne coll session filter updates options)
-                  session               (.updateOne coll session filter updates)
-                  options               (.updateOne coll filter updates options)
-                  :else                 (.updateOne coll filter updates))]
+  (let [coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        filter   (c/map->bson query registry)
+        updates  (c/map->bson changes registry)
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-update-options)
+        result   (cond
+                   (and session options) (.updateOne coll session filter updates options)
+                   session               (.updateOne coll session filter updates)
+                   options               (.updateOne coll filter updates options)
+                   :else                 (.updateOne coll filter updates))]
     ;; There doesn't seem to be a way to verify that the query would match
     ;; just a single document because matched count is always either 0 or 1 :(
     ;; TODO: support `getUpsertedId`
@@ -78,17 +103,18 @@
    changes
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
-  (let [coll    (collection/get-collection conn collection options)
-        filter  (c/map->bson query (.getCodecRegistry coll))
-        updates (c/map->bson changes (.getCodecRegistry coll))
-        ;; TODO: array-filters should be BSON
-        ;; TODO: variables should be BSON
-        options (di/make-update-options (or options {}))
-        result  (cond
-                  (and session options) (.updateMany coll session filter updates options)
-                  session               (.updateMany coll session filter updates)
-                  options               (.updateMany coll filter updates options)
-                  :else                 (.updateMany coll filter updates))]
+  (let [coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        filter   (c/map->bson query (.getCodecRegistry coll))
+        updates  (c/map->bson changes (.getCodecRegistry coll))
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-update-options)
+        result   (cond
+                   (and session options) (.updateMany coll session filter updates options)
+                   session               (.updateMany coll session filter updates)
+                   options               (.updateMany coll filter updates options)
+                   :else                 (.updateMany coll filter updates))]
     {:modified (.getModifiedCount result)
      :matched  (.getMatchedCount result)}))
 
@@ -101,14 +127,17 @@
    replacement
    & {:as options}]
   {:pre [conn collection (map? query) (map? replacement)]}
-  (let [coll    (collection/get-collection conn collection options)
-        filter  (c/map->bson query (.getCodecRegistry coll))
-        options (di/make-replace-options (or options {}))
-        result  (cond
-                  (and session options) (.replaceOne coll session filter replacement options)
-                  session               (.replaceOne coll session filter replacement)
-                  options               (.replaceOne coll filter replacement options)
-                  :else                 (.replaceOne coll filter replacement))]
+  (let [coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        filter   (c/map->bson query (.getCodecRegistry coll))
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-replace-options)
+        result   (cond
+                   (and session options) (.replaceOne coll session filter replacement options)
+                   session               (.replaceOne coll session filter replacement)
+                   options               (.replaceOne coll filter replacement options)
+                   :else                 (.replaceOne coll filter replacement))]
     ;; There doesn't seem to be a way to verify that the query would match
     ;; just a single document because matched count is always either 0 or 1 :(
     {:modified (.getModifiedCount result)
@@ -149,15 +178,15 @@
 (defn count-collection
   [{::session/keys [^ClientSession session] :as conn}
    collection
-   & {:keys [query hint] :as options}]
+   & {:keys [query] :as options}]
   {:pre [conn collection]}
   (let [coll     (collection/get-collection conn collection options)
         registry (.getCodecRegistry coll)
         query    (when query
                    (c/map->bson query registry))
-        options  (di/make-count-options
-                   (cond-> (or options {})
-                     (seq hint) (assoc :hint (c/map->bson hint registry))))]
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-count-options)]
     (cond
       (and session query options) (.countDocuments coll session query options)
       (and session query)         (.countDocuments coll session query)
@@ -196,13 +225,6 @@
                                batch-size  (.batchSize (int batch-size))
                                max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
     (cursor/->reducible it)))
-
-(defn- preprocess-projection
-  [projection registry]
-  (when (seq projection)
-    (cond-> projection
-      (sequential? projection) (zipmap (repeat 1))
-      true                     (c/map->bson registry))))
 
 (defn find-reducible
   [{::session/keys [^ClientSession session] :as conn}
@@ -274,18 +296,14 @@
   [{::session/keys [^ClientSession session] :as conn}
    collection
    query
-   & {:keys [hint projection sort variables] :as options}]
+   & {:as options}]
   {:pre [conn collection (seq query)]}
-  (let [coll       (collection/get-collection conn collection options)
-        registry   (.getCodecRegistry coll)
-        query      (c/map->bson query registry)
-        projection (preprocess-projection projection registry)
-        options    (di/make-find-one-and-delete-options
-                     (cond-> (or options {})
-                       (seq hint)       (assoc :hint (c/map->bson hint registry))
-                       (seq projection) (assoc :projection projection)
-                       (seq sort)       (assoc :sort (c/map->bson sort registry))
-                       (seq variables)  (assoc :variables (c/map->bson variables registry))))]
+  (let [coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        query    (c/map->bson query registry)
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-find-one-and-delete-options)]
     (cond
       (and session options) (.findOneAndDelete coll session query options)
       session               (.findOneAndDelete coll session query)
@@ -297,18 +315,14 @@
    collection
    query
    replacement
-   & {:keys [hint projection sort variables] :as options}]
+   & {:as options}]
   {:pre [conn collection (map? replacement) (map? query)]}
-  (let [coll       (collection/get-collection conn collection options)
-        registry   (.getCodecRegistry coll)
-        query      (c/map->bson query registry)
-        projection (preprocess-projection projection registry)
-        options    (di/make-find-one-and-replace-options
-                     (cond-> (or options {})
-                       (seq hint)       (assoc :hint (c/map->bson hint registry))
-                       (seq projection) (assoc :projection projection)
-                       (seq sort)       (assoc :sort (c/map->bson sort registry))
-                       (seq variables)  (assoc :variables (c/map->bson variables registry))))]
+  (let [coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        query    (c/map->bson query registry)
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-find-one-and-replace-options)]
     (cond
       (and session options) (.findOneAndReplace coll session query replacement options)
       session               (.findOneAndReplace coll session query replacement)
@@ -320,20 +334,15 @@
    collection
    query
    updates
-   & {:keys [array-filters hint projection sort variables] :as options}]
+   & {:as options}]
   {:pre [conn collection (map? updates) (map? query)]}
-  (let [coll       (collection/get-collection conn collection options)
-        registry   (.getCodecRegistry coll)
-        query      (c/map->bson query registry)
-        projection (preprocess-projection projection registry)
-        updates    (c/map->bson updates registry)
-        options    (di/make-find-one-and-update-options
-                     (cond-> (or options {})
-                       (seq array-filters) (assoc :array-filters (mapv (fn [f] (c/map->bson f registry)) array-filters))
-                       (seq hint)          (assoc :hint (c/map->bson hint registry))
-                       (seq projection)    (assoc :projection projection)
-                       (seq sort)          (assoc :sort (c/map->bson sort registry))
-                       (seq variables)     (assoc :variables (c/map->bson variables registry))))]
+  (let [coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        query    (c/map->bson query registry)
+        updates  (c/map->bson updates registry)
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-find-one-and-update-options)]
     (cond
       (and session options) (.findOneAndUpdate coll session query updates options)
       session               (.findOneAndUpdate coll session query updates)

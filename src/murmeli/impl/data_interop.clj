@@ -315,6 +315,7 @@
            collation-options
            ^String comment
            hint
+           sort
            upsert?
            variables]
     :as   options}]
@@ -327,6 +328,7 @@
         collation                  (.collation collation)
         comment                    (.comment comment)
         hint                       (.hint hint)
+        sort                       (.sort sort)
         (some? upsert?)            (.upsert (boolean upsert?))
         variables                  (.let variables)))))
 

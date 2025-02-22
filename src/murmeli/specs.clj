@@ -563,6 +563,7 @@
 (s/def ::bypass-validation? boolean?)
 (s/def ::comment ::non-blank-str)
 (s/def :bson/hint ::bson)
+(s/def :bson/sort ::bson)
 (s/def :bson/variables ::bson)
 
 (s/def ::make-update-options (s/keys :opt-un [::array-filters
@@ -570,6 +571,7 @@
                                               ::collation-options
                                               ::comment
                                               :bson/hint
+                                              :bson/sort
                                               ::upsert?
                                               :bson/variables]))
 
@@ -598,7 +600,6 @@
 
 (s/def :bson/projection ::bson)
 (s/def ::return #{:after :before})
-(s/def :bson/sort ::bson)
 
 (s/def ::make-find-one-and-delete-options (s/keys :opt-un [::collation-options
                                                            ::comment
