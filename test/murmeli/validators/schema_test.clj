@@ -136,10 +136,19 @@
            schema))))
 
 (deftest wrapper-test
-  (is (thrown-with-msg? RuntimeException
-                        #"Cannot represent arbitrary predicates as JSON schema"
-                        (validator/schema->json-schema
-                          {:a (s/pred some?)})))
+  (testing "by default we forbid `s/pred`"
+    (is (thrown-with-msg? RuntimeException
+                          #"Cannot represent arbitrary predicates as JSON schema"
+                          (validator/schema->json-schema
+                            {:a (s/pred some?)}))))
+  (testing "but with `strict?` `false` we can choose to ignore them"
+    (is (= {:bsonType             :object
+            :required             ["_id" "a"]
+            :properties           {"_id" {:bsonType :objectId}
+                                   "a"   {}}
+            :additionalProperties false}
+           (validator/schema->json-schema
+             {:a (s/pred some?)} :strict? false))))
   (is (= {:bsonType             :object
           :required             ["_id" "a"]
           :properties           {"_id" {:bsonType :objectId}

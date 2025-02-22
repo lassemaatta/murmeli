@@ -43,12 +43,12 @@
     (-> this second name)))
 
 (defprotocol ToJsonSchema
-  (-to-schema [this opts]))
+  (-to-schema [this opts child-opts]))
 
 (extend-protocol ToJsonSchema
   Symbol
-  (-to-schema [this {:keys [null?
-                            description]}]
+  (-to-schema [this _ {:keys [null?
+                              description]}]
     (cond-> (case this
               Any      {}
               ObjectId {:bsonType :objectId}
@@ -70,7 +70,7 @@
   ;; No idea why some schema sequences (enum, cond-pre) are wrapped in Cons and others
   ;; in IPersistenLists (maybe, named, ..)
   Cons
-  (-to-schema [this _]
+  (-to-schema [this options _]
     (case (first this)
       enum        {:enum (->> (rest this)
                               (map (fn [x]
@@ -82,41 +82,41 @@
                               (into []))}
       ;; cond-pre lists a bunch of disjoint schemas, we must match one of them
       cond-pre    {:anyOf (->> (rest this)
-                               (mapv to-schema))}
+                               (mapv (fn [v] (to-schema v options))))}
       either      {:oneOf (->> (rest this)
-                               (mapv to-schema))}
+                               (mapv (fn [v] (to-schema v options))))}
       both        {:allOf (->> (rest this)
-                               (mapv to-schema))}
+                               (mapv (fn [v] (to-schema v options))))}
       ;; conditional has pairs of predicate + schema. We can't really represent the
       ;; predicates, but at least we can try to check if one of the schemas matches
       conditional {:anyOf (->> (rest this)
                                (partition 2)
-                               (mapv (comp to-schema second)))}))
+                               (mapv (comp (fn [v] (to-schema v options)) second)))}))
   IPersistentVector
-  (-to-schema [this _]
+  (-to-schema [this options _]
     {:bsonType :array
-     :items    (to-schema (first this))})
+     :items    (to-schema (first this) options)})
   IPersistentSet
-  (-to-schema [this _]
+  (-to-schema [this options _]
     {:bsonType    :array
      :uniqueItems true
-     :items       (mapv to-schema this)})
+     :items       (mapv (fn [v] (to-schema v options)) this)})
   IPersistentList
-  (-to-schema [[wrapper-type schema & args] {:keys [id?]}]
-    (if id?
-      {:bsonType :objectId}
-      (case wrapper-type
-        eq          {:enum [schema]}
-        maybe       (to-schema schema {:null? true})
-        named       (to-schema schema {:description (first args)})
-        constrained (to-schema schema {:description (when (string? (first args))
-                                                      (first args))})
-        pred        (case schema
-                      objectId? {:bsonType :objectId}
+  (-to-schema [[wrapper-type schema & args] {:keys [strict?] :as options} _]
+    (case wrapper-type
+      eq          {:enum [schema]}
+      maybe       (to-schema schema options {:null? true})
+      named       (to-schema schema options {:description (first args)})
+      constrained (to-schema schema options {:description (when (string? (first args))
+                                                            (first args))})
+      pred        (case schema
+                    objectId? {:bsonType :objectId}
+                    (if strict?
                       (throw (ex-info "Cannot represent arbitrary predicates as JSON schema"
-                                      {:pred schema}))))))
+                                      {:pred schema}))
+                      {}))))
   IPersistentMap
-  (-to-schema [this _]
+  (-to-schema [this options _]
     (let [required    (some->> (keys this)
                                (remove list?)
                                (keep -to-key)
@@ -126,7 +126,7 @@
           props       (some->> this
                                (keep (fn [[k v]]
                                        (when-let [k (-to-key k)]
-                                         [k (to-schema v)])))
+                                         [k (to-schema v options)])))
                                (into {}))
           ;; Contains open keys like `s/Str`?
           additional? (boolean (some->> (keys this)
@@ -142,17 +142,20 @@
                {})))))
 
 (defn- to-schema
-  ([schema]
-   (to-schema schema {}))
   ([schema opts]
-   (-to-schema schema opts)))
+   (to-schema schema opts {}))
+  ([schema opts child-opts]
+   (-to-schema schema opts child-opts)))
+
+(def default-options {:strict? true})
 
 (defn schema->json-schema
-  [schema]
-  (-> schema
-      ;; Make sure the root document mentions `_id`, otherwise
-      ;; we won't match any documents (unless `additionalProperties` is true)
-      (update :_id (fnil identity ObjectId))
-      ;; Expand schema to make it easier to parse
-      s/explain
-      to-schema))
+  [schema & {:as options}]
+  (let [options (merge default-options options)]
+    (-> schema
+        ;; Make sure the root document mentions `_id`, otherwise
+        ;; we won't match any documents (unless `additionalProperties` is true)
+        (update :_id (fnil identity ObjectId))
+        ;; Expand schema to make it easier to parse
+        s/explain
+        (to-schema options))))
