@@ -46,11 +46,16 @@
    doc
    & {:as options}]
   {:pre [conn collection (map? doc)]}
-  (let [coll   (collection/get-collection conn collection options)
-        ;; TODO: add `InsertOneOptions` support
-        result (if session
-                 (.insertOne coll session doc)
-                 (.insertOne coll doc))]
+  (let [coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-insert-one-options)
+        result   (cond
+                   (and session options) (.insertOne coll session doc options)
+                   session               (.insertOne coll session doc)
+                   options               (.insertOne coll doc options)
+                   :else                 (.insertOne coll doc))]
     (c/bson-value->document-id (.getInsertedId result))))
 
 (defn insert-many!

@@ -284,6 +284,8 @@
 
   Options:
   * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
+  * `bypass-validation?` -- If true, bypass document validation
+  * `comment` -- Operation comment string
 
   Returns the `_id` of the inserted document (`String` or `ObjectId`)."
   {:arglists '([conn collection doc & {:keys [allow-qualified?

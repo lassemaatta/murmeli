@@ -136,3 +136,7 @@
                             ;; Generating the BSON can get expensive, so drop
                             ;; the number of test runs from 1k to 50
                             ::stc/opts {:num-tests 100}}))))
+
+(deftest make-insert-one-options-test
+  (is (match? passed
+              (stest/check `di/make-insert-one-options))))

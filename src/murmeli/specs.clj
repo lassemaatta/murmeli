@@ -26,6 +26,7 @@
                                      FindOneAndUpdateOptions
                                      IndexOptionDefaults
                                      IndexOptions
+                                     InsertOneOptions
                                      ReplaceOptions
                                      TimeSeriesOptions
                                      UpdateOptions
@@ -780,3 +781,14 @@
 (s/fdef di/make-create-collection-options
   :args (s/cat :options ::make-create-collection-options)
   :ret (s/nilable create-collection-options?))
+
+(s/def ::make-insert-one-options (s/keys :opt-un [::bypass-validation?
+                                                  ::comment]))
+
+(defn insert-one-options?
+  [object]
+  (instance? InsertOneOptions object))
+
+(s/fdef di/make-insert-one-options
+  :args (s/cat :options ::make-insert-one-options)
+  :ret (s/nilable insert-one-options?))

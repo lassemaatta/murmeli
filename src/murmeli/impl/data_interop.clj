@@ -29,6 +29,7 @@
                                      IndexOptionDefaults
                                      IndexOptions
                                      Indexes
+                                     InsertOneOptions
                                      ReplaceOptions
                                      ReturnDocument
                                      TimeSeriesGranularity
@@ -594,3 +595,14 @@
       storage-engine-options (.storageEngineOptions storage-engine-options)
       time-series            (.timeSeriesOptions time-series)
       validation             (.validationOptions validation))))
+
+(defn make-insert-one-options
+  {:no-doc true}
+  ^InsertOneOptions
+  [{:keys [bypass-validation?
+           ^String comment]
+    :as   options}]
+  (when (seq options)
+    (cond-> (InsertOneOptions.)
+      (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
+      comment                    (.comment comment))))
