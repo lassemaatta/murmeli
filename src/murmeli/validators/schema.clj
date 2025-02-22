@@ -83,6 +83,8 @@
       ;; cond-pre lists a bunch of disjoint schemas, we must match one of them
       cond-pre    {:anyOf (->> (rest this)
                                (mapv to-schema))}
+      either      {:oneOf (->> (rest this)
+                               (mapv to-schema))}
       both        {:allOf (->> (rest this)
                                (mapv to-schema))}
       ;; conditional has pairs of predicate + schema. We can't really represent the

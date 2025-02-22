@@ -216,4 +216,13 @@
                                                  :format   :uuid}]}
                                  "_id" {:bsonType :objectId}}}
          (validator/schema->json-schema
-           {:a (s/both s/Str s/Uuid)}))))
+           {:a (s/both s/Str s/Uuid)})))
+  (is (= {:bsonType             :object
+          :additionalProperties false
+          :required             ["_id" "a"]
+          :properties           {"a"   {:oneOf [{:bsonType :string}
+                                                {:bsonType :string
+                                                 :format   :uuid}]}
+                                 "_id" {:bsonType :objectId}}}
+         (validator/schema->json-schema
+           {:a (s/either s/Str s/Uuid)}))))
