@@ -55,8 +55,10 @@
                    (and session options) (.insertOne coll session doc options)
                    session               (.insertOne coll session doc)
                    options               (.insertOne coll doc options)
-                   :else                 (.insertOne coll doc))]
-    (c/bson-value->document-id (.getInsertedId result))))
+                   :else                 (.insertOne coll doc))
+        id       (.getInsertedId result)]
+    (cond-> {:acknowledged? (.wasAcknowledged result)}
+      id (assoc :id (c/bson-value->document-id id)))))
 
 (defn insert-many!
   [{::session/keys [^ClientSession session] :as conn}
@@ -75,9 +77,11 @@
                    session               (.insertMany coll session docs)
                    options               (.insertMany coll docs options)
                    :else                 (.insertMany coll docs))]
-    (->> (.getInsertedIds result)
-         (sort-by key)
-         (mapv (comp c/bson-value->document-id val)))))
+    {:acknowledged? (.wasAcknowledged result)
+     :ids           (->> (.getInsertedIds result)
+                         (filter identity)
+                         (sort-by key)
+                         (mapv (comp c/bson-value->document-id val)))}))
 
 ;; Updates
 

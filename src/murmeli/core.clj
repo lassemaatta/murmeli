@@ -287,7 +287,9 @@
   * `bypass-validation?` -- If true, bypass document validation
   * `comment` -- Operation comment string
 
-  Returns the `_id` of the inserted document (`String` or `ObjectId`)."
+  Returns a map with:
+  * `id` -- `_id` of the inserted document (`String` or `ObjectId`)
+  * `acknowledged?` -- True if the insertion was acknowledged"
   {:arglists '([conn collection doc & {:keys [allow-qualified?
                                               sanitize-strings?]}])}
   [conn collection doc & {:as options}]
@@ -305,7 +307,9 @@
   * `comment` -- Operation comment string
   * `ordered?` -- Insert documents in the order provided, stop on the first error
 
-  Returns a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
+  Returns a map with:
+  * `ids` -- a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order
+  * `acknowledged?` -- True if the insertion was acknowledged"
   {:arglists '([conn collection docs & {:keys [allow-qualified?
                                                sanitize-strings?]}])}
   [conn collection docs & {:as options}]
