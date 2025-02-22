@@ -47,8 +47,7 @@
 
 (extend-protocol ToJsonSchema
   Symbol
-  (-to-schema [this _ {:keys [null?
-                              description]}]
+  (-to-schema [this _ {:keys [null?]}]
     (cond-> (case this
               Any      {}
               ObjectId {:bsonType :objectId}
@@ -64,9 +63,8 @@
               Inst     {:bsonType :date}
               {:bsonType :symbol})
       ;; Are we wrapped in a `s/maybe`?
-      null?       (update :bsonType (fn [other]
-                                      [:null other]))
-      description (assoc :description description)))
+      null? (update :bsonType (fn [other]
+                                [:null other]))))
   ;; No idea why some schema sequences (enum, cond-pre) are wrapped in Cons and others
   ;; in IPersistenLists (maybe, named, ..)
   Cons
@@ -106,9 +104,10 @@
     (case wrapper-type
       eq          {:enum [schema]}
       maybe       (to-schema schema options {:null? true})
-      named       (to-schema schema options {:description (first args)})
-      constrained (to-schema schema options {:description (when (string? (first args))
-                                                            (first args))})
+      named       (-> (to-schema schema options)
+                      (assoc :description (first args)))
+      constrained (cond-> (to-schema schema options)
+                    (string? (first args)) (assoc :description (first args)))
       pred        (case schema
                     objectId? {:bsonType :objectId}
                     (if strict?

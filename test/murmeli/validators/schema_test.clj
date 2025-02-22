@@ -156,14 +156,26 @@
           :additionalProperties false}
          (validator/schema->json-schema
            {:a (s/maybe s/Str)})))
-  (is (= {:bsonType             :object
-          :required             ["_id" "a"]
-          :properties           {"_id" {:bsonType :objectId}
-                                 "a"   {:bsonType    :string
-                                        :description "I'm a string"}}
-          :additionalProperties false}
-         (validator/schema->json-schema
-           {:a (s/named s/Str "I'm a string")})))
+  (testing "named schemas"
+    (is (= {:bsonType             :object
+            :required             ["_id" "a"]
+            :properties           {"_id" {:bsonType :objectId}
+                                   "a"   {:bsonType    :string
+                                          :description "I'm a string"}}
+            :additionalProperties false}
+           (validator/schema->json-schema
+             {:a (s/named s/Str "I'm a string")})))
+    (is (= {:bsonType             :object
+            :additionalProperties false
+            :required             ["_id" "a"]
+            :properties           {"a"   {:bsonType             :object
+                                          :additionalProperties false
+                                          :required             ["b"]
+                                          :properties           {"b" {:bsonType :string}}
+                                          :description          "I'm a map"}
+                                   "_id" {:bsonType :objectId}}}
+           (validator/schema->json-schema
+             {:a (s/named {:b s/Str} "I'm a map")}))))
   (is (= {:bsonType             :object
           :required             ["_id" "a"]
           :properties           {"_id" {:bsonType :objectId}
