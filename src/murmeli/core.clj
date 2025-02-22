@@ -1,7 +1,5 @@
 (ns murmeli.core
-  "Murmeli MongoDB driver
-
-  [Javadoc](https://www.mongodb.com/docs/drivers/java/sync/current/)"
+  "Murmeli MongoDB driver"
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
             [murmeli.impl.collection :as collection]
@@ -334,7 +332,8 @@
 
   Returns a map, where
   * `:matched` -- Number of documents matched.
-  * `:modified` -- Number of documents modified."
+  * `:modified` -- Number of documents modified.
+  * `:id` -- Upserted `_id`, if any."
   {:arglists '([conn collection query changes & {:keys [allow-qualified?
                                                         array-filters
                                                         bypass-validation?

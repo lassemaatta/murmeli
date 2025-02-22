@@ -39,6 +39,7 @@
                                      ValidationAction
                                      ValidationLevel
                                      ValidationOptions]
+           [com.mongodb.client.result UpdateResult]
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
            [java.util List]
            [java.util.concurrent TimeUnit]
@@ -620,3 +621,12 @@
       (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
       comment                    (.comment comment)
       (some? ordered?)           (.ordered (boolean ordered?)))))
+
+(defn update-result->map
+  [^UpdateResult result]
+  (let [id (.getUpsertedId result)]
+    ;; There doesn't seem to be a way to verify that the query would match
+    ;; just a single document because matched count is always either 0 or 1 :(
+    (cond-> {:modified (.getModifiedCount result)
+             :matched  (.getMatchedCount result)}
+      id (assoc :id (c/bson-value->document-id id)))))

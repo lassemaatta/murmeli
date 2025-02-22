@@ -104,11 +104,7 @@
                    session               (.updateOne coll session filter updates)
                    options               (.updateOne coll filter updates options)
                    :else                 (.updateOne coll filter updates))]
-    ;; There doesn't seem to be a way to verify that the query would match
-    ;; just a single document because matched count is always either 0 or 1 :(
-    ;; TODO: support `getUpsertedId`
-    {:modified (.getModifiedCount result)
-     :matched  (.getMatchedCount result)}))
+    (di/update-result->map result)))
 
 (defn update-many!
   [{::session/keys [^ClientSession session] :as conn}
@@ -129,8 +125,7 @@
                    session               (.updateMany coll session filter updates)
                    options               (.updateMany coll filter updates options)
                    :else                 (.updateMany coll filter updates))]
-    {:modified (.getModifiedCount result)
-     :matched  (.getMatchedCount result)}))
+    (di/update-result->map result)))
 
 ;; Replace
 
@@ -152,10 +147,7 @@
                    session               (.replaceOne coll session filter replacement)
                    options               (.replaceOne coll filter replacement options)
                    :else                 (.replaceOne coll filter replacement))]
-    ;; There doesn't seem to be a way to verify that the query would match
-    ;; just a single document because matched count is always either 0 or 1 :(
-    {:modified (.getModifiedCount result)
-     :matched  (.getMatchedCount result)}))
+    (di/update-result->map result)))
 
 ;; Deletes
 
