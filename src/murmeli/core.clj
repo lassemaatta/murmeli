@@ -301,6 +301,9 @@
 
   Options:
   * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
+  * `bypass-validation?` -- If true, bypass document validation
+  * `comment` -- Operation comment string
+  * `ordered?` -- Insert documents in the order provided, stop on the first error
 
   Returns a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order."
   {:arglists '([conn collection docs & {:keys [allow-qualified?

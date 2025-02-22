@@ -29,6 +29,7 @@
                                      IndexOptionDefaults
                                      IndexOptions
                                      Indexes
+                                     InsertManyOptions
                                      InsertOneOptions
                                      ReplaceOptions
                                      ReturnDocument
@@ -606,3 +607,16 @@
     (cond-> (InsertOneOptions.)
       (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
       comment                    (.comment comment))))
+
+(defn make-insert-many-options
+  {:no-doc true}
+  ^InsertManyOptions
+  [{:keys [bypass-validation?
+           ^String comment
+           ordered?]
+    :as   options}]
+  (when (seq options)
+    (cond-> (InsertManyOptions.)
+      (some? bypass-validation?) (.bypassDocumentValidation (boolean bypass-validation?))
+      comment                    (.comment comment)
+      (some? ordered?)           (.ordered (boolean ordered?)))))

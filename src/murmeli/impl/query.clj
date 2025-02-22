@@ -64,12 +64,17 @@
    docs
    & {:as options}]
   {:pre [conn collection (seq docs) (every? map? docs)]}
-  (let [docs   ^List (vec docs)
-        coll   (collection/get-collection conn collection options)
-        ;; TODO: add `InsertManyOptions` support
-        result (if session
-                 (.insertMany coll session docs)
-                 (.insertMany coll docs))]
+  (let [docs     ^List (vec docs)
+        coll     (collection/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        options  (some-> options
+                         (preprocess-options registry)
+                         di/make-insert-many-options)
+        result   (cond
+                   (and session options) (.insertMany coll session docs options)
+                   session               (.insertMany coll session docs)
+                   options               (.insertMany coll docs options)
+                   :else                 (.insertMany coll docs))]
     (->> (.getInsertedIds result)
          (sort-by key)
          (mapv (comp c/bson-value->document-id val)))))

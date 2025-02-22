@@ -26,6 +26,7 @@
                                      FindOneAndUpdateOptions
                                      IndexOptionDefaults
                                      IndexOptions
+                                     InsertManyOptions
                                      InsertOneOptions
                                      ReplaceOptions
                                      TimeSeriesOptions
@@ -792,3 +793,17 @@
 (s/fdef di/make-insert-one-options
   :args (s/cat :options ::make-insert-one-options)
   :ret (s/nilable insert-one-options?))
+
+(s/def ::ordered? boolean?)
+
+(s/def ::make-insert-many-options (s/keys :opt-un [::bypass-validation?
+                                                   ::ordered?
+                                                   ::comment]))
+
+(defn insert-many-options?
+  [object]
+  (instance? InsertManyOptions object))
+
+(s/fdef di/make-insert-many-options
+  :args (s/cat :options ::make-insert-many-options)
+  :ret (s/nilable insert-many-options?))

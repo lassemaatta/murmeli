@@ -140,3 +140,7 @@
 (deftest make-insert-one-options-test
   (is (match? passed
               (stest/check `di/make-insert-one-options))))
+
+(deftest make-insert-many-options-test
+  (is (match? passed
+              (stest/check `di/make-insert-many-options))))
