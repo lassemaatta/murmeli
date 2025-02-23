@@ -1,24 +1,21 @@
 (ns murmeli.impl.db
-  "Database implementation"
+  "Database implementation.
+
+  See [MongoDatabase](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoDatabase.html)."
   {:no-doc true}
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
-            [murmeli.impl.session :as session]
             [murmeli.impl.convert :as c]
-            [murmeli.impl.cursor :as cursor])
+            [murmeli.impl.cursor :as cursor]
+            [murmeli.impl.data-interop :as di])
   (:import [clojure.lang PersistentHashMap]
-           [com.mongodb.client ClientSession MongoClient MongoDatabase]
+           [com.mongodb.client ClientSession MongoCollection MongoDatabase]
+           [java.util.concurrent TimeUnit]
            [org.bson.codecs.configuration CodecRegistry]))
 
 (set! *warn-on-reflection* true)
 
-(defn get-database
-  "Find a database by name."
-  ^MongoDatabase
-  [{::client/keys [^MongoClient client]}
-   database-name]
-  {:pre [client database-name]}
-  (.getDatabase client database-name))
+;;; Database
 
 (defn with-db
   [{::keys [^MongoDatabase db] :as conn}
@@ -29,7 +26,7 @@
   (if-not (and db (= database-name (.getName db)))
     (do
       (log/debugf "Loading database %s" database-name)
-      (assoc conn ::db (get-database conn database-name)))
+      (assoc conn ::db (client/get-database conn database-name)))
     conn))
 
 (defn with-registry
@@ -47,20 +44,73 @@
   ^CodecRegistry [{::keys [^MongoDatabase db]}]
   (.getCodecRegistry db))
 
-(defn list-dbs
-  [{::client/keys  [^MongoClient client]
-    ::session/keys [^ClientSession session]}]
-  (let [it (cond
-             session (.listDatabases client session PersistentHashMap)
-             :else   (.listDatabases client PersistentHashMap))]
-    (into [] (cursor/->reducible it))))
-
 (defn drop-db!
-  [{::session/keys [^ClientSession session]
-    :as            conn}
+  [{::client/keys [^ClientSession session]
+    :as           conn}
    database-name]
   {:pre [conn database-name]}
-  (let [db (get-database conn database-name)]
+  (let [db (client/get-database conn database-name)]
     (if session
       (.drop db session)
       (.drop db))))
+
+;;; Collection
+
+(defn create-collection!
+  [{::keys        [^MongoDatabase db]
+    ::client/keys [^ClientSession session]}
+   collection
+   & {:as options}]
+  {:pre [db collection]}
+  (let [options (when (seq options)
+                  (di/make-create-collection-options options))]
+    (cond
+      (and session options) (.createCollection db session (name collection) options)
+      session               (.createCollection db session (name collection))
+      options               (.createCollection db (name collection) options)
+      :else                 (.createCollection db (name collection)))))
+
+(defn get-collection
+  (^MongoCollection
+   [conn collection]
+   (get-collection conn collection nil))
+  (^MongoCollection
+   [{::keys [^MongoDatabase db] :as conn} collection opts]
+   {:pre [db collection]}
+   (let [opts          (select-keys opts c/registry-options-keys)
+         registry-opts (when (seq opts)
+                         (merge (select-keys conn c/registry-options-keys)
+                                opts))]
+     (cond-> (.getCollection db (name collection) PersistentHashMap)
+       (seq registry-opts) (.withCodecRegistry (c/registry registry-opts))))))
+
+(defn list-collection-names-reducible
+  [{::keys        [^MongoDatabase db]
+    ::client/keys [^ClientSession session]
+    :as           conn}
+   & {:keys [authorized-collections?
+             batch-size
+             ^String comment
+             max-time-ms
+             query]}]
+  {:pre [conn db]}
+  (let [registry (.getCodecRegistry db)
+        it       (cond
+                   session (.listCollectionNames db session)
+                   :else   (.listCollectionNames db))
+        it       (cond-> it
+                   authorized-collections? (.authorizedCollections (boolean authorized-collections?))
+                   batch-size              (.batchSize (int batch-size))
+                   comment                 (.comment comment)
+                   query                   (.filter (c/map->bson query registry))
+                   max-time-ms             (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
+    (cursor/->reducible it)))
+
+(defn list-collection-names
+  [conn & {:keys [keywords?]
+           :or   {keywords? true}
+           :as   options}]
+  {:pre [conn]}
+  (cond->> (list-collection-names-reducible conn options)
+    keywords? (eduction (map keyword))
+    true      (into #{})))

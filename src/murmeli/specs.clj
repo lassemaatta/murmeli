@@ -6,8 +6,7 @@
             [murmeli.impl.client :as client]
             [murmeli.impl.convert :as mc]
             [murmeli.impl.data-interop :as di]
-            [murmeli.impl.db :as db]
-            [murmeli.impl.session :as session])
+            [murmeli.impl.db :as db])
   (:import [com.mongodb ClientSessionOptions
                         ConnectionString
                         MongoClientSettings
@@ -105,17 +104,17 @@
 (s/def ::client/client client?)
 
 (defn session-options? [instance] (instance? ClientSessionOptions instance))
-(s/def ::session/session-options session-options?)
+(s/def ::client/session-options session-options?)
 
 (defn session? [instance] (instance? ClientSession instance))
-(s/def ::session/session session?)
+(s/def ::client/session session?)
 
 (s/def ::db-spec (s/merge (s/keys :opt-un [::database-name])
                           ::client-settings-options))
 
 (s/def ::conn (s/keys :req [::client/client]
-                      :opt [::session/session-options
-                            ::session/session]))
+                      :opt [::client/session-options
+                            ::client/session]))
 
 (s/def ::conn-with-db (s/merge ::conn
                                (s/keys :req [::db/db])))

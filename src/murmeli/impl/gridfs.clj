@@ -1,12 +1,15 @@
 (ns murmeli.impl.gridfs
-  "GridFS implementation"
+  "GridFS implementation.
+
+  See [GridFSBuckets](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/gridfs/GridFSBuckets.html)
+  and [GridFSBucket](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/gridfs/GridFSBucket.html)"
   {:no-doc true}
   (:refer-clojure :exclude [find])
-  (:require [murmeli.impl.convert :as c]
+  (:require [murmeli.impl.client :as client]
+            [murmeli.impl.convert :as c]
             [murmeli.impl.cursor :as cursor]
             [murmeli.impl.data-interop :as di]
-            [murmeli.impl.db :as db]
-            [murmeli.impl.session :as session])
+            [murmeli.impl.db :as db])
   (:import [com.mongodb.client ClientSession MongoDatabase]
            [com.mongodb.client.gridfs GridFSBucket GridFSBuckets]
            [com.mongodb.client.gridfs.model GridFSFile GridFSUploadOptions]
@@ -41,7 +44,7 @@
 (defn drop-bucket!
   ([{::keys [bucket] :as conn}]
    (drop-bucket! conn bucket))
-  ([{::session/keys [^ClientSession session] :as conn}
+  ([{::client/keys [^ClientSession session] :as conn}
     bucket-or-bucket-name]
    {:pre [conn bucket-or-bucket-name]}
    (let [^GridFSBucket bucket (cond
@@ -60,9 +63,9 @@
      bucket)))
 
 (defn upload-stream!
-  [{::session/keys [^ClientSession session]
-    ::keys         [^GridFSBucket bucket]
-    :as            conn}
+  [{::client/keys [^ClientSession session]
+    ::keys        [^GridFSBucket bucket]
+    :as           conn}
    ^String filename
    ^InputStream source
    & {:keys [id doc]
@@ -98,9 +101,9 @@
       doc (assoc :doc (c/document->map doc registry)))))
 
 (defn download-stream
-  [{::session/keys [^ClientSession session]
-    ::keys         [^GridFSBucket bucket]
-    :as            conn}
+  [{::client/keys [^ClientSession session]
+    ::keys        [^GridFSBucket bucket]
+    :as           conn}
    & {:keys [id ^String filename revision] :as options}]
   {:pre [conn bucket (or id filename)]}
   (let [registry (db/registry conn)
@@ -118,9 +121,9 @@
      :file         (gfs-file->map registry (.getGridFSFile stream))}))
 
 (defn find
-  [{::session/keys [^ClientSession session]
-    ::keys         [^GridFSBucket bucket]
-    :as            conn}
+  [{::client/keys [^ClientSession session]
+    ::keys        [^GridFSBucket bucket]
+    :as           conn}
    & {:keys [batch-size
              collation-options
              limit
@@ -150,8 +153,8 @@
          (eduction (map (partial gfs-file->map registry))))))
 
 (defn delete!
-  [{::session/keys [^ClientSession session]
-    ::keys         [^GridFSBucket bucket]}
+  [{::client/keys [^ClientSession session]
+    ::keys        [^GridFSBucket bucket]}
    id]
   {:pre [bucket id]}
   (let [id (c/->object-id id)]
@@ -160,8 +163,8 @@
       :else   (.delete bucket id))))
 
 (defn rename!
-  [{::session/keys [^ClientSession session]
-    ::keys         [^GridFSBucket bucket]}
+  [{::client/keys [^ClientSession session]
+    ::keys        [^GridFSBucket bucket]}
    id
    ^String new-filename]
   {:pre [bucket id new-filename]}
