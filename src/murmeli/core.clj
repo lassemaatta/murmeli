@@ -111,11 +111,30 @@
     (log/debugf "Database names query found %d names." (count names))
     names))
 
+(defn list-dbs-reducible
+  "Query all the databases as documents."
+  {:arglists '([conn & {:keys [authorized-databases?
+                               batch-size
+                               comment
+                               max-time-ms
+                               name-only?
+                               query
+                               timeout-mode]}])}
+  [conn & {:as options}]
+  (client/list-dbs-reducible conn options))
+
 (defn list-dbs
   "Query all the databases as documents.
   Returns a vector of maps, where each map contains keys like `:name`, `:sizeOnDisk`, `:empty`."
-  [conn]
-  (let [documents (client/list-dbs conn)]
+  {:arglists '([conn & {:keys [authorized-databases?
+                               batch-size
+                               comment
+                               max-time-ms
+                               name-only?
+                               query
+                               timeout-mode]}])}
+  [conn & {:as options}]
+  (let [documents (into [] (client/list-dbs-reducible conn options))]
     (log/debugf "Database query found '%s' documents." (count documents))
     documents))
 

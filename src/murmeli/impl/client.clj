@@ -4,13 +4,15 @@
   See [MongoClient](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoClient.html)
   and [MongoCluster](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoClient.html)."
   {:no-doc true}
-  (:require [murmeli.impl.cursor :as cursor]
+  (:require [murmeli.impl.convert :as c]
+            [murmeli.impl.cursor :as cursor]
             [murmeli.impl.data-interop :as di])
   (:import [clojure.lang PersistentHashMap]
            [com.mongodb.client ClientSession
                                MongoClient
                                MongoClients
-                               MongoDatabase]))
+                               MongoDatabase]
+           [java.util.concurrent TimeUnit]))
 
 (set! *warn-on-reflection* true)
 
@@ -59,12 +61,28 @@
     keywords? (eduction (map keyword))
     true      (into [])))
 
-(defn list-dbs
-  [{::keys [^MongoClient client ^ClientSession session]}]
-  (let [it (cond
-             session (.listDatabases client session PersistentHashMap)
-             :else   (.listDatabases client PersistentHashMap))]
-    (into [] (cursor/->reducible it))))
+(defn list-dbs-reducible
+  [{::keys [^MongoClient client ^ClientSession session]}
+   & {:keys [authorized-databases?
+             batch-size
+             ^String comment
+             max-time-ms
+             name-only?
+             query
+             timeout-mode]}]
+  (let [registry (.getCodecRegistry client)
+        it       (cond
+                   session (.listDatabases client session PersistentHashMap)
+                   :else   (.listDatabases client PersistentHashMap))
+        it       (cond-> it
+                   authorized-databases? (.authorizedDatabasesOnly (boolean authorized-databases?))
+                   batch-size            (.batchSize (int batch-size))
+                   comment               (.comment comment)
+                   query                 (.filter (c/map->bson query registry))
+                   max-time-ms           (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+                   (some? name-only?)    (.nameOnly (boolean name-only?))
+                   timeout-mode          (.timeoutMode (di/get-timeout-mode timeout-mode)))]
+    (cursor/->reducible it)))
 
 ;;; Session
 

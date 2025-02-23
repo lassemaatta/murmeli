@@ -13,6 +13,7 @@
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
+           [com.mongodb.client.cursor TimeoutMode]
            [com.mongodb.client.gridfs.model GridFSDownloadOptions GridFSUploadOptions]
            [com.mongodb.client.model ChangeStreamPreAndPostImagesOptions
                                      ClusteredIndexOptions
@@ -95,6 +96,12 @@
     :acknowledged   WriteConcern/ACKNOWLEDGED
     ;; Return when message written to the socket (W0)
     :unacknowledged WriteConcern/UNACKNOWLEDGED))
+
+(defn get-timeout-mode
+  [timeout-mode]
+  (case timeout-mode
+    :cursor-lifetime TimeoutMode/CURSOR_LIFETIME
+    :iteration       TimeoutMode/ITERATION))
 
 (defn- apply-block
   [f]

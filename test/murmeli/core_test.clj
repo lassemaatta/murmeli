@@ -4,7 +4,7 @@
             [matcher-combinators.matchers :as matchers]
             [matcher-combinators.test]
             [murmeli.core :as m]
-            [murmeli.operators :refer [$exists $group $gt $jsonSchema $lt $match $project $set $sum]]
+            [murmeli.operators :refer [$eq $exists $group $gt $jsonSchema $lt $match $project $set $sum]]
             [murmeli.specs]
             [murmeli.test.utils :as test-utils]
             [murmeli.validators.schema :as vs]
@@ -61,11 +61,20 @@
       (let [names (m/list-db-names conn :keywords? false)]
         (is (= ["admin" "config" "local"]
                names))))
-    (testing "list databases "
+    (testing "list databases"
+      (is (reducible? (m/list-dbs-reducible conn)))
       (doseq [{:keys [name sizeOnDisk empty]} (m/list-dbs conn)]
         (is (string? name))
         (is (int? sizeOnDisk))
-        (is (not empty))))))
+        (is (not empty)))
+      (let [data (->> (m/list-dbs-reducible conn {:comment "reading dbs"
+                                                  :query   {:name {$eq :admin}}})
+                      (eduction (map #(update % :name keyword)))
+                      (into []))]
+        (is (match? [{:name       :admin
+                      :sizeOnDisk int?
+                      :empty      false}]
+                    data))))))
 
 (deftest drop-db-test
   (let [conn         (test-utils/get-conn)
