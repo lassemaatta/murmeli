@@ -97,6 +97,20 @@
   [conn]
   (db/with-default-registry conn))
 
+(defn list-db-names-reducible
+  "Query all the database names."
+  {:arglists '([conn & {:keys [batch-size]}])}
+  [conn & {:as options}]
+  (client/list-db-names-reducible conn options))
+
+(defn list-db-names
+  {:arglists '([conn & {:keys [batch-size
+                               keywords?]}])}
+  [conn & {:as options}]
+  (let [names (client/list-db-names conn options)]
+    (log/debugf "Database names query found %d names." (count names))
+    names))
+
 (defn list-dbs
   "Query all the databases as documents.
   Returns a vector of maps, where each map contains keys like `:name`, `:sizeOnDisk`, `:empty`."

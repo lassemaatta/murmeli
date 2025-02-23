@@ -47,8 +47,15 @@
     (is (m/connected? original-conn))))
 
 (deftest db-test
-  (testing "list databases "
-    (let [conn (test-utils/get-conn)]
+  (let [conn (test-utils/get-conn)]
+    (testing "list database names"
+      (let [names (m/list-db-names conn)]
+        (is (= [:admin :config :local]
+               names)))
+      (let [names (m/list-db-names conn :keywords? false)]
+        (is (= ["admin" "config" "local"]
+               names))))
+    (testing "list databases "
       (doseq [{:keys [name sizeOnDisk empty]} (m/list-dbs conn)]
         (is (string? name))
         (is (int? sizeOnDisk))
