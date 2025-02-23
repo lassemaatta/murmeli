@@ -125,13 +125,38 @@
   (collection/create-collection! conn collection options)
   (log/debugf "Created collection '%s'." collection))
 
+(defn list-collection-names-reducible
+  "Query the collections names in the database.
+
+  Options:
+  * `authorized-collections?` -- Allows querying collections names without the `listCollections` privilege
+  * `batch-size` -- Number of documents per batch
+  * `comment` -- Comment for this operation
+  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `query` -- Query filter
+
+  Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to execute the query and produce the collection names."
+  {:arglists '([conn & {:keys [authorized-collections?
+                               batch-size
+                               comment
+                               max-time-ms
+                               query]}])}
+  [conn & {:as options}]
+  (let [documents (collection/list-collection-names-reducible conn options)]
+    (log/debugf "Collection names query found %d collections." (count documents))
+    documents))
+
 (defn list-collection-names
   "Query the collections names in the database.
 
   Options:
+  * `authorized-collections?` -- Allows querying collections names without the `listCollections` privilege
   * `batch-size` -- Number of documents per batch
-  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `comment` -- Comment for this operation
   * `keywords?` -- If true, return collection names as keywords
+  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `query` -- Query filter
 
   Returns a set of collection names."
   {:arglists '([conn & {:keys [batch-size

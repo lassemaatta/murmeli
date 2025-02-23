@@ -40,28 +40,36 @@
      (cond-> (.getCollection db (name collection) PersistentHashMap)
        (seq registry-opts) (.withCodecRegistry (c/registry registry-opts))))))
 
-(defn list-collection-names
+(defn list-collection-names-reducible
   [{::db/keys      [^MongoDatabase db]
     ::session/keys [^ClientSession session]
     :as            conn}
-   & {:keys [batch-size
+   & {:keys [authorized-collections?
+             batch-size
+             ^String comment
              max-time-ms
-             keywords?]
-      :or   {keywords? true}}]
+             query]}]
+  {:pre [conn db]}
+  (let [registry (.getCodecRegistry db)
+        it       (cond
+                   session (.listCollectionNames db session)
+                   :else   (.listCollectionNames db))
+        it       (cond-> it
+                   authorized-collections? (.authorizedCollections (boolean authorized-collections?))
+                   batch-size              (.batchSize (int batch-size))
+                   comment                 (.comment comment)
+                   query                   (.filter (c/map->bson query registry))
+                   max-time-ms             (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
+    (cursor/->reducible it)))
+
+(defn list-collection-names
+  [conn & {:keys [keywords?]
+           :or   {keywords? true}
+           :as   options}]
   {:pre [conn]}
-  (let [it (cond
-             session (.listCollectionNames db session)
-             :else   (.listCollectionNames db))
-        ;; TODO: add `filter` parameter
-        ;; TODO: add `authorizedCollections` parameter
-        it (cond-> it
-             batch-size  (.batchSize (int batch-size))
-             max-time-ms (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))
-        r  (cursor/->reducible it)]
-    ;; TODO separate -reducible variant?
-    (if keywords?
-      (into #{} (map keyword) r)
-      (into #{} r))))
+  (cond->> (list-collection-names-reducible conn options)
+    keywords? (eduction (map keyword))
+    true      (into #{})))
 
 (defn drop-collection!
   [{::session/keys [^ClientSession session] :as conn}
