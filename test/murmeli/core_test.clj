@@ -10,7 +10,8 @@
             [murmeli.validators.schema :as vs]
             [schema.coerce :as sc]
             [schema.core :as s :refer [defschema]])
-  (:import [com.mongodb MongoCommandException]
+  (:import [clojure.lang IReduceInit]
+           [com.mongodb MongoCommandException]
            [org.bson.types ObjectId]))
 
 (set! *warn-on-reflection* true)
@@ -22,6 +23,10 @@
                             test-utils/db-fixture]))
 
 (test/use-fixtures :each test-utils/reset-db-fixture)
+
+(defn- reducible?
+  [r]
+  (instance? IReduceInit r))
 
 (defn get-coll
   "Return a random unique collection name for a test"
@@ -48,6 +53,7 @@
 
 (deftest db-test
   (let [conn (test-utils/get-conn)]
+    (is (reducible? (m/list-db-names-reducible conn)))
     (testing "list database names"
       (let [names (m/list-db-names conn)]
         (is (= [:admin :config :local]
@@ -90,6 +96,7 @@
   (let [conn    (test-utils/get-conn)
         coll-1  (get-coll)
         coll-2  (get-coll)]
+    (is (reducible? (m/list-collection-names-reducible conn)))
     (testing "basic stuff"
       (is (= #{} (m/list-collection-names conn)))
       (m/create-collection! conn coll-1)
@@ -559,6 +566,7 @@
                       :map {:a "x"
                             :b "y"}}]
                     out-plain))))
+    (is (reducible? (m/find-reducible conn coll)))
     (testing "coerce using xform"
       (let [out-plain (into []
                             (map coerce-my-record!)
@@ -671,6 +679,7 @@
     (m/insert-many! conn coll [{:foo 1 :data "bar" :bar {:key 1} :quuz "this"}
                                {:foo 2 :data "quuz" :bar {:key 2} :quuz "this"}])
     (testing "find-distinct-reducible"
+      (is (reducible? (m/find-distinct-reducible conn coll :foo)))
       (is (= #{1 2}
              (into #{} (m/find-distinct-reducible conn coll :foo))))
       (is (= #{1 2}
@@ -728,6 +737,7 @@
                        {:university "USAL"
                         :name       "Communication"
                         :level      "Excellent"}]))
+    (is (reducible? (m/aggregate-reducible! conn :universities [])))
     (testing "$match"
       (is (match? [(assoc usal :_id m/object-id?)
                    (assoc upsa :_id m/object-id?)]
