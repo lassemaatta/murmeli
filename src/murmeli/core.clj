@@ -140,9 +140,7 @@
                                max-time-ms
                                query]}])}
   [conn & {:as options}]
-  (let [documents (db/list-collection-names-reducible conn options)]
-    (log/debugf "Collection names query found %d collections." (count documents))
-    documents))
+  (db/list-collection-names-reducible conn options))
 
 (defn list-collection-names
   "Query the collections names in the database.
