@@ -195,6 +195,29 @@
     (log/debugf "Collection names query found %d collections." (count documents))
     documents))
 
+(defn list-collections-reducible
+  "Query all the collections as documents."
+  {:arglists '([conn & {:keys [batch-size
+                               comment
+                               max-time-ms
+                               query
+                               timeout-mode]}])}
+  [conn & {:as options}]
+  (db/list-collections-reducible conn options))
+
+(defn list-collections
+  "Query all the collections as documents.
+  Returns a vector of maps, where each map contains keys like `:name`, `:sizeOnDisk`, `:empty`."
+  {:arglists '([conn & {:keys [batch-size
+                               comment
+                               max-time-ms
+                               query
+                               timeout-mode]}])}
+  [conn & {:as options}]
+  (let [documents (into [] (db/list-collections-reducible conn options))]
+    (log/debugf "Collections query found '%s' documents." (count documents))
+    documents))
+
 (defn drop-collection!
   "Drop the given collection from the database.
 

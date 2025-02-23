@@ -12,7 +12,8 @@
             [schema.core :as s :refer [defschema]])
   (:import [clojure.lang IReduceInit]
            [com.mongodb MongoCommandException]
-           [org.bson.types ObjectId]))
+           [org.bson BsonBinarySubType]
+           [org.bson.types Binary ObjectId]))
 
 (set! *warn-on-reflection* true)
 
@@ -128,6 +129,26 @@
         (is (= #{coll-1 coll-2} (m/list-collection-names conn :max-time-ms 100))))
       (testing "keywords?"
         (is (= #{(name coll-1) (name coll-2)} (m/list-collection-names conn :keywords? false)))))))
+
+(deftest list-collections-test
+  (let [conn   (test-utils/get-conn)
+        coll-1 (get-coll)]
+    (is (reducible? (m/list-collections-reducible conn)))
+    (testing "basic stuff"
+      (is (empty? (m/list-collections conn)))
+      (m/create-collection! conn coll-1)
+      (is (match? [{:name    (name coll-1)
+                    :type    "collection"
+                    :options {}
+                    :info    {:readOnly false
+                              :uuid     (fn [^Binary obj]
+                                          (and (instance? Binary obj)
+                                               (= (.getValue BsonBinarySubType/UUID_STANDARD)
+                                                  (.getType obj))))}
+                    :idIndex {:v    2
+                              :key  {:_id 1}
+                              :name "_id_"}}]
+                  (m/list-collections conn))))))
 
 (deftest simple-insert-test
   (testing "inserting document"

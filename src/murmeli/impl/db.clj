@@ -114,3 +114,25 @@
   (cond->> (list-collection-names-reducible conn options)
     keywords? (eduction (map keyword))
     true      (into #{})))
+
+(defn list-collections-reducible
+  [{::keys        [^MongoDatabase db]
+    ::client/keys [^ClientSession session]
+    :as           conn}
+   & {:keys [batch-size
+             ^String comment
+             max-time-ms
+             query
+             timeout-mode]}]
+  {:pre [conn db]}
+  (let [registry (.getCodecRegistry db)
+        it       (cond
+                   session (.listCollections db session PersistentHashMap)
+                   :else   (.listCollections db PersistentHashMap))
+        it       (cond-> it
+                   batch-size   (.batchSize (int batch-size))
+                   comment      (.comment comment)
+                   query        (.filter (c/map->bson query registry))
+                   max-time-ms  (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+                   timeout-mode (.timeoutMode (di/get-timeout-mode timeout-mode)))]
+    (cursor/->reducible it)))
