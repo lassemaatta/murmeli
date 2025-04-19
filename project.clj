@@ -5,7 +5,7 @@
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.12.0"]
                  [org.clojure/tools.logging "1.3.0"]
-                 [org.mongodb/mongodb-driver-sync "5.3.1"]
+                 [org.mongodb/mongodb-driver-sync "5.4.0"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
   :deploy-repositories [["clojars"  {:url           "https://clojars.org/repo"
@@ -20,8 +20,8 @@
                                               ;; Matcher for tests
                                               [nubank/matcher-combinators "3.9.1"]
                                               ;; Logging
-                                              [org.slf4j/slf4j-api "2.0.16"]
-                                              [ch.qos.logback/logback-classic "1.5.16"]]
+                                              [org.slf4j/slf4j-api "2.0.17"]
+                                              [ch.qos.logback/logback-classic "1.5.18"]]
                              :resource-paths ["test-resources"]
                              :jvm-opts       ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
              :repl          {:jvm-opts ["-Dmurmeli.repl=true"]}
