@@ -694,17 +694,17 @@
 ;; Aggregation
 
 (defn aggregate-reducible!
-  "Execute an aggregation pipelien on a collection.
+  "Execute an aggregation pipeline on a collection.
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
   which can be reduced (using `reduce`, `into`, `transduce`, `run!`,...)
   to execute the aggregation and produce the resulting documents."
-  [conn collection pipeline & { :as options}]
+  [conn collection pipeline & {:as options}]
   (collection/aggregate-reducible! conn collection pipeline options))
 
 (defn aggregate!
   "Like [[aggregate-reducible!]], but eagerly executes the aggregation and returns a vector of documents."
-  [conn collection pipeline & { :as options}]
+  [conn collection pipeline & {:as options}]
   (let [documents (into [] (collection/aggregate-reducible! conn collection pipeline options))]
     (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))
     documents))
