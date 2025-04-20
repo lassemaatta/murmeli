@@ -4,7 +4,8 @@
             [matcher-combinators.matchers :as matchers]
             [matcher-combinators.test]
             [murmeli.core :as m]
-            [murmeli.operators :refer [$eq $exists $group $gt $jsonSchema $lt $match $project $set $sum]]
+            [murmeli.operators :refer [$addFields $eq $exists $group $gt $jsonSchema $lt $match $project $push $set
+                                       $sum]]
             [murmeli.specs]
             [murmeli.test.utils :as test-utils]
             [murmeli.validators.schema :as vs]
@@ -785,3 +786,102 @@
                                           {:_id "USAL" :totaldocs 1}])
                   (m/aggregate! conn :universities [{$group {:_id       "$name"
                                                              :totaldocs {$sum 1}}}]))))))
+
+(deftest watch-test
+  (let [conn     (test-utils/get-conn)
+        coll     (get-coll)
+        *changes (atom [])
+        fut      (future
+                   (->> (m/watch-collection conn coll {:full-document               :update-lookup
+                                                       :full-document-before-change :when-available})
+                        (run! (fn [doc] (swap! *changes conj doc)))))]
+
+    ;; We need to enable the pre- and post- images
+    (m/create-collection! conn coll {:change-stream-options {:enabled? true}})
+
+    (let [id (:id (m/insert-one! conn coll {:foo "bar" :val 1 :arr [1 2]}))]
+      (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
+                                             $push {:arr 42}})
+
+      (Thread/sleep 100)
+
+      (future-cancel fut)
+
+      (Thread/sleep 100)
+
+      (let [changes (deref *changes)]
+        (is (= 2 (count changes)))
+        (is (match?
+              {:database-name  "test-db"
+               :document-key   {:_id id}
+               :full-document  {:_id id
+                                :foo "bar"
+                                :val 1
+                                :arr [1 2]}
+               :namespace      {:collection-name (name coll)
+                                :database-name   "test-db"}
+               :operation-type :insert
+               :resume-token   {:_data string?}
+               :wall-time      inst?}
+              (nth changes 0)))
+        (is (match?
+              {:database-name               "test-db"
+               :document-key                {:_id id}
+               :full-document               {:_id id
+                                             :foo "bar"
+                                             :val 42
+                                             :arr [1 2 42]}
+               :full-document-before-change {:_id id
+                                             :foo "bar"
+                                             :val 1
+                                             :arr [1 2]}
+               :namespace                   {:collection-name (name coll)
+                                             :database-name   "test-db"}
+               :operation-type              :update
+               :resume-token                {:_data string?}
+               :update-description          {:updated-fields {:val   42
+                                                              :arr.2 42}}
+               :wall-time                   inst?}
+              (nth changes 1)))))))
+
+(deftest watch-pipeline-test
+  (let [conn     (test-utils/get-conn)
+        coll     (get-coll)
+        *changes (atom [])
+        fut      (future
+                   (->> (m/watch-collection conn coll {:pipeline                    [{$match {:fullDocument.val 1}}
+                                                                                     {$addFields {:quuz 15}}]
+                                                       :full-document               :update-lookup
+                                                       :full-document-before-change :when-available})
+                        (run! (fn [doc] (swap! *changes conj doc)))))]
+
+    ;; We need to enable the pre- and post- images
+    (m/create-collection! conn coll {:change-stream-options {:enabled? true}})
+
+    (let [id (:id (m/insert-one! conn coll {:foo "bar" :val 1 :arr [1 2]}))]
+      ;; change stream ignores update as `val` is no longer 1
+      (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
+                                             $push {:arr 42}})
+
+      (Thread/sleep 100)
+
+      (future-cancel fut)
+
+      (Thread/sleep 100)
+
+      (let [changes (deref *changes)]
+        (is (= 1 (count changes)))
+        (is (match?
+              {:database-name  "test-db"
+               :document-key   {:_id id}
+               :extra-elements {:quuz 15} ; Added field
+               :full-document  {:_id id
+                                :foo "bar"
+                                :val 1
+                                :arr [1 2]}
+               :namespace      {:collection-name (name coll)
+                                :database-name   "test-db"}
+               :operation-type :insert
+               :resume-token   {:_data string?}
+               :wall-time      inst?}
+              (nth changes 0)))))))

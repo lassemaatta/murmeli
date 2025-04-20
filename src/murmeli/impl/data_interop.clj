@@ -40,8 +40,15 @@
                                      ValidationAction
                                      ValidationLevel
                                      ValidationOptions]
+           [com.mongodb.client.model.changestream ChangeStreamDocument
+                                                  FullDocument
+                                                  FullDocumentBeforeChange
+                                                  OperationType
+                                                  TruncatedArray
+                                                  UpdateDescription]
            [com.mongodb.client.result UpdateResult]
            [com.mongodb.connection ClusterSettings$Builder SslSettings$Builder]
+           [java.time Instant]
            [java.util List]
            [java.util.concurrent TimeUnit]
            [org.bson Document]
@@ -637,3 +644,71 @@
     (cond-> {:modified (.getModifiedCount result)
              :matched  (.getMatchedCount result)}
       id (assoc :id (c/bson-value->document-id id)))))
+
+(defn get-full-document
+  "Should the change stream contain the updated document"
+  [choice]
+  (case choice
+    ;; Like `:when-available`, but raise an error if no document is available
+    :required       FullDocument/REQUIRED
+    ;; Partial updates will include a delta and the full document
+    :update-lookup  FullDocument/UPDATE_LOOKUP
+    ;; Return full document after modifications, if available
+    :when-available FullDocument/WHEN_AVAILABLE
+    FullDocument/DEFAULT))
+
+(defn get-full-document-before-change
+  "Should the change stream contain the original document"
+  [choice]
+  (case choice
+    :default        FullDocumentBeforeChange/DEFAULT
+    :off            FullDocumentBeforeChange/OFF
+    :required       FullDocumentBeforeChange/REQUIRED
+    :when-available FullDocumentBeforeChange/WHEN_AVAILABLE))
+
+(def op-type->kw
+  {OperationType/DELETE        :delete
+   OperationType/DROP          :drop
+   OperationType/DROP_DATABASE :drop-database
+   OperationType/INSERT        :insert
+   OperationType/INVALIDATE    :invalidate
+   OperationType/OTHER         :other
+   OperationType/RENAME        :rename
+   OperationType/REPLACE       :replace
+   OperationType/UPDATE        :update})
+
+(defn- truncated-array
+  [^TruncatedArray arr]
+  {:field    (.getField arr)
+   :new-size (.getNewSize arr)})
+
+(defn- update-description
+  [^UpdateDescription description bson->map]
+  {:removed-fields      (into [] (.getRemovedFields description))
+   :updated-fields      (some-> (.getUpdatedFields description) bson->map)
+   :disambiguated-paths (some-> (.getDisambiguatedPaths description) bson->map)
+   :truncated-arrays    (some->> (.getTruncatedArrays description) (mapv truncated-array))})
+
+(defn change-stream-document
+  [^ChangeStreamDocument doc bson->map]
+  (let [ct          (.getClusterTime doc)
+        destination (.getDestinationNamespace doc)
+        namespace   (.getNamespace doc)]
+    {;; BsonTimestamps have a 32 bit epoch second counter and
+     ;; a 32 bit incrementing counter
+     :cluster-time-inc            (.getInc ct)
+     :cluster-time-s              (Instant/ofEpochSecond (.getTime ct) 0)
+     :database-name               (.getDatabaseName doc)
+     :destination                 {:collection (some-> destination .getCollectionName)}
+     :document-key                (some-> (.getDocumentKey doc) bson->map)
+     :extra-elements              (some-> (.getExtraElements doc) bson->map)
+     :full-document               (.getFullDocument doc)
+     :full-document-before-change (.getFullDocumentBeforeChange doc)
+     :namespace                   {:database-name   (some-> namespace .getDatabaseName)
+                                   :collection-name (some-> namespace .getCollectionName)}
+     :lsid                        (some-> (.getLsid doc) bson->map)
+     :operation-type              (get op-type->kw (.getOperationType doc) :unknown)
+     :resume-token                (some-> (.getResumeToken doc) bson->map)
+     :txn-number                  (some-> (.getTxnNumber doc) .getValue)
+     :update-description          (some-> (.getUpdateDescription doc) (update-description bson->map))
+     :wall-time                   (Instant/ofEpochMilli (.getValue (.getWallTime doc)))}))

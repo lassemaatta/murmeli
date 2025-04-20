@@ -708,3 +708,34 @@
   (let [documents (into [] (collection/aggregate-reducible! conn collection pipeline options))]
     (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))
     documents))
+
+;; Change streams
+
+(defn watch-collection
+  "Create a change stream against a collection as a reducible.
+
+  Processing the reducible blocks the thread while we wait for new change stream documents. So you may want
+  to run the reducing within a separate thread (e.g., with `future`).
+
+  Options:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
+  * `batch-size` -- Fetch documents in N sized batches
+  * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
+  * `comment` -- Comment for this operation
+  * `full-document` -- Should the stream include the updated document, see [[murmeli.impl.data-interop/get-full-document]]
+  * `full-document-before-change` -- Should the stream include the original document, see [[murmeli.impl.data-interop/get-full-document-before-change]]
+  * `keywords?` -- Decode map keys as keywords instead of strings
+  * `max-time-ms` -- Maximum execution time on server in milliseconds
+  * `pipeline` -- Apply an aggregation pipeline against the stream
+
+  Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to create the change steam and process the change documents as they occur."
+  {:arglists '([conn collection & {:keys [batch-size
+                                          collation-options
+                                          ^String comment
+                                          full-document
+                                          full-document-before-change
+                                          max-time-ms
+                                          pipeline]}])}
+  [conn collection & {:as options}]
+  (collection/watch conn collection options))

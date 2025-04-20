@@ -82,14 +82,19 @@
         ctx    (-> (DecoderContext/builder) .build)]
     (.decode codec reader ctx)))
 
-(defn document->map
-  "Convert a `Document` to a map."
-  [^Document doc ^CodecRegistry registry]
-  (let [bson   (.toBsonDocument doc BsonDocument registry)
-        codec  (.get registry PersistentHashMap)
+(defn bson-document->map
+  [^BsonDocument bson ^CodecRegistry registry]
+  (let [codec  (.get registry PersistentHashMap)
         reader (.asBsonReader bson)
         ctx    (-> (DecoderContext/builder) .build)]
     (.decode codec reader ctx)))
+
+(defn document->map
+  "Convert a `Document` to a map."
+  [^Document doc ^CodecRegistry registry]
+  (-> doc
+      (.toBsonDocument BsonDocument registry)
+      (bson-document->map registry)))
 
 (def overrides
   "Instead of decoding values as Bson* instances, use these overrides"

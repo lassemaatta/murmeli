@@ -466,3 +466,38 @@
                    max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
                    allow-disk-use? (.allowDiskUse (boolean allow-disk-use?)))]
     (cursor/->reducible it)))
+
+;; Change streams
+
+(defn watch
+  [{::client/keys [^ClientSession session] :as conn}
+   collection
+   & {:keys [batch-size
+             collation-options
+             ^String comment
+             full-document
+             full-document-before-change
+             max-time-ms
+             pipeline]
+      :as   options}]
+  {:pre [conn collection]}
+  (let [coll     (db/get-collection conn collection options)
+        registry (.getCodecRegistry coll)
+        pipeline (when (seq pipeline)
+                   ^List (mapv (fn [m] (c/map->bson m registry)) pipeline))
+        it       (cond
+                   (and session pipeline) (.watch coll session pipeline PersistentHashMap)
+                   session                (.watch coll PersistentHashMap)
+                   pipeline               (.watch coll pipeline PersistentHashMap)
+                   :else                  (.watch coll PersistentHashMap))
+        it       (cond-> it
+                   collation-options           (.collation (di/make-collation collation-options))
+                   comment                     (.comment comment)
+                   batch-size                  (.batchSize (int batch-size))
+                   full-document               (.fullDocument (di/get-full-document full-document))
+                   full-document-before-change (.fullDocumentBeforeChange (di/get-full-document-before-change full-document-before-change))
+                   max-time-ms                 (.maxAwaitTime (long max-time-ms) TimeUnit/MILLISECONDS))
+        csd->clj (map (fn [csd]
+                        (di/change-stream-document csd (fn [b] (c/bson-document->map b registry)))))]
+    (->> (cursor/->reducible-cs it)
+         (eduction csd->clj))))

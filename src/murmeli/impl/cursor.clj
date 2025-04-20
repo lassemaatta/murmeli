@@ -1,6 +1,6 @@
 (ns murmeli.impl.cursor
   (:import [clojure.lang IReduceInit]
-           [com.mongodb.client MongoIterable]))
+           [com.mongodb.client ChangeStreamIterable MongoIterable]))
 
 (set! *warn-on-reflection* true)
 
@@ -25,3 +25,21 @@
               (if (reduced? acc)
                 (deref acc)
                 (recur acc)))))))))
+
+(defn ->reducible-cs
+  "Like `->reducible`, but for `ChangeStreamIterable`s."
+  [^ChangeStreamIterable iterable]
+  {:pre [iterable]}
+  (reify
+    IReduceInit
+    (reduce [_ f start]
+      ;; "An application should ensure that a cursor is closed in all circumstances,
+      ;; e.g. using a try-with-resources statement"
+      (with-open [it (.cursor iterable)]
+        (loop [acc start]
+          ;; Waiting with `.next` will be aborted if the thread is interrepted,
+          ;; e.g., if you are running the change stream reducing within a future and cancel it
+          (let [acc (f acc (.next it))]
+            (if (reduced? acc)
+              (deref acc)
+              (recur acc))))))))
