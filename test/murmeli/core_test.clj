@@ -803,11 +803,11 @@
       (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                              $push {:arr 42}})
 
-      (Thread/sleep 100)
+      (Thread/sleep 500)
 
       (future-cancel fut)
 
-      (Thread/sleep 100)
+      (Thread/sleep 500)
 
       (let [changes (deref *changes)]
         (is (= 2 (count changes)))
@@ -863,11 +863,11 @@
       (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                              $push {:arr 42}})
 
-      (Thread/sleep 100)
+      (Thread/sleep 500)
 
       (future-cancel fut)
 
-      (Thread/sleep 100)
+      (Thread/sleep 500)
 
       (let [changes (deref *changes)]
         (is (= 1 (count changes)))
