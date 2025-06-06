@@ -787,6 +787,18 @@
                   (m/aggregate! conn :universities [{$group {:_id       "$name"
                                                              :totaldocs {$sum 1}}}]))))))
 
+(defn- wait-for
+  [check-fn timeout-ms]
+  (let [deadline-ms (+ timeout-ms (System/currentTimeMillis))]
+    (loop []
+      (let [done?    (check-fn)
+            timeout? (< deadline-ms (System/currentTimeMillis))]
+        (if (or done? timeout?)
+          done?
+          (do
+            (Thread/sleep 50)
+            (recur)))))))
+
 (deftest watch-test
   (let [conn     (test-utils/get-conn)
         coll     (get-coll)
@@ -803,11 +815,9 @@
       (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                              $push {:arr 42}})
 
-      (Thread/sleep 500)
+      (is (wait-for (fn [] (= 2 (count (deref *changes)))) 1000))
 
       (future-cancel fut)
-
-      (Thread/sleep 500)
 
       (let [changes (deref *changes)]
         (is (= 2 (count changes)))
@@ -863,11 +873,9 @@
       (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                              $push {:arr 42}})
 
-      (Thread/sleep 500)
+      (is (wait-for (fn [] (= 1 (count (deref *changes)))) 1000))
 
       (future-cancel fut)
-
-      (Thread/sleep 500)
 
       (let [changes (deref *changes)]
         (is (= 1 (count changes)))
