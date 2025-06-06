@@ -85,6 +85,40 @@ Mongo creates collections implicitly when you insert a document. But you can als
 
 ### Inserting documents
 
+One-by-one:
+
+```clojure
+(def first-result (m/insert-one! conn coll {:boolean false
+                                            :symbol  'foobar
+                                            :integer 42
+                                            :inst    #inst "2025-01-02"
+                                            :string  "hello"
+                                            :keyword :some-key
+                                            :vec     [1 "2" 3]
+                                            :set     #{1 2 3}
+                                            :map     {:foo :bar}}))
+
+(:acknowledged? first-result)
+;; => true
+
+(m/object-id? (:id first-result))
+;; => true
+
+(-> (m/find-by-id conn coll (:id first-result))
+    (dissoc :_id))
+;; => {:boolean false
+;;     :symbol  "foobar"
+;;     :integer 42
+;;     :inst    #inst "2025-01-02T00:00:00.000-00:00"
+;;     :string  "hello"
+;;     :keyword "some-key"
+;;     :vec     [1 "2" 3]
+;;     :set     [1 3 2]
+;;     :map     {:foo "bar"}}
+```
+
+Multiple at once:
+
 ```clojure
 (m/insert-many! conn coll [{:counter 1
                             :name    "bar"}
@@ -147,14 +181,14 @@ or as a trailing map
 
 ```clojure
 (m/count-collection conn coll)
-;; => 5
+;; => 6
 
 (m/with-session [conn (m/with-client-session-options conn {:read-preference :nearest})]
   (m/insert-one! conn coll {:name "foo"})
   (m/insert-one! conn coll {:name "quuz"}))
 
 (m/count-collection conn coll)
-;; => 7
+;; => 8
 
 (try
   (m/with-session [conn (m/with-client-session-options conn {:read-preference :nearest})]
@@ -167,7 +201,7 @@ or as a trailing map
     nil))
 
 (m/count-collection conn coll)
-;; => 7
+;; => 8
 ```
 
 ### Adding processing steps to the reducible
