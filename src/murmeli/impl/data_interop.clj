@@ -495,14 +495,12 @@
     revision (.revision (int revision))))
 
 (defn make-change-stream-options
-  {:no-doc true}
   ^ChangeStreamPreAndPostImagesOptions
   [{:keys [enabled?]}]
   (when (some? enabled?)
     (ChangeStreamPreAndPostImagesOptions. (boolean enabled?))))
 
 (defn make-clustered-index-options
-  {:no-doc true}
   ^ClusteredIndexOptions
   [{:keys [index-key
            index-name
@@ -512,7 +510,6 @@
       index-name (.name index-name))))
 
 (defn make-index-option-defaults
-  {:no-doc true}
   ^IndexOptionDefaults
   [{:keys [storage-engine]}]
   (when storage-engine
@@ -528,7 +525,6 @@
     :seconds TimeSeriesGranularity/SECONDS))
 
 (defn make-time-series-options
-  {:no-doc true}
   ^TimeSeriesOptions
   [{:keys [bucket-max-span-seconds
            bucket-rounding-seconds
@@ -560,7 +556,6 @@
     :off      ValidationLevel/OFF))
 
 (defn make-validation-options
-  {:no-doc true}
   ^ValidationOptions
   [{:keys [validation-action
            validation-level
@@ -578,12 +573,12 @@
            change-stream-options
            clustered-index-options
            collation-options
-           encrypted-fields
+           ^Bson encrypted-fields
            expire-after-seconds
            index-option-defaults-options
            max-documents
            size-in-bytes
-           storage-engine-options
+           ^Bson storage-engine-options
            time-series-options
            validation-options]}]
   (let [change-stream   (when (seq change-stream-options)

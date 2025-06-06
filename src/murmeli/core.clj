@@ -149,8 +149,35 @@
 ;; Collections
 
 (defn create-collection!
-  "Creates a collection.
+  "Creates a collection explicitly.
+
+  Options:
+  * `capped?` -- If capped
+  * `change-stream-options` -- Map of change stream options, see [[murmeli.impl.data-interop/make-change-stream-options]]
+  * `clustered-index-options` -- Map of clustered index options, see [[murmeli.impl.data-interop/make-clustered-index-options]]
+  * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
+  * `encrypted-fields` -- Encrypted fields document
+  * `expire-after-seconds` -- TTL for time-series data
+  * `index-option-defaults-options` -- Map of index option defaults, see [[murmeli.impl.data-interop/make-index-option-defaults]]
+  * `max-documents` -- Maximum number of allowed documents in a capped collection
+  * `size-in-bytes` -- Maximum size of a capped collection. Required if `capped?` is truthy.
+  * `storage-engine-options` -- Storage engine options document
+  * `time-series-options` -- Map of time series options, see [[murmeli.impl.data-interop/make-time-series-options]]
+  * `validation-options` -- Map of validation options, see [[murmeli.impl.data-interop/make-validation-options]]
+
   Returns `nil`."
+  {:arglists '([conn collection & {:keys [capped?
+                                          change-stream-options
+                                          clustered-index-options
+                                          collation-options
+                                          encrypted-fields
+                                          expire-after-seconds
+                                          index-option-defaults-options
+                                          max-documents
+                                          size-in-bytes
+                                          storage-engine-options
+                                          time-series-options
+                                          validation-options]}])}
   [conn collection & {:as options}]
   (db/create-collection! conn collection options)
   (log/debugf "Created collection '%s'." collection))

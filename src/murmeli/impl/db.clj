@@ -10,6 +10,7 @@
             [murmeli.impl.data-interop :as di])
   (:import [clojure.lang PersistentHashMap]
            [com.mongodb.client ClientSession MongoCollection MongoDatabase]
+           [com.mongodb.client.model CreateCollectionOptions]
            [java.util.concurrent TimeUnit]
            [org.bson.codecs.configuration CodecRegistry]))
 
@@ -40,7 +41,7 @@
   (with-registry conn (c/registry {:keywords?        true
                                    :allow-qualified? false})))
 
-(defn registry
+(defn get-registry
   ^CodecRegistry [{::keys [^MongoDatabase db]}]
   (.getCodecRegistry db))
 
@@ -58,12 +59,19 @@
 
 (defn create-collection!
   [{::keys        [^MongoDatabase db]
-    ::client/keys [^ClientSession session]}
+    ::client/keys [^ClientSession session]
+    :as           conn}
    collection
-   & {:as options}]
+   & {:keys [encrypted-fields
+             storage-engine-options]
+      :as   options}]
   {:pre [db collection]}
-  (let [options (when (seq options)
-                  (di/make-create-collection-options options))]
+  (let [registry                         (get-registry conn)
+        ^CreateCollectionOptions options (when (seq options)
+                                           (cond-> options
+                                             encrypted-fields       (update :encrypted-fields c/map->bson registry)
+                                             storage-engine-options (update :storage-engine-options c/map->bson registry)
+                                             true                   di/make-create-collection-options))]
     (cond
       (and session options) (.createCollection db session (name collection) options)
       session               (.createCollection db session (name collection))

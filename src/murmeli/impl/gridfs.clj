@@ -71,7 +71,7 @@
    & {:keys [id doc]
       :as   options}]
   {:pre [conn bucket filename source]}
-  (let [registry                     (db/registry conn)
+  (let [registry                     (db/get-registry conn)
         id                           (some-> id c/->object-id c/object-id->bson)
         ^GridFSUploadOptions options (when (seq options)
                                        (cond-> options
@@ -106,7 +106,7 @@
     :as           conn}
    & {:keys [id ^String filename revision] :as options}]
   {:pre [conn bucket (or id filename)]}
-  (let [registry (db/registry conn)
+  (let [registry (db/get-registry conn)
         id       (some-> id c/->object-id c/object-id->bson)
         options  (when revision
                    (di/make-gridfs-download-options options))
@@ -132,7 +132,7 @@
              skip
              sort]}]
   {:pre [conn bucket]}
-  (let [registry  (db/registry conn)
+  (let [registry  (db/get-registry conn)
         query     (when query
                     (c/map->bson query registry))
         collation (when collation-options

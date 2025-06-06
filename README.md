@@ -58,6 +58,31 @@ Avoid lazyness. Use [IReduceInit](https://github.com/clojure/clojure/blob/master
 (def coll :some-collection)
 ```
 
+### Collections
+
+Mongo creates collections implicitly when you insert a document. But you can also be explicit.
+
+```clojure
+
+;; A capped collection with a size and document count limits
+(m/create-collection! conn
+                      :example-capped-coll
+                      {:capped?          true
+                       :size-in-bytes    1024
+                       :max-document     10})
+
+;; A collection with an encrypted field
+(m/create-collection! conn
+                      :example-encrypted-coll
+                      {:encrypted-fields {:fields [{:path     :password
+                                                    :bsonType :string
+                                                    :keyId    (random-uuid)
+                                                    :queries  {:queryType :equality}}]}})
+
+;; A random collection name for the examples below
+(def coll :some-collection)
+```
+
 ### Inserting documents
 
 ```clojure
