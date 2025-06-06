@@ -147,7 +147,7 @@
                    :else                 (.insertOne coll doc))
         id       (.getInsertedId result)]
     (cond-> {:acknowledged? (.wasAcknowledged result)}
-      id (assoc :id (c/bson-value->document-id id)))))
+      id (assoc :_id (c/bson-value->document-id id)))))
 
 (defn insert-many!
   [{::client/keys [^ClientSession session] :as conn}
@@ -167,10 +167,10 @@
                    options               (.insertMany coll docs options)
                    :else                 (.insertMany coll docs))]
     {:acknowledged? (.wasAcknowledged result)
-     :ids           (->> (.getInsertedIds result)
-                         (filter identity)
-                         (sort-by key)
-                         (mapv (comp c/bson-value->document-id val)))}))
+     :_ids          (->> (.getInsertedIds result)
+                          (filter identity)
+                          (sort-by key)
+                          (mapv (comp c/bson-value->document-id val)))}))
 
 ;; Updates
 

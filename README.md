@@ -101,10 +101,10 @@ One-by-one:
 (:acknowledged? first-result)
 ;; => true
 
-(m/object-id? (:id first-result))
+(m/object-id? (:_id first-result))
 ;; => true
 
-(-> (m/find-by-id conn coll (:id first-result))
+(-> (m/find-by-id conn coll (:_id first-result))
     (dissoc :_id))
 ;; => {:boolean false
 ;;     :symbol  "foobar"

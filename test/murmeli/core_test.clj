@@ -155,7 +155,7 @@
   (testing "inserting document"
     (let [conn (test-utils/get-conn)
           coll (get-coll)
-          id   (:id (m/insert-one! conn coll {:foo 123}))]
+          id   (:_id (m/insert-one! conn coll {:foo 123}))]
       ;; By default the generated ID will be a proper ObjectId
       (is (m/object-id? id))
       (is (= 1 (m/count-collection conn coll)))
@@ -164,17 +164,17 @@
              (m/find-one conn coll :query {:_id id})
              (m/find-by-id conn coll id)
              (m/find-by-id conn coll (ObjectId. (str id)))))
-      (let [id-2 (:id (m/insert-one! conn coll {:foo 2
-                                                :_id (m/create-id)}))]
+      (let [id-2 (:_id (m/insert-one! conn coll {:foo 2
+                                                 :_id (m/create-id)}))]
         (is (m/id? id-2)))
 
       (testing "insert with escape characters"
         (testing "string values can contain NULLs"
-          (let [id  (:id (m/insert-one! conn coll {"bar" "foo \0 asd"}))
+          (let [id  (:_id (m/insert-one! conn coll {"bar" "foo \0 asd"}))
                 res (:bar (m/find-by-id conn coll id))]
             (is (= res "foo \0 asd"))))
         (testing "and we can choose to sanitize them"
-          (let [id  (:id (m/insert-one! conn coll {"bar" "foo \0 asd"} {:sanitize-strings? true}))
+          (let [id  (:_id (m/insert-one! conn coll {"bar" "foo \0 asd"} {:sanitize-strings? true}))
                 res (:bar (m/find-by-id conn coll id))]
             (is (= res "foo  asd"))))
         (testing "... but not field names as they are stored as C strings"
@@ -187,9 +187,9 @@
   (testing "inserting documents"
     (let [conn                     (test-utils/get-conn)
           coll                     (get-coll)
-          [id-1 id-2 id-3 :as ids] (:ids (m/insert-many! conn coll [{:foo 1}
-                                                                    {:foo 2}
-                                                                    {:foo 3}]))]
+          [id-1 id-2 id-3 :as ids] (:_ids (m/insert-many! conn coll [{:foo 1}
+                                                                     {:foo 2}
+                                                                     {:foo 3}]))]
       (is (every? m/object-id? ids))
       (is (= 3 (count ids)))
       (is (= 3 (m/count-collection conn coll)))
@@ -204,7 +204,7 @@
   (testing "count with query"
     (let [conn (test-utils/get-conn)
           coll (get-coll)]
-      (is (m/object-id? (:id (m/insert-one! conn coll {:foo 123}))))
+      (is (m/object-id? (:_id (m/insert-one! conn coll {:foo 123}))))
       (is (= 1 (m/count-collection conn coll)))
       (is (= 0 (m/count-collection conn coll :query {:foo {$lt 100}})))
       (is (= 1 (m/count-collection conn coll :query {:foo {$lt 200}})))
@@ -241,7 +241,7 @@
 (deftest update-one-test
   (let [coll   (get-coll)
         conn   (test-utils/get-conn)
-        [id-1] (:ids (m/insert-many! conn coll [{:foo 1}]))]
+        [id-1] (:_ids (m/insert-many! conn coll [{:foo 1}]))]
     (testing "update single document"
       (is (= {:modified 1
               :matched  1}
@@ -258,9 +258,9 @@
 (deftest update-many-test
   (let [coll   (get-coll)
         conn   (test-utils/get-conn)
-        [id-1] (:ids (m/insert-many! conn coll [{:foo 1}
-                                                {:foo 2}
-                                                {:foo 3}]))]
+        [id-1] (:_ids (m/insert-many! conn coll [{:foo 1}
+                                                 {:foo 2}
+                                                 {:foo 3}]))]
     (testing "update single document"
       (is (= {:modified 1
               :matched  1}
@@ -286,10 +286,10 @@
 (deftest find-test
   (let [coll   (get-coll)
         conn   (test-utils/get-conn)
-        id     (:id (m/insert-one! conn coll {:foo 123}))
-        id-2   (:id (m/insert-one! conn coll {:bar "quuz"}))
-        id-3   (:id (m/insert-one! conn coll {:foo 200
-                                              :bar "aaaa"}))
+        id     (:_id (m/insert-one! conn coll {:foo 123}))
+        id-2   (:_id (m/insert-one! conn coll {:bar "quuz"}))
+        id-3   (:_id (m/insert-one! conn coll {:foo 200
+                                               :bar "aaaa"}))
         item-1 {:_id id
                 :foo 123}
         item-2 {:_id id-2
@@ -344,10 +344,10 @@
 (deftest str-coll-test
   (let [coll   (get-coll)
         conn   (test-utils/get-conn)
-        id     (:id (m/insert-one! conn coll {"foo" 123}))
-        id-2   (:id (m/insert-one! conn coll {"bar" "quuz"}))
-        id-3   (:id (m/insert-one! conn coll {"foo" 200
-                                              "bar" "aaaa"}))
+        id     (:_id (m/insert-one! conn coll {"foo" 123}))
+        id-2   (:_id (m/insert-one! conn coll {"bar" "quuz"}))
+        id-3   (:_id (m/insert-one! conn coll {"foo" 200
+                                               "bar" "aaaa"}))
         item-1 {"_id" id
                 "foo" 123}
         item-2 {"_id" id-2
@@ -516,11 +516,11 @@
 (deftest schema-test
   (let [coll (get-coll)
         conn (test-utils/get-conn)
-        id-0 (:id (m/insert-one! conn coll {}))
-        id-1 (:id (m/insert-one! conn coll {:foo "just foo"}))
-        id-2 (:id (m/insert-one! conn coll {:foo "foo and a timestamp"
-                                            :bar #inst "2024-06-01"}))
-        id-3 (:id (m/insert-one! conn coll {:bar #inst "2024-06-02"}))]
+        id-0 (:_id (m/insert-one! conn coll {}))
+        id-1 (:_id (m/insert-one! conn coll {:foo "just foo"}))
+        id-2 (:_id (m/insert-one! conn coll {:foo "foo and a timestamp"
+                                             :bar #inst "2024-06-01"}))
+        id-3 (:_id (m/insert-one! conn coll {:bar #inst "2024-06-02"}))]
 
     (testing "one required field"
       (let [schema (vs/schema->json-schema
@@ -584,7 +584,7 @@
                 :map {:a :x
                       :b :y}}]]
     (is (nil? (run! valid-my-record! input)))
-    (is (= 2 (count (:ids (m/insert-many! conn coll input)))))
+    (is (= 2 (count (:_ids (m/insert-many! conn coll input)))))
     (testing "read out as-is"
       (let [out-plain (m/find-all conn coll)]
         (is (match? [{:_id m/id?
@@ -811,7 +811,7 @@
     ;; We need to enable the pre- and post- images
     (m/create-collection! conn coll {:change-stream-options {:enabled? true}})
 
-    (let [id (:id (m/insert-one! conn coll {:foo "bar" :val 1 :arr [1 2]}))]
+    (let [id (:_id (m/insert-one! conn coll {:foo "bar" :val 1 :arr [1 2]}))]
       (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                              $push {:arr 42}})
 
@@ -868,7 +868,7 @@
     ;; We need to enable the pre- and post- images
     (m/create-collection! conn coll {:change-stream-options {:enabled? true}})
 
-    (let [id (:id (m/insert-one! conn coll {:foo "bar" :val 1 :arr [1 2]}))]
+    (let [id (:_id (m/insert-one! conn coll {:foo "bar" :val 1 :arr [1 2]}))]
       ;; change stream ignores update as `val` is no longer 1
       (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                              $push {:arr 42}})

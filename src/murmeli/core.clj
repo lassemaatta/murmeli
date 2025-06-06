@@ -394,9 +394,9 @@
   {:arglists '([conn collection doc & {:keys [allow-qualified?
                                               sanitize-strings?]}])}
   [conn collection doc & {:as options}]
-  (let [id (collection/insert-one! conn collection doc options)]
-    (log/debugf "Inserted document to '%s' with id '%s'." collection id)
-    id))
+  (let [result (collection/insert-one! conn collection doc options)]
+    (log/debugf "Inserted document to '%s' with id '%s'." collection (:_id result))
+    result))
 
 (defn insert-many!
   "Insert multiple documents into a collection.
@@ -409,14 +409,14 @@
   * `ordered?` -- Insert documents in the order provided, stop on the first error
 
   Returns a map with:
-  * `ids` -- a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order
+  * `_ids` -- a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order
   * `acknowledged?` -- True if the insertion was acknowledged"
   {:arglists '([conn collection docs & {:keys [allow-qualified?
                                                sanitize-strings?]}])}
   [conn collection docs & {:as options}]
-  (let [ids (collection/insert-many! conn collection docs options)]
-    (log/debugf "Inserted %d documents to '%s'." (count ids) collection)
-    ids))
+  (let [result (collection/insert-many! conn collection docs options)]
+    (log/debugf "Inserted %d documents to '%s'." (count (:_ids result)) collection)
+    result))
 
 ;; Updates
 
