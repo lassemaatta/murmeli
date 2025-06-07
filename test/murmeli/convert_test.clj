@@ -5,7 +5,8 @@
             [murmeli.impl.convert :as c]
             [murmeli.specs]
             [murmeli.test.generators :as mg])
-  (:import [java.nio ByteBuffer]
+  (:import [clojure.lang PersistentTreeMap]
+           [java.nio ByteBuffer]
            [java.util.regex Pattern]
            [org.bson BsonBinaryReader BsonBinaryWriter ByteBufNIO]
            [org.bson.codecs Codec DecoderContext EncoderContext]
@@ -54,6 +55,9 @@
              :b "2"
              :c nil
              :d false}}
+      {:hash-map (hash-map :foo 1)}
+      {:array-map (array-map :bar 2)}
+      {:tree-map (PersistentTreeMap/create {:quuz 3})}
       {:vector [1 "2" 3 nil false]})))
 
 (deftest asymmetric-roundtrips

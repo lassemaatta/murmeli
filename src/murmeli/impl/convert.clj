@@ -9,34 +9,24 @@
                          PersistentVector
                          Symbol]
            [com.mongodb MongoClientSettings]
-           [java.util Date]
            [java.util.regex Pattern]
-           [org.bson BsonArray
-                     BsonBinary
-                     BsonBoolean
-                     BsonDateTime
-                     BsonDecimal128
-                     BsonDocument
+           [org.bson BsonDocument
                      BsonDocumentWrapper
-                     BsonDouble
-                     BsonInt32
-                     BsonInt64
                      BsonObjectId
                      BsonReader
-                     BsonRegularExpression
-                     BsonString
                      BsonType
                      BsonValue
                      BsonWriter
                      Document
                      UuidRepresentation]
-           [org.bson.codecs BsonValueCodecProvider
+           [org.bson.codecs BsonTypeClassMap
+                            BsonValueCodecProvider
                             Codec
                             DecoderContext
                             EncoderContext
                             UuidCodecProvider]
            [org.bson.codecs.configuration CodecProvider CodecRegistries CodecRegistry]
-           [org.bson.types Binary Decimal128 ObjectId]))
+           [org.bson.types ObjectId]))
 
 ;; https://github.com/mongodb/mongo-java-driver/tree/main/bson/src/main/org/bson/codecs
 
@@ -96,30 +86,15 @@
       (.toBsonDocument BsonDocument registry)
       (bson-document->map registry)))
 
-(def overrides
-  "Instead of decoding values as Bson* instances, use these overrides"
-  {BsonArray             PersistentVector
-   BsonBinary            Binary
-   BsonBoolean           Boolean
-   BsonDateTime          Date
-   BsonDecimal128        Decimal128
-   BsonDocument          PersistentHashMap
-   BsonDouble            Double
-   BsonInt32             Integer
-   BsonInt64             Long
-   BsonObjectId          ObjectId
-   BsonRegularExpression Pattern
-   BsonString            String})
-
-(defn value->class
-  [value overrides]
-  (let [clazz (class value)]
-    (get overrides clazz clazz)))
+;; TODO: pass this through options when building registry
+(def overrides (BsonTypeClassMap. {BsonType/ARRAY              PersistentVector
+                                   BsonType/DOCUMENT           PersistentHashMap
+                                   BsonType/REGULAR_EXPRESSION Pattern}))
 
 (defn bson-type->class
-  [bson-type overrides]
-  (let [clazz (BsonValueCodecProvider/getClassForBsonType bson-type)]
-    (get overrides clazz clazz)))
+  [^BsonType bson-type ^BsonTypeClassMap overrides]
+  (or (.get overrides bson-type)
+      (BsonValueCodecProvider/getClassForBsonType bson-type)))
 
 (defn map-codec
   "Build `Codec` for `APersistentMap`."
@@ -135,7 +110,7 @@
              (.writeName writer (name k))
              (if (nil? v)
                (.writeNull writer)
-               (let [clazz (value->class v overrides)
+               (let [clazz (class v)
                      c     (.get registry clazz)]
                  (.encodeWithChildContext ctx c writer v))))
            m)
@@ -169,7 +144,7 @@
   (run! (fn [x]
           (if (nil? x)
             (.writeNull writer)
-            (let [clazz (value->class x overrides)
+            (let [clazz (class x)
                   c     (.get registry clazz)]
               (.encodeWithChildContext ctx c writer x))))
         xs))
