@@ -295,6 +295,27 @@
                              :keywords?
                              :sanitize-strings?})
 
+(defn join-registries
+  "Combine multiple `CodecRegistry`s into a single `CodecRegistry`."
+  ^CodecRegistry [& registries]
+  (CodecRegistries/fromRegistries
+    ^"[Lorg.bson.codecs.configuration.CodecRegistry;"
+    (into-array CodecRegistry registries)))
+
+(defn codecs->registry
+  "Combine multiple `Codecs`s into a single `CodecRegistry`."
+  ^CodecRegistry [& codecs]
+  (CodecRegistries/fromCodecs
+    ^"[Lorg.bson.codecs.Codec;"
+    (into-array Codec codecs)))
+
+(defn providers->registry
+  "Combine multiple `Provider`s into a single `CodecRegistry`."
+  ^CodecRegistry [& providers]
+  (CodecRegistries/fromProviders
+    ^"[Lorg.bson.codecs.configuration.CodecProvider;"
+    (into-array CodecProvider providers)))
+
 (defn registry
   "Construct a `CodecRegistry` for converting between Java classes and BSON
   Options:
@@ -305,12 +326,8 @@
                         keywords?
                         sanitize-strings?]}])}
   ^CodecRegistry [opts]
-  (CodecRegistries/fromRegistries
-    ^"[Lorg.bson.codecs.configuration.CodecRegistry;"
-    (into-array CodecRegistry
-                [(CodecRegistries/fromProviders
-                   ^"[Lorg.bson.codecs.configuration.CodecProvider;"
-                   (into-array CodecProvider
-                               [(clojure-provider opts)
-                                (UuidCodecProvider. UuidRepresentation/STANDARD)]))
-                 (MongoClientSettings/getDefaultCodecRegistry)])))
+  (join-registries
+    (providers->registry
+      (clojure-provider opts)
+      (UuidCodecProvider. UuidRepresentation/STANDARD))
+    (MongoClientSettings/getDefaultCodecRegistry)))

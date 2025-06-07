@@ -30,20 +30,24 @@
       (assoc conn ::db (client/get-database conn database-name)))
     conn))
 
+(defn get-registry
+  ^CodecRegistry [{::keys [^MongoDatabase db]}]
+  (.getCodecRegistry db))
+
 (defn with-registry
   [{::keys [^MongoDatabase db] :as conn}
    ^CodecRegistry registry]
   {:pre [conn db registry]}
-  (assoc conn ::db (.withCodecRegistry db registry)))
+  (if (= registry (get-registry conn))
+    conn
+    (assoc conn ::db (.withCodecRegistry db registry))))
 
 (defn with-default-registry
   [conn]
   (with-registry conn (c/registry {:keywords?        true
                                    :allow-qualified? false})))
 
-(defn get-registry
-  ^CodecRegistry [{::keys [^MongoDatabase db]}]
-  (.getCodecRegistry db))
+
 
 (defn drop-db!
   [{::client/keys [^ClientSession session]

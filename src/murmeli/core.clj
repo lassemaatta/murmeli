@@ -89,6 +89,10 @@
   {:pre [database-name]}
   (db/with-db conn database-name))
 
+(defn get-registry
+  [conn]
+  (db/get-registry conn))
+
 (defn with-registry
   [conn registry]
   (db/with-registry conn registry))

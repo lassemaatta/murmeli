@@ -372,20 +372,26 @@
 
 (s/def ::regex regex?)
 
-(s/def ::convertable (s/or :keyword keyword?
-                           :symbol symbol?
-                           :string string?
-                           :int int?
-                           :double double?
-                           :float float?
-                           :boolean boolean?
-                           :inst inst?
-                           :nil nil?
-                           :object-id ::object-id
-                           :pattern ::regex
-                           :set (s/coll-of ::convertable :into #{})
-                           :vec (s/coll-of ::convertable :into [])
-                           :map ::document))
+;; Users might register their own BSON codecs, so we can't restrict what can be converted into BSON
+(s/def ::convertable any?)
+
+;; .. but we can provide some defaults for tests
+(s/def ::default-document (s/map-of ::key ::default-convertable))
+
+(s/def ::default-convertable (s/or :keyword keyword?
+                                   :symbol symbol?
+                                   :string string?
+                                   :int int?
+                                   :double double?
+                                   :float float?
+                                   :boolean boolean?
+                                   :inst inst?
+                                   :nil nil?
+                                   :object-id ::object-id
+                                   :pattern ::regex
+                                   :set (s/coll-of ::default-convertable :into #{})
+                                   :vec (s/coll-of ::default-convertable :into [])
+                                   :map (s/spec ::default-document)))
 
 (s/fdef mc/to-bson
   :args (s/cat :object ::convertable)

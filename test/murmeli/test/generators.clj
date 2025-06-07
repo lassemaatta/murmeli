@@ -16,9 +16,12 @@
 (def registry (mc/registry {:keywords?        true
                             :allow-qualified? true}))
 
-(def doc-gen (binding [s/*recursion-limit* 1]
-               (s/gen ::ms/document {::ms/object-id (constantly object-id-gen)
-                                     ::ms/regex     (constantly regex-gen)})))
+(def convertable-gen (binding [s/*recursion-limit* 1]
+                       (s/gen ::ms/default-convertable
+                              {::ms/object-id (constantly object-id-gen)
+                               ::ms/regex     (constantly regex-gen)})))
+
+(def doc-gen  (s/gen ::ms/document {::ms/convertable (constantly convertable-gen)}))
 
 (def bson-gen (gen/let [doc doc-gen]
                 (mc/map->bson doc registry)))

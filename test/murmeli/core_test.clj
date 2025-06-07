@@ -4,6 +4,7 @@
             [matcher-combinators.matchers :as matchers]
             [matcher-combinators.test]
             [murmeli.core :as m]
+            [murmeli.impl.convert :as mc]
             [murmeli.operators :refer [$addFields $eq $exists $group $gt $jsonSchema $lt $match $project $push $set
                                        $sum]]
             [murmeli.specs]
@@ -11,9 +12,11 @@
             [murmeli.validators.schema :as vs]
             [schema.coerce :as sc]
             [schema.core :as s :refer [defschema]])
-  (:import [clojure.lang IReduceInit]
+  (:import [clojure.lang IReduceInit Ratio]
            [com.mongodb MongoCommandException]
-           [org.bson BsonBinarySubType]
+           [org.bson BsonBinarySubType BsonReader BsonWriter]
+           [org.bson.codecs Codec DecoderContext EncoderContext]
+           [org.bson.codecs.configuration CodecProvider CodecRegistry]
            [org.bson.types Binary ObjectId]))
 
 (set! *warn-on-reflection* true)
@@ -77,6 +80,38 @@
                       :sizeOnDisk int?
                       :empty      false}]
                     data))))))
+
+(deftest with-db-test
+  (let [conn     (test-utils/get-conn)
+        with-foo (m/with-db conn "foo")]
+    (is (not= conn with-foo))
+    (is (= with-foo (m/with-db with-foo "foo")))))
+
+(def ratio-codec
+  "A `Codec` for `Ratio` which encodes values as doubles."
+  (reify Codec
+    (getEncoderClass [_this] Ratio)
+    (^void encode [_this ^BsonWriter writer ratio ^EncoderContext _ctx]
+     (.writeDouble writer (double ratio)))
+    (decode [_this ^BsonReader _reader ^DecoderContext _ctx]
+      (throw (ex-info "not implemented" {})))))
+
+(deftest with-registry-test
+  (let [conn              (test-utils/get-conn)
+        coll              (get-coll)
+        original-registry (m/get-registry conn)]
+    (is original-registry)
+    (is (= conn (m/with-registry conn original-registry)))
+    (testing "user supplied codec"
+      (let [new-registry  (mc/join-registries
+                            original-registry
+                            (mc/codecs->registry
+                              ratio-codec))
+            conn          (m/with-registry conn new-registry)
+            {:keys [_id]} (m/insert-one! conn coll {:foo (/ 1 2)})]
+        (is (= {:_id _id
+                :foo 0.5}
+               (m/find-by-id conn coll _id)))))))
 
 (deftest drop-db-test
   (let [conn         (test-utils/get-conn)
