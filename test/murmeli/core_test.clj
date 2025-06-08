@@ -288,7 +288,12 @@
     (testing "no match"
       (is (= {:modified 0
               :matched  0}
-             (m/update-one! conn coll {:quuz "kukka"} {$set {:foo 10}}))))))
+             (m/update-one! conn coll {:quuz "kukka"} {$set {:foo 10}}))))
+    (testing "upsert"
+      (is (match? {:modified 0
+                   :matched  0
+                   :_id      m/object-id?}
+                  (m/update-one! conn coll {:quuz "kukka"} {$set {:foo 10}} {:upsert? true}))))))
 
 (deftest update-many-test
   (let [coll   (get-coll)
@@ -316,7 +321,12 @@
       (is (= {:modified 3
               :matched  3}
              (m/update-many! conn coll {:foo {$exists true}} {$set {:bar  1
-                                                                    :quuz 1}}))))))
+                                                                    :quuz 1}}))))
+    (testing "upsert"
+      (is (match? {:modified 0
+                   :matched  0
+                   :_id      m/object-id?}
+                  (m/update-many! conn coll {:quuz "kukka"} {$set {:foo 10}} {:upsert? true}))))))
 
 (deftest find-test
   (let [coll   (get-coll)

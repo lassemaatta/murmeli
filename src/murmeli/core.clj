@@ -440,7 +440,7 @@
   Returns a map, where
   * `:matched` -- Number of documents matched.
   * `:modified` -- Number of documents modified.
-  * `:id` -- Upserted `_id`, if any."
+  * `:_id` -- Upserted `_id`, if any."
   {:arglists '([conn collection query changes & {:keys [allow-qualified?
                                                         array-filters
                                                         bypass-validation?
@@ -469,7 +469,8 @@
 
   Returns a map, where
   * `:matched` -- Number of documents matched.
-  * `:modified` -- Number of documents modified."
+  * `:modified` -- Number of documents modified.
+  * `:_id` -- Upserted `_id`, if any."
   {:arglists '([conn collection query changes & {:keys [allow-qualified?
                                                         array-filters
                                                         bypass-validation?
@@ -491,7 +492,8 @@
 
   Returns a map, where
   * `:matched` -- Number of documents matched.
-  * `:modified` -- Number of documents modified."
+  * `:modified` -- Number of documents modified.
+  * `:_id` -- Upserted `_id`, if any."
   {:arglists '([conn collection query changes & {:keys [allow-qualified?
                                                         bypass-validation?
                                                         collation-options

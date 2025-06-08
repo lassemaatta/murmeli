@@ -638,7 +638,7 @@
     ;; just a single document because matched count is always either 0 or 1 :(
     (cond-> {:modified (.getModifiedCount result)
              :matched  (.getMatchedCount result)}
-      id (assoc :id (c/bson-value->document-id id)))))
+      id (assoc :_id (c/bson-value->document-id id)))))
 
 (defn get-full-document
   "Should the change stream contain the updated document"
