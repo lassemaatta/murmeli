@@ -30,7 +30,7 @@ jobs:
           key: cljdeps-${{ hashFiles('project.clj') }}
           restore-keys: cljdeps-
       - name: Test
-        run: lein eftest
+        run: lein test
       - name: Deploy
         env:
           # Provide environment variables used to deploy.
