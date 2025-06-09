@@ -247,11 +247,18 @@ bb run lint
 
 ### Tests
 
-Unit tests:
+Unit tests (single threaded):
 
 ```shell
 lein test
 ```
+
+Unit tests (multithreaded):
+
+```shell
+lein eftest
+```
+
 
 Check code examples in this `README.md`:
 

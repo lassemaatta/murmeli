@@ -22,6 +22,8 @@
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.17"]
                                               [ch.qos.logback/logback-classic "1.5.18"]]
+                             :plugins        [[lein-eftest "0.6.0"]]
+                             :eftest         {:multithread? true}
                              :resource-paths ["test-resources"]
                              :jvm-opts       ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]}
              :repl          {:jvm-opts ["-Dmurmeli.repl=true"]}
