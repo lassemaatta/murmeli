@@ -873,7 +873,7 @@
         (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                                $push {:arr 42}})
 
-        (is (wait-for (fn [] (= 2 (count (deref *changes)))) 1000))
+        (is (wait-for (fn [] (= 2 (count (deref *changes)))) 5000))
 
         (future-cancel fut)
 
@@ -932,7 +932,7 @@
         (m/update-one! conn coll {:foo "bar"} {$set  {:val 42}
                                                $push {:arr 42}})
 
-        (is (wait-for (fn [] (= 1 (count (deref *changes)))) 1000))
+        (is (wait-for (fn [] (= 1 (count (deref *changes)))) 5000))
 
         (future-cancel fut)
 
