@@ -3,7 +3,7 @@
   :url "https://github.com/lassemaatta/murmeli"
   :license {:name "European Union Public Licence v. 1.2"
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
-  :dependencies [[org.clojure/clojure "1.12.1"]
+  :dependencies [[org.clojure/clojure "1.12.2"]
                  [org.clojure/tools.logging "1.3.0"]
                  [org.mongodb/mongodb-driver-sync "5.5.1"]
                  [prismatic/schema "1.4.1"]]
@@ -18,7 +18,7 @@
                                               ;; Generative testing with spec
                                               [org.clojure/test.check "1.1.1"]
                                               ;; Matcher for tests
-                                              [nubank/matcher-combinators "3.9.1"]
+                                              [nubank/matcher-combinators "3.9.2"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.17"]
                                               [ch.qos.logback/logback-classic "1.5.18"]]
