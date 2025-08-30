@@ -691,8 +691,8 @@
         namespace   (.getNamespace doc)]
     {;; BsonTimestamps have a 32 bit epoch second counter and
      ;; a 32 bit incrementing counter
-     :cluster-time-inc            (.getInc ct)
-     :cluster-time-s              (Instant/ofEpochSecond (.getTime ct) 0)
+     :cluster-time-inc            (some-> ct .getInc)
+     :cluster-time-s              (some-> ct .getTime (Instant/ofEpochSecond 0))
      :database-name               (.getDatabaseName doc)
      :destination                 {:collection (some-> destination .getCollectionName)}
      :document-key                (some-> (.getDocumentKey doc) bson->map)
@@ -706,4 +706,4 @@
      :resume-token                (some-> (.getResumeToken doc) bson->map)
      :txn-number                  (some-> (.getTxnNumber doc) .getValue)
      :update-description          (some-> (.getUpdateDescription doc) (update-description bson->map))
-     :wall-time                   (Instant/ofEpochMilli (.getValue (.getWallTime doc)))}))
+     :wall-time                   (some-> doc .getWallTime .getValue Instant/ofEpochMilli)}))

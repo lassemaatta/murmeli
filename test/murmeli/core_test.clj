@@ -919,6 +919,7 @@
           *changes (atom [])
           fut      (future
                      (->> (m/watch-collection conn coll {:pipeline                    [{$match {:fullDocument.val 1}}
+                                                                                       {$project {:fullDocument.val 0}}
                                                                                        {$addFields {:quuz 15}}]
                                                          :full-document               :update-lookup
                                                          :full-document-before-change :when-available})
@@ -944,7 +945,7 @@
                  :extra-elements {:quuz 15} ; Added field
                  :full-document  {:_id id
                                   :foo "bar"
-                                  :val 1
+                                  ;; :val is excluded from the projection
                                   :arr [1 2]}
                  :namespace      {:collection-name (name coll)
                                   :database-name   string?}
