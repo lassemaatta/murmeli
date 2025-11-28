@@ -533,9 +533,9 @@
                (m/list-indexes conn coll))))
       (testing "removing index"
         (testing "removing with wrong name fails"
-          (is (thrown-with-msg? MongoCommandException
-                                #"Command failed with error 27 \(IndexNotFound\).*"
-                                (m/drop-index-by-name! conn coll "missing"))))
+          (let [^MongoCommandException e (is (thrown? MongoCommandException
+                                                      (m/drop-index-by-name! conn coll "missing")))]
+            (is (= 27 (.getErrorCode e)))))
         (testing "removing with correct name works"
           (m/drop-index-by-name! conn coll "my-index")
           (m/drop-index-by-name! conn coll "my-index-4")
