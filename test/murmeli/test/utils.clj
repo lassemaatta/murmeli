@@ -19,9 +19,9 @@
 
 (stest/instrument `tc/init)
 
-(def version-matrix ["mongo:6.0.24"
-                     "mongo:7.0.21"
-                     "mongo:8.0.10"])
+(def version-matrix ["mongo:6.0.26"
+                     "mongo:7.0.28"
+                     "mongo:8.0.17"])
 
 (defn config
   [^String image]
