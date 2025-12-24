@@ -3,9 +3,9 @@
   :url "https://github.com/lassemaatta/murmeli"
   :license {:name "European Union Public Licence v. 1.2"
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
-  :dependencies [[org.clojure/clojure "1.12.3"]
+  :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/tools.logging "1.3.0"]
-                 [org.mongodb/mongodb-driver-sync "5.6.1"]
+                 [org.mongodb/mongodb-driver-sync "5.6.2"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
   :deploy-repositories [["clojars"  {:url           "https://clojars.org/repo"
@@ -13,7 +13,7 @@
                                      :username      :env/clojars_username
                                      :password      :env/clojars_password}]]
   :profiles {:dev           {:dependencies   [;; Testcontainers for mongodb
-                                              [org.testcontainers/testcontainers "2.0.2"]
+                                              [org.testcontainers/testcontainers "2.0.3"]
                                               [clj-test-containers "0.7.4"]
                                               [org.testcontainers/mongodb "1.17.6"]
                                               ;; Generative testing with spec
@@ -22,7 +22,7 @@
                                               [nubank/matcher-combinators "3.9.2"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.17"]
-                                              [ch.qos.logback/logback-classic "1.5.21"]]
+                                              [ch.qos.logback/logback-classic "1.5.23"]]
                              :plugins        [[lein-eftest "0.6.0"]]
                              :eftest         {:multithread? true}
                              :resource-paths ["test-resources"]
