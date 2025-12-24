@@ -1,14 +1,15 @@
 (ns murmeli.impl.convert
   "Convert Mongo BSON to/from Clojure data."
-  {:no-doc true}
   (:import [clojure.lang APersistentMap
                          APersistentSet
                          APersistentVector
                          Keyword
+                         PersistentArrayMap
                          PersistentHashMap
                          PersistentVector
                          Symbol]
            [com.mongodb MongoClientSettings]
+           [java.util ArrayList]
            [java.util.regex Pattern]
            [org.bson BsonDocument
                      BsonDocumentWrapper
@@ -96,10 +97,14 @@
   (or (.get overrides bson-type)
       (BsonValueCodecProvider/getClassForBsonType bson-type)))
 
-(defn map-codec
+(defn- make-map-codec
   "Build `Codec` for `APersistentMap`."
-  ^Codec [^CodecRegistry registry {:keys [keywords?
-                                          allow-qualified?]}]
+  ^Codec [^CodecRegistry registry
+          {:keys [keywords?
+                  allow-qualified?]}
+          {:keys [on-read-init
+                  on-assoc
+                  on-read-finished]}]
   (reify Codec
     (getEncoderClass [_this] APersistentMap)
     (^void encode [_this ^BsonWriter writer m ^EncoderContext ctx]
@@ -117,17 +122,17 @@
      (.writeEndDocument writer))
     (decode [_this ^BsonReader reader ^DecoderContext ctx]
       (.readStartDocument reader)
-      (let [m (loop [m* (transient {})]
+      (let [m (loop [m* (on-read-init)]
                 (cond
                   ;; Finished?
                   (= BsonType/END_OF_DOCUMENT (.readBsonType reader))
-                  (persistent! m*)
+                  (on-read-finished m*)
                   ;; Read nil?
                   (= BsonType/NULL (.getCurrentBsonType reader))
                   (let [k (.readName reader)
                         k (if keywords? (keyword k) k)]
                     (.readNull reader)
-                    (recur (assoc! m* k nil)))
+                    (recur (on-assoc m* k nil)))
                   :else
                   (let [current (.getCurrentBsonType reader)
                         clazz   (bson-type->class current overrides)
@@ -135,9 +140,29 @@
                         k       (.readName reader)
                         k       (if keywords? (keyword k) k)
                         v       (.decode codec reader ctx)]
-                    (recur (assoc! m* k v)))))]
+                    (recur (on-assoc m* k v)))))]
         (.readEndDocument reader)
         m))))
+
+(defn map-codec
+  "Build `Codec` for `APersistentMap`."
+  ^Codec [^CodecRegistry registry {:keys [retain-order?] :as opts}]
+  (make-map-codec registry opts
+                  (if retain-order?
+                    {:on-read-init     (fn [] (ArrayList. 32))
+                     :on-assoc         (fn [^ArrayList l k v]
+                                         ;; Construct an array of [K1, V1, K2, V2, K3..]
+                                         (.add l k)
+                                         (.add l v)
+                                         l)
+                     :on-read-finished (fn [^ArrayList l]
+                                         ;; `.toArray` allocates a new(!) array and
+                                         ;; the persistent array map takes ownership of it.
+                                         (PersistentArrayMap. (.toArray l)))}
+                    ;; Decode into a transient map, key order not guaranteed
+                    {:on-read-init     (fn [] (transient {}))
+                     :on-assoc         (fn [m k v] (assoc! m k v))
+                     :on-read-finished (fn [m] (persistent! m))})))
 
 (defn- write-coll-children!
   [^BsonWriter writer ^CodecRegistry registry ^EncoderContext ctx xs]
@@ -296,7 +321,9 @@
   Options:
   - `keywords?`: Decode map keys as keywords instead of strings
   - `allow-qualified?`: Accept qualified idents (keywords or symbols), even though we discard the namespace
-  - `sanitize-strings?`: Remove NULL characters from strings"
+  - `sanitize-strings?`: Remove NULL characters from strings
+  - `retain-order?`: If true, always decodes documents into an array-map. Retains original key order,
+                     but slower lookup (vs. hashmap). If false, decodes into array-map or hash-map."
   {:arglists '([{:keys [allow-qualified?
                         keywords?
                         sanitize-strings?]}])}

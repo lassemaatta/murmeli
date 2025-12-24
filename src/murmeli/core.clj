@@ -40,9 +40,10 @@
   * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `cluster-settings` -- Map of cluster settings, see below
   * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
-  * `keywords?` -- If true, deserialize map keys as keywords instead of strings
+  * `keywords?` -- If true, deserialize map keys as keywords instead of strings, see [[murmeli.impl.convert/registry]]
   * `read-concern` -- Choose level of read isolation, see [[murmeli.impl.data-interop/get-read-concern]]
   * `read-preference` -- Choose preferred replica set members when reading, see [[murmeli.impl.data-interop/get-read-preference]]
+  * `retain-order?` -- If true, always decodes documents into an array-map, see [[murmeli.impl.convert/registry]]
   * `retry-reads?` -- Retry reads if they fail due to a network error
   * `retry-writes?` -- Retry writes if they fail due to a network error
   * `ssl-settings` -- Map of SSL settings, see below

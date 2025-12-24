@@ -99,22 +99,38 @@
       (is (vector? r)))))
 
 (deftest map-key-ordering-test
-  (let [input  (array-map "a" 1
-                          "b" 2
-                          "c" 3
-                          "d" 4
-                          "e" 5
-                          "f" 6
-                          "g" 7
-                          "h" 8
-                          "i" 9
-                          "j" 10
-                          "k" 11
-                          "l" 12)
-        output (roundtrip input)]
-    ;; BSON document -> hashmap : key ordering is not preserved
-    (is (not= (keys input)
-              (keys output)))))
+  (testing "short input"
+    (let [ks    [:a :b :c :d :e :f]
+          input (apply array-map (interleave (shuffle ks) (range)))]
+
+      (testing "no ordering"
+        (let [output (roundtrip input)]
+          ;; BSON document -> transient -> array-map
+          (is (= (keys input)
+                 (keys output)))))
+      (testing "with ordering"
+        (let [output (roundtrip (c/registry {:keywords?     true
+                                             :retain-order? true})
+                                input)]
+          ;; BSON document -> array-list -> array-map : key ordering is preserved
+          (is (= (keys input)
+                 (keys output)))))))
+  (testing "long input"
+    (let [ ks   [:a :b :c :d :e :f :g :h :i :j :k :l :m :n :o :p :q :r :s :t :u :v :x :y :z]
+          input (apply array-map (interleave (shuffle ks) (range)))]
+      (testing "no ordering"
+        (let [output (roundtrip input)]
+          ;; BSON document -> transient -> hash-map
+          ;; technically the keys _might_ be in the correct order, just by chance
+          (is (not= (keys input)
+                    (keys output)))))
+      (testing "with ordering"
+        (let [output (roundtrip (c/registry {:keywords?     true
+                                             :retain-order? true})
+                                input)]
+          ;; BSON document -> array-list -> array-map : key ordering is preserved
+          (is (= (keys input)
+                 (keys output))))))))
 
 (defspec map->bson-test 50
   (properties/for-all [doc mg/doc-gen]
