@@ -237,6 +237,7 @@
                                                  :format   :uuid}]}
                                  "_id" {:bsonType :objectId}}}
          (validator/schema->json-schema
+           #_{:clj-kondo/ignore [:deprecated-var]}
            {:a (s/both s/Str s/Uuid)})))
   (is (= {:bsonType             :object
           :additionalProperties false
@@ -246,4 +247,5 @@
                                                  :format   :uuid}]}
                                  "_id" {:bsonType :objectId}}}
          (validator/schema->json-schema
+           #_{:clj-kondo/ignore [:deprecated-var]}
            {:a (s/either s/Str s/Uuid)}))))

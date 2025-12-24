@@ -116,7 +116,6 @@
     (is (not= (keys input)
               (keys output)))))
 
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defspec map->bson-test 50
   (properties/for-all [doc mg/doc-gen]
     (try
