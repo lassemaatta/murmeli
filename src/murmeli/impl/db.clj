@@ -89,10 +89,8 @@
   (^MongoCollection
    [{::keys [^MongoDatabase db] :as conn} collection opts]
    {:pre [db collection]}
-   (let [opts          (select-keys opts c/registry-options-keys)
-         registry-opts (when (seq opts)
-                         (merge (select-keys conn c/registry-options-keys)
-                                opts))]
+   (let [registry-opts (-> (merge conn opts)
+                           (select-keys c/registry-options-keys))]
      (cond-> (.getCollection db (name collection) PersistentHashMap)
        (seq registry-opts) (.withCodecRegistry (c/registry registry-opts))))))
 
