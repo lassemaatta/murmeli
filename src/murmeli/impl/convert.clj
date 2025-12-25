@@ -293,7 +293,8 @@
 
 (def registry-options-keys #{:allow-qualified?
                              :keywords?
-                             :sanitize-strings?})
+                             :sanitize-strings?
+                             :retain-order?})
 
 (defn join-registries
   "Combine multiple `CodecRegistry`s into a single `CodecRegistry`."
