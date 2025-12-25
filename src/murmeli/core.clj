@@ -433,6 +433,7 @@
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
   * `comment` -- Operation comment string
   * `hint` -- Indexing hint document
+  * `sort` -- Vector of field name and sort type
   * `upsert?` -- If true, insert `changes` document if no existing document matches `query`
   * `variables` -- Top-level variable documents
 
@@ -445,6 +446,7 @@
                                                         collation-options
                                                         comment
                                                         hint
+                                                        sort
                                                         upsert?
                                                         variables]}])}
   [conn collection query changes & {:as options}]
@@ -461,6 +463,7 @@
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
   * `comment` -- Operation comment string
   * `hint` -- Indexing hint document
+  * `sort` -- Vector of field name and sort type
   * `upsert?` -- If true, insert `changes` document if no existing document matches `query`
   * `variables` -- Top-level variable documents
 
@@ -473,6 +476,7 @@
                                                         collation-options
                                                         comment
                                                         hint
+                                                        sort
                                                         upsert?
                                                         variables]}])}
   [conn collection query changes & {:as options}]
@@ -692,11 +696,17 @@
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
   which can be reduced (using `reduce`, `into`, `transduce`, `run!`,...)
   to execute the aggregation and produce the resulting documents."
+  {:arglists '([conn collection pipeline & {:keys [allow-disk-use?
+                                                   batch-size
+                                                   max-time-ms]}])}
   [conn collection pipeline & {:as options}]
   (collection/aggregate-reducible! conn collection pipeline options))
 
 (defn aggregate!
   "Like [[aggregate-reducible!]], but eagerly executes the aggregation and returns a vector of documents."
+  {:arglists '([conn collection pipeline & {:keys [allow-disk-use?
+                                                   batch-size
+                                                   max-time-ms]}])}
   [conn collection pipeline & {:as options}]
   (let [documents (into [] (collection/aggregate-reducible! conn collection pipeline options))]
     (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))
