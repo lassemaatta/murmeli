@@ -403,12 +403,6 @@
   :args (s/cat :m map? :registry ::registry)
   :ret ::bson)
 
-(s/def ::from-bson-options (s/keys :opt-un [::keywords?]))
-
-(s/fdef mc/from-bson
-  :args (s/cat :options (s/? ::from-bson-options)
-               :bson bson-value?))
-
 ;; murmeli.data-interop
 
 (defn read-preference?
