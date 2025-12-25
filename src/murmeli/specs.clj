@@ -306,10 +306,12 @@
 (s/def ::projection-list (s/coll-of ::key))
 (s/def ::projection (s/or :list ::projection-list
                           :map ::projection-map))
-(s/def ::sort (s/map-of ::key any?
-                        ;; "You can sort on a maximum of 32 keys."
-                        :min-count 1
-                        :max-count 32))
+(s/def ::sort-entry (s/tuple ::key #{-1 1}))
+(s/def ::sort (s/coll-of ::sort-entry
+                         :kind vector?
+                         ;; "You can sort on a maximum of 32 keys."
+                         :min-count 1
+                         :max-count 32))
 (s/def ::limit ::integer)
 (s/def ::skip ::integer)
 (s/def ::batch-size int?)
@@ -812,3 +814,7 @@
 (s/fdef di/make-insert-many-options
   :args (s/cat :options ::make-insert-many-options)
   :ret (s/nilable insert-many-options?))
+
+(s/fdef di/make-sort
+  :args (s/cat :kvs ::sort)
+  :ret ::bson)

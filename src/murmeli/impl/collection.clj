@@ -123,7 +123,7 @@
     (seq array-filters) (assoc :array-filters (mapv (fn [f] (c/map->bson f registry)) array-filters))
     (seq hint)          (assoc :hint (c/map->bson hint registry))
     (seq projection)    (assoc :projection (preprocess-projection projection registry))
-    (seq sort)          (assoc :sort (c/map->bson sort registry))
+    (seq sort)          (assoc :sort (di/make-sort sort))
     (seq variables)     (assoc :variables (c/map->bson variables registry))
     true                not-empty))
 
@@ -339,7 +339,7 @@
                      (c/map->bson query registry))
         projection (preprocess-projection projection registry)
         sort       (when (seq sort)
-                     (c/map->bson sort registry))
+                     (di/make-sort sort))
         it         ^FindIterable (cond
                                    (and query session) (.find coll session query PersistentHashMap)
                                    session             (.find coll session PersistentHashMap)

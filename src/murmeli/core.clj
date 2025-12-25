@@ -605,7 +605,7 @@
   * `projection` -- Either a sequence of field names or a map of field names to projection types
   * `query` -- Map describing the query to run
   * `skip` -- Skip first N documents
-  * `sort` -- Map of field name to sort type
+  * `sort` -- Vector of field name and sort type
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
   which can be reduced (using `reduce`, `into`, `transduce`, `run!`..). to execute the query and produce the matched documents."

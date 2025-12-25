@@ -51,7 +51,7 @@
            [java.time Instant]
            [java.util List]
            [java.util.concurrent TimeUnit]
-           [org.bson Document]
+           [org.bson BsonDocument BsonInt32 Document]
            [org.bson.conversions Bson]))
 
 (set! *warn-on-reflection* true)
@@ -707,3 +707,11 @@
      :txn-number                  (some-> (.getTxnNumber doc) .getValue)
      :update-description          (some-> (.getUpdateDescription doc) (update-description bson->map))
      :wall-time                   (some-> doc .getWallTime .getValue Instant/ofEpochMilli)}))
+
+(defn make-sort
+  ^Bson [kvs]
+  (let [doc (BsonDocument.)]
+    (run! (fn [[k v]]
+            (.append doc (name k) (BsonInt32. v)))
+          kvs)
+    doc))

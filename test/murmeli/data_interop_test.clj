@@ -144,3 +144,7 @@
 (deftest make-insert-many-options-test
   (is (match? passed
               (stest/check `di/make-insert-many-options))))
+
+(deftest make-sort-test
+  (is (match? passed
+              (stest/check `di/make-sort))))

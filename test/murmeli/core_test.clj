@@ -367,10 +367,10 @@
                       {:_id id-3 :foo 200 :bar "aaaa"}]
                      results)))))
         (testing "sorting"
-          (let [results (m/find-all conn coll :sort (array-map :foo 1))]
+          (let [results (m/find-all conn coll :sort [[:foo 1]])]
             (is (= [item-2 item-1 item-3]
                    results)))
-          (let [results (m/find-all conn coll :sort (array-map :foo -1))]
+          (let [results (m/find-all conn coll :sort [[:foo -1]])]
             (is (= [item-3 item-1 item-2]
                    results)))))
       (testing "find all by query"
@@ -416,10 +416,10 @@
             (is (= [{"_id" id "foo" 123} {"_id" id-2} {"_id" id-3 "foo" 200}]
                    results))))
         (testing "sorting"
-          (let [results (m/find-all conn coll :sort (array-map "foo" 1) :keywords? false)]
+          (let [results (m/find-all conn coll :sort [["foo" 1]] :keywords? false)]
             (is (= [item-2 item-1 item-3]
                    results)))
-          (let [results (m/find-all conn coll :sort (array-map "foo" -1) :keywords? false)]
+          (let [results (m/find-all conn coll :sort [["foo" -1]] :keywords? false)]
             (is (= [item-3 item-1 item-2]
                    results)))))
       (testing "find all by query"
