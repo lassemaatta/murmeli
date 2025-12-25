@@ -44,10 +44,7 @@
 
 (defn with-default-registry
   [conn]
-  (with-registry conn (c/registry {:keywords?        true
-                                   :allow-qualified? false})))
-
-
+  (with-registry conn c/default-registry))
 
 (defn drop-db!
   [{::client/keys [^ClientSession session]
@@ -83,16 +80,10 @@
       :else                 (.createCollection db (name collection)))))
 
 (defn get-collection
-  (^MongoCollection
-   [conn collection]
-   (get-collection conn collection nil))
-  (^MongoCollection
-   [{::keys [^MongoDatabase db] :as conn} collection opts]
-   {:pre [db collection]}
-   (let [registry-opts (-> (merge conn opts)
-                           (select-keys c/registry-options-keys))]
-     (cond-> (.getCollection db (name collection) PersistentHashMap)
-       (seq registry-opts) (.withCodecRegistry (c/registry registry-opts))))))
+  ^MongoCollection
+  [{::keys [^MongoDatabase db]} collection]
+  {:pre [db collection]}
+  (.getCollection db (name collection) PersistentHashMap))
 
 (defn list-collection-names-reducible
   [{::keys        [^MongoDatabase db]

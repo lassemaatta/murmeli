@@ -251,9 +251,8 @@
                :collection ::collection
                :index-name ::index-name))
 
-(s/def ::insert-one-options (s/keys* :opt-un [::allow-qualified?
-                                              ::keywords?
-                                              ::sanitize-strings?]))
+(s/def ::insert-one-options (s/keys* :opt-un [::bypass-validation?
+                                              ::comment]))
 
 (s/fdef m/insert-one!
   :args (s/cat :conn ::conn-with-db
@@ -316,18 +315,12 @@
 (s/def ::skip ::integer)
 (s/def ::batch-size int?)
 (s/def ::max-time-ms int?)
-(s/def ::keywords? boolean?)
-(s/def ::allow-qualified? boolean?)
-(s/def ::sanitize-strings? boolean?)
 
-(s/def ::find-all-options (s/keys* :opt-un [::allow-qualified?
-                                            ::batch-size
-                                            ::keywords?
+(s/def ::find-all-options (s/keys* :opt-un [::batch-size
                                             ::limit
                                             ::max-time-ms
                                             ::projection
                                             ::query
-                                            ::sanitize-strings?
                                             ::skip
                                             ::sort]))
 
@@ -338,11 +331,8 @@
 
 (s/def ::warn-on-multiple? boolean?)
 (s/def ::throw-on-multiple? boolean?)
-(s/def ::find-one-options (s/keys* :opt-un [::allow-qualified?
-                                            ::keywords?
-                                            ::projection
+(s/def ::find-one-options (s/keys* :opt-un [::projection
                                             ::query
-                                            ::sanitize-strings?
                                             ::throw-on-multiple?
                                             ::warn-on-multiple?]))
 
@@ -351,10 +341,7 @@
                :collection ::collection
                :options ::find-one-options))
 
-(s/def ::find-by-id-options (s/keys* :opt-un [::allow-qualified?
-                                              ::keywords?
-                                              ::projection
-                                              ::sanitize-strings?]))
+(s/def ::find-by-id-options (s/keys* :opt-un [::projection]))
 
 (s/fdef m/find-by-id
   :args (s/cat :conn ::conn-with-db
@@ -402,6 +389,20 @@
 (s/fdef mc/map->bson
   :args (s/cat :m map? :registry ::registry)
   :ret ::bson)
+
+(s/def ::allow-qualified? boolean?)
+(s/def ::keywords? boolean?)
+(s/def ::sanitize-strings? boolean?)
+(s/def ::retain-order? boolean?)
+
+(s/def ::registry-options (s/keys :opt-un [::allow-qualified?
+                                           ::keywords?
+                                           ::sanitize-strings?
+                                           ::retain-order?]))
+
+(s/fdef mc/registry
+  :args (s/cat :opts ::registry-options)
+  :ret ::registry)
 
 ;; murmeli.data-interop
 
@@ -453,15 +454,17 @@
                                       ::password
                                       ::auth-db]))
 
-(s/def ::client-settings-options (s/keys :opt-un [::uri
-                                                  ::read-concern
-                                                  ::write-concern
-                                                  ::read-preference
-                                                  ::retry-reads?
-                                                  ::retry-writes?
-                                                  ::credentials
-                                                  ::cluster-settings
-                                                  ::ssl-settings]))
+(s/def ::client-settings-options (s/merge
+                                   (s/keys :opt-un [::uri
+                                                    ::read-concern
+                                                    ::write-concern
+                                                    ::read-preference
+                                                    ::retry-reads?
+                                                    ::retry-writes?
+                                                    ::credentials
+                                                    ::cluster-settings
+                                                    ::ssl-settings])
+                                   ::registry-options))
 
 (defn client-settings?
   [object]

@@ -37,18 +37,21 @@
   "Connects to a Mongo instance as described by the `db-spec` by constructing a client connection.
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `cluster-settings` -- Map of cluster settings, see below
   * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
-  * `keywords?` -- If true, deserialize map keys as keywords instead of strings, see [[murmeli.impl.convert/registry]]
   * `read-concern` -- Choose level of read isolation, see [[murmeli.impl.data-interop/get-read-concern]]
   * `read-preference` -- Choose preferred replica set members when reading, see [[murmeli.impl.data-interop/get-read-preference]]
-  * `retain-order?` -- If true, always decodes documents into an array-map, see [[murmeli.impl.convert/registry]]
   * `retry-reads?` -- Retry reads if they fail due to a network error
   * `retry-writes?` -- Retry writes if they fail due to a network error
   * `ssl-settings` -- Map of SSL settings, see below
   * `uri` -- The connection string to use, eg. \"mongodb://[username:password@]host[:port1],...\"
   * `write-concern` -- Acknowledgement of write operations, see [[murmeli.impl.data-interop/get-write-concern]]
+
+  Also, the following registry options may be specified:
+  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
+  * `keywords?` -- If true, deserialize map keys as keywords instead of strings, see [[murmeli.impl.convert/registry]]
+  * `sanitize-strings?`: Remove NULL characters from strings
+  * `retain-order?` -- If true, always decodes documents into an array-map, see [[murmeli.impl.convert/registry]]
 
   The `cluster-settings` map:
   * `hosts` -- Sequence of maps with `host` and optionally `port`
@@ -63,8 +66,10 @@
                         keywords?
                         read-concern
                         read-preference
+                        retain-order?
                         retry-reads?
                         retry-writes?
+                        sanitize-strings?
                         ssl-settings
                         uri
                         write-concern]
@@ -109,8 +114,7 @@
   (client/list-db-names-reducible conn options))
 
 (defn list-db-names
-  {:arglists '([conn & {:keys [batch-size
-                               keywords?]}])}
+  {:arglists '([conn & {:keys [batch-size]}])}
   [conn & {:as options}]
   (let [names (client/list-db-names conn options)]
     (log/debugf "Database names query found %d names." (count names))
@@ -292,7 +296,6 @@
   * `index-keys` -- Map of index name to index type (1, -1, 2d, 2dsphere, text)
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `background?` -- Create index in the background
   * `bits` -- 2d index location geodata hash precision bits
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
@@ -317,8 +320,7 @@
   {:arglists '([conn
                 collection
                 index-keys
-                & {:keys [allow-qualified?
-                          background?
+                & {:keys [background?
                           bits
                           collation-options
                           default-language
@@ -329,7 +331,6 @@
                           max-boundary
                           min-boundary
                           partial-filter-expression
-                          sanitize-strings?
                           sparse?
                           sphere-version
                           storage-engine
@@ -353,8 +354,7 @@
   {:arglists '([conn
                 collection
                 & {:keys [batch-size
-                          max-time-ms
-                          keywords?]}])}
+                          max-time-ms]}])}
   [conn collection & {:as options}]
   (let [documents (collection/list-indexes conn collection options)]
     (log/debugf "Index query on '%s' found '%s' indexes." collection (count documents))
@@ -389,15 +389,14 @@
   If the document does not contain an `_id` field, one will be generated (by default an `ObjectId`).
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `bypass-validation?` -- If true, bypass document validation
   * `comment` -- Operation comment string
 
   Returns a map with:
   * `id` -- `_id` of the inserted document (`String` or `ObjectId`)
   * `acknowledged?` -- True if the insertion was acknowledged"
-  {:arglists '([conn collection doc & {:keys [allow-qualified?
-                                              sanitize-strings?]}])}
+  {:arglists '([conn collection doc & {:keys [bypass-validation?
+                                              comment]}])}
   [conn collection doc & {:as options}]
   (let [result (collection/insert-one! conn collection doc options)]
     (log/debugf "Inserted document to '%s' with id '%s'." collection (:_id result))
@@ -408,7 +407,6 @@
   If the documents do not contain `_id` fields, one will be generated (by default an `ObjectId`).
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `bypass-validation?` -- If true, bypass document validation
   * `comment` -- Operation comment string
   * `ordered?` -- Insert documents in the order provided, stop on the first error
@@ -416,8 +414,9 @@
   Returns a map with:
   * `_ids` -- a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order
   * `acknowledged?` -- True if the insertion was acknowledged"
-  {:arglists '([conn collection docs & {:keys [allow-qualified?
-                                               sanitize-strings?]}])}
+  {:arglists '([conn collection docs & {:keys [bypass-validation?
+                                               comment
+                                               ordered?]}])}
   [conn collection docs & {:as options}]
   (let [result (collection/insert-many! conn collection docs options)]
     (log/debugf "Inserted %d documents to '%s'." (count (:_ids result)) collection)
@@ -429,7 +428,6 @@
   "Find document matching `query` and apply `changes` to it.
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `array-filters` -- List of array filter documents
   * `bypass-validation?` -- If true, bypass document validation
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
@@ -442,8 +440,7 @@
   * `:matched` -- Number of documents matched.
   * `:modified` -- Number of documents modified.
   * `:_id` -- Upserted `_id`, if any."
-  {:arglists '([conn collection query changes & {:keys [allow-qualified?
-                                                        array-filters
+  {:arglists '([conn collection query changes & {:keys [array-filters
                                                         bypass-validation?
                                                         collation-options
                                                         comment
@@ -459,7 +456,6 @@
   "Find document(s) matching `query` and apply `changes` to them.
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `array-filters` -- List of array filter documents
   * `bypass-validation?` -- If true, bypass document validation
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
@@ -472,13 +468,11 @@
   * `:matched` -- Number of documents matched.
   * `:modified` -- Number of documents modified.
   * `:_id` -- Upserted `_id`, if any."
-  {:arglists '([conn collection query changes & {:keys [allow-qualified?
-                                                        array-filters
+  {:arglists '([conn collection query changes & {:keys [array-filters
                                                         bypass-validation?
                                                         collation-options
                                                         comment
                                                         hint
-                                                        sanitize-strings?
                                                         upsert?
                                                         variables]}])}
   [conn collection query changes & {:as options}]
@@ -495,13 +489,10 @@
   * `:matched` -- Number of documents matched.
   * `:modified` -- Number of documents modified.
   * `:_id` -- Upserted `_id`, if any."
-  {:arglists '([conn collection query changes & {:keys [allow-qualified?
-                                                        bypass-validation?
+  {:arglists '([conn collection query changes & {:keys [bypass-validation?
                                                         collation-options
                                                         comment
                                                         hint
-                                                        keywords?
-                                                        sanitize-strings?
                                                         upsert?
                                                         variables]}])}
   [conn collection query replacement & {:as options}]
@@ -517,8 +508,8 @@
   Returns a map, where
   * `:acknowledged?` -- True if the deletion was acknowledged.
   * `:count` -- Number of documents deleted."
-  [conn collection query & {:as options}]
-  (let [response (collection/delete-one! conn collection query options)]
+  [conn collection query]
+  (let [response (collection/delete-one! conn collection query)]
     (log/debugf "Deleted document (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
     response))
 
@@ -528,8 +519,8 @@
   Returns a map, where
   * `:acknowledged?` -- True if the deletion was acknowledged.
   * `:count` -- Number of documents deleted."
-  [conn collection query & {:as options}]
-  (let [response (collection/delete-many! conn collection query options)]
+  [conn collection query]
+  (let [response (collection/delete-many! conn collection query)]
     (log/debugf "Deleted document(s) (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
     response))
 
@@ -539,15 +530,12 @@
   "Count the number of documents in a collection.
 
   Returns the number of documents."
-  {:arglists '([conn collection & {:keys [allow-qualified?
-                                          collation-options
+  {:arglists '([conn collection & {:keys [collation-options
                                           comment
                                           hint
-                                          keywords?
                                           limit
                                           max-time-ms
                                           query
-                                          sanitize-strings?
                                           skip]}])}
   [conn collection & {:as options}]
   (let [c (collection/count-collection conn collection options)]
@@ -569,12 +557,9 @@
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
   which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to execute the query and produce the distinct values."
-  {:arglists '([conn collection field & {:keys [allow-qualified?
-                                                batch-size
-                                                keywords?
+  {:arglists '([conn collection field & {:keys [batch-size
                                                 max-time-ms
-                                                query
-                                                sanitize-strings?]}])}
+                                                query]}])}
   [conn collection field & {:as options}]
   (collection/find-distinct-reducible conn collection field options))
 
@@ -582,12 +567,9 @@
   "Find all distinct value of a field in a collection.
 
   Returns a set containing the distinct values."
-  {:arglists '([conn collection field & {:keys [allow-qualified?
-                                                batch-size
-                                                keywords?
+  {:arglists '([conn collection field & {:keys [batch-size
                                                 max-time-ms
-                                                query
-                                                sanitize-strings?]}])}
+                                                query]}])}
   [conn collection field & {:as options}]
   (let [values (into #{} (collection/find-distinct-reducible conn collection field options))]
     (log/debugf "Distinct query for field '%s' in collection '%s' found %d unique values." field collection (count values))
@@ -597,9 +579,7 @@
   "Query for documents in the given collection.
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `batch-size` -- Fetch documents in N sized batches
-  * `keywords?` -- Decode map keys as keywords instead of strings
   * `limit` -- Limit number of results to return
   * `max-time-ms` -- Maximum execution time on server in milliseconds
   * `projection` -- Either a sequence of field names or a map of field names to projection types
@@ -609,14 +589,11 @@
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
   which can be reduced (using `reduce`, `into`, `transduce`, `run!`..). to execute the query and produce the matched documents."
-  {:arglists '([conn collection & {:keys [allow-qualified?
-                                          batch-size
-                                          keywords?
+  {:arglists '([conn collection & {:keys [batch-size
                                           limit
                                           max-time-ms
                                           projection
                                           query
-                                          sanitize-strings?
                                           skip
                                           sort]}])}
   [conn collection & {:as options}]
@@ -624,14 +601,11 @@
 
 (defn find-all
   "Like [[find-reducible]], but eagerly realizes all matches into a vector."
-  {:arglists '([conn collection & {:keys [allow-qualified?
-                                          batch-size
-                                          keywords?
+  {:arglists '([conn collection & {:keys [batch-size
                                           limit
                                           max-time-ms
                                           projection
                                           query
-                                          sanitize-strings?
                                           skip
                                           sort]}])}
   [conn collection & {:as options}]
@@ -643,11 +617,8 @@
   "Like [[find-all]], but fetches a single document
 
   By default will warn & throw if the query produces more than one document."
-  {:arglists '([conn collection & {:keys [allow-qualified?
-                                          keywords?
-                                          projection
+  {:arglists '([conn collection & {:keys [projection
                                           query
-                                          sanitize-strings?
                                           throw-on-multiple?
                                           warn-on-multiple?]}])}
   [conn collection & {:as options}]
@@ -657,10 +628,7 @@
 
 (defn find-by-id
   "Like [[find-one]], but fetches a single document by id."
-  {:arglists '([conn collection id & {:keys [allow-qualified?
-                                             keywords?
-                                             projection
-                                             sanitize-strings?]}])}
+  {:arglists '([conn collection id & {:keys [projection]}])}
   [conn collection id & {:as options}]
   (collection/find-by-id conn collection id options))
 
@@ -670,14 +638,11 @@
   "Find a document and remove it.
 
   Returns the document, or `nil` if none found."
-  {:arglists '([conn collection query & {:keys [allow-qualified?
-                                                collation-options
+  {:arglists '([conn collection query & {:keys [collation-options
                                                 comment
                                                 hint
-                                                keywords?
                                                 max-time-ms
                                                 projection
-                                                sanitize-strings?
                                                 sort
                                                 variables]}])}
   [conn collection query & {:as options}]
@@ -688,16 +653,13 @@
 
   Returns the document, or `nil` if none found. The `return` argument controls
   whether we return the document before or after the replacement."
-  {:arglists '([conn collection query replacement & {:keys [allow-qualified?
-                                                            bypass-validation?
+  {:arglists '([conn collection query replacement & {:keys [bypass-validation?
                                                             collation-options
                                                             comment
                                                             hint
-                                                            keywords?
                                                             max-time-ms
                                                             projection
                                                             return
-                                                            sanitize-strings?
                                                             sort
                                                             upsert?
                                                             variables]}])}
@@ -708,17 +670,14 @@
   "Find a document and update it.
   Returns the document, or ´nil´ if none found. The `return` argument controls
   whether we return the document before or after the replacement."
-  {:arglists '([conn collection query updates & {:keys [allow-qualified?
-                                                        array-filters
+  {:arglists '([conn collection query updates & {:keys [array-filters
                                                         bypass-validation?
                                                         collation-options
                                                         comment
                                                         hint
-                                                        keywords?
                                                         max-time-ms
                                                         projection
                                                         return
-                                                        sanitize-strings?
                                                         sort
                                                         upsert?
                                                         variables]}])}
@@ -752,13 +711,11 @@
   to run the reducing within a separate thread (e.g., with `future`).
 
   Options:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
   * `batch-size` -- Fetch documents in N sized batches
   * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
   * `comment` -- Comment for this operation
   * `full-document` -- Should the stream include the updated document, see [[murmeli.impl.data-interop/get-full-document]]
   * `full-document-before-change` -- Should the stream include the original document, see [[murmeli.impl.data-interop/get-full-document-before-change]]
-  * `keywords?` -- Decode map keys as keywords instead of strings
   * `max-time-ms` -- Maximum execution time on server in milliseconds
   * `pipeline` -- Apply an aggregation pipeline against the stream
 

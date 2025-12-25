@@ -3,7 +3,8 @@
 
   See [MongoCollection](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoCollection.html)."
   {:no-doc true}
-  (:require [clojure.tools.logging :as log]
+  (:require [clojure.set :as set]
+            [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
             [murmeli.impl.convert :as c]
             [murmeli.impl.cursor :as cursor]
@@ -41,7 +42,7 @@
              weights]
       :as   options}]
   {:pre [conn collection (map? index-keys)]}
-  (let [coll             (db/get-collection conn collection options)
+  (let [coll             (db/get-collection conn collection)
         registry         (.getCodecRegistry coll)
         index-keys       (di/make-index-bson index-keys)
         ^IndexOptions io (cond-> options
@@ -59,10 +60,9 @@
   [{::client/keys [^ClientSession session] :as conn}
    collection
    & {:keys [batch-size
-             max-time-ms]
-      :as   options}]
+             max-time-ms]}]
   {:pre [conn collection]}
-  (let [coll                    (db/get-collection conn collection options)
+  (let [coll                    (db/get-collection conn collection)
         ^ListIndexesIterable it (if session
                                   (.listIndexes coll session PersistentHashMap)
                                   (.listIndexes coll PersistentHashMap))
@@ -135,7 +135,7 @@
    doc
    & {:as options}]
   {:pre [conn collection (map? doc)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         options  (some-> options
                          (preprocess-options registry)
@@ -156,7 +156,7 @@
    & {:as options}]
   {:pre [conn collection (seq docs) (every? map? docs)]}
   (let [docs     ^List (vec docs)
-        coll     (db/get-collection conn collection options)
+        coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         options  (some-> options
                          (preprocess-options registry)
@@ -181,7 +181,7 @@
    changes
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         filter   (c/map->bson query registry)
         updates  (c/map->bson changes registry)
@@ -202,7 +202,7 @@
    changes
    & {:as options}]
   {:pre [conn collection (map? query) (map? changes)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         filter   (c/map->bson query (.getCodecRegistry coll))
         updates  (c/map->bson changes (.getCodecRegistry coll))
@@ -225,7 +225,7 @@
    replacement
    & {:as options}]
   {:pre [conn collection (map? query) (map? replacement)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         filter   (c/map->bson query (.getCodecRegistry coll))
         options  (some-> options
@@ -243,10 +243,9 @@
 (defn delete-one!
   [{::client/keys [^ClientSession session] :as conn}
    collection
-   query
-   & {:as options}]
+   query]
   {:pre [conn collection (map? query)]}
-  (let [coll   (db/get-collection conn collection options)
+  (let [coll   (db/get-collection conn collection)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteOne coll session query)
@@ -257,10 +256,9 @@
 (defn delete-many!
   [{::client/keys [^ClientSession session] :as conn}
    collection
-   query
-   & {:as options}]
+   query]
   {:pre [conn collection (map? query)]}
-  (let [coll   (db/get-collection conn collection options)
+  (let [coll   (db/get-collection conn collection)
         query  (c/map->bson query (.getCodecRegistry coll))
         result (cond
                  session (.deleteMany coll session query)
@@ -275,7 +273,7 @@
    collection
    & {:keys [query] :as options}]
   {:pre [conn collection]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         query    (when query
                    (c/map->bson query registry))
@@ -303,10 +301,9 @@
    field
    & {:keys [query
              batch-size
-             max-time-ms]
-      :as   options}]
+             max-time-ms]}]
   {:pre [conn collection field]}
-  (let [coll                 (db/get-collection conn collection options)
+  (let [coll                 (db/get-collection conn collection)
         field-name           (name field)
         query                (when (seq query)
                                (c/map->bson query (.getCodecRegistry coll)))
@@ -330,10 +327,9 @@
              projection
              query
              skip
-             sort]
-      :as   options}]
+             sort]}]
   {:pre [conn collection]}
-  (let [coll       (db/get-collection conn collection options)
+  (let [coll       (db/get-collection conn collection)
         registry   (.getCodecRegistry coll)
         query      (when (seq query)
                      (c/map->bson query registry))
@@ -368,7 +364,8 @@
         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
         cnt       (if (or warn-on-multiple? throw-on-multiple?) -2 -1)
         options   (-> options
-                      (select-keys [:query :projection :keywords? :allow-qualified?])
+                      (select-keys (set/union #{:query :projection}
+                                              c/registry-options-keys))
                       (assoc :limit cnt :batch-size 2))
         results   (into [] (find-reducible conn collection options))
         multiple? (< 1 (count results))]
@@ -393,7 +390,7 @@
    query
    & {:as options}]
   {:pre [conn collection (seq query)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         query    (c/map->bson query registry)
         options  (some-> options
@@ -412,7 +409,7 @@
    replacement
    & {:as options}]
   {:pre [conn collection (map? replacement) (map? query)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         query    (c/map->bson query registry)
         options  (some-> options
@@ -431,7 +428,7 @@
    updates
    & {:as options}]
   {:pre [conn collection (map? updates) (map? query)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         query    (c/map->bson query registry)
         updates  (c/map->bson updates registry)
@@ -452,10 +449,9 @@
    pipeline
    & {:keys [allow-disk-use?
              batch-size
-             max-time-ms]
-      :as   options}]
+             max-time-ms]}]
   {:pre [conn collection (sequential? pipeline)]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         pipeline ^List (mapv (fn [m] (c/map->bson m registry)) pipeline)
         it       (cond
@@ -478,10 +474,9 @@
              full-document
              full-document-before-change
              max-time-ms
-             pipeline]
-      :as   options}]
+             pipeline]}]
   {:pre [conn collection]}
-  (let [coll     (db/get-collection conn collection options)
+  (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
         pipeline (when (seq pipeline)
                    ^List (mapv (fn [m] (c/map->bson m registry)) pipeline))

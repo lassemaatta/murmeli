@@ -110,6 +110,17 @@
                   :foo 0.5}
                  (m/find-by-id conn coll _id))))))))
 
+(deftest registry-override-test
+  (test-utils/with-matrix
+    (let [conn (test-utils/get-conn)
+          coll (get-coll)
+          id   (:_id (m/insert-one! conn coll {:foo 123}))]
+      (is (= {:_id id :foo 123} (m/find-by-id conn coll id)))
+      (let [conn (m/with-registry conn (mc/registry {:keywords? false}))]
+        (is (= {"_id" id "foo" 123} (m/find-by-id conn coll id))))
+      (let [conn (m/with-registry conn (mc/registry {:keywords? true}))]
+        (is (= {:_id id :foo 123} (m/find-by-id conn coll id)))))))
+
 (deftest drop-db-test
   (test-utils/with-matrix
     (let [conn         (test-utils/get-conn)
@@ -206,7 +217,9 @@
                   res (:bar (m/find-by-id conn coll id))]
               (is (= res "foo \0 asd"))))
           (testing "and we can choose to sanitize them"
-            (let [id  (:_id (m/insert-one! conn coll {"bar" "foo \0 asd"} {:sanitize-strings? true}))
+            (let [id  (:_id (-> conn
+                                (m/with-registry (mc/registry {:sanitize-strings? true}))
+                                (m/insert-one! coll {"bar" "foo \0 asd"})))
                   res (:bar (m/find-by-id conn coll id))]
               (is (= res "foo  asd"))))
           (testing "... but not field names as they are stored as C strings"
@@ -392,7 +405,8 @@
 (deftest str-coll-test
   (test-utils/with-matrix
     (let [coll   (get-coll)
-          conn   (test-utils/get-conn)
+          conn   (-> (test-utils/get-conn)
+                     (m/with-registry (mc/registry {:keywords? false})))
           id     (:_id (m/insert-one! conn coll {"foo" 123}))
           id-2   (:_id (m/insert-one! conn coll {"bar" "quuz"}))
           id-3   (:_id (m/insert-one! conn coll {"foo" 200
@@ -405,38 +419,38 @@
                   "foo" 200
                   "bar" "aaaa"}]
       (testing "find all"
-        (let [results (m/find-all conn coll :keywords? false)]
+        (let [results (m/find-all conn coll)]
           (is (= [item-1 item-2 item-3]
                  results)))
         (testing "projection"
-          (let [results (m/find-all conn coll :projection {"_id" 1} :keywords? false)]
+          (let [results (m/find-all conn coll :projection {"_id" 1})]
             (is (= [{"_id" id} {"_id" id-2} {"_id" id-3}]
                    results)))
-          (let [results (m/find-all conn coll :projection {"foo" 1} :keywords? false)]
+          (let [results (m/find-all conn coll :projection {"foo" 1})]
             (is (= [{"_id" id "foo" 123} {"_id" id-2} {"_id" id-3 "foo" 200}]
                    results))))
         (testing "sorting"
-          (let [results (m/find-all conn coll :sort [["foo" 1]] :keywords? false)]
+          (let [results (m/find-all conn coll :sort [["foo" 1]])]
             (is (= [item-2 item-1 item-3]
                    results)))
-          (let [results (m/find-all conn coll :sort [["foo" -1]] :keywords? false)]
+          (let [results (m/find-all conn coll :sort [["foo" -1]])]
             (is (= [item-3 item-1 item-2]
                    results)))))
       (testing "find all by query"
-        (is (empty? (m/find-all conn coll :query {"foo" {$gt 1000}} :keywords? false)))
+        (is (empty? (m/find-all conn coll :query {"foo" {$gt 1000}})))
         (let [results (m/find-all conn coll :query {"foo" {$gt 5
-                                                           $lt 150}} :keywords? false)]
+                                                           $lt 150}})]
           (is (= [item-1]
                  results))))
       (testing "find one by query"
-        (is (nil? (m/find-one conn coll :query {:foo {$gt 1000}} :keywords? false)))
+        (is (nil? (m/find-one conn coll :query {:foo {$gt 1000}})))
         (let [results (m/find-one conn coll :query {:foo {$gt 5
-                                                          $lt 150}} :keywords? false)]
+                                                          $lt 150}})]
           (is (= item-1 results)))
         (testing "find-one throws on multiple hits"
           (is (thrown-with-msg? RuntimeException
                                 #"find-one found multiple results"
-                                (m/find-one conn coll :query {"_id" {$exists 1}} :keywords? false))))))))
+                                (m/find-one conn coll :query {"_id" {$exists 1}}))))))))
 
 (deftest index-test
   (test-utils/with-matrix
