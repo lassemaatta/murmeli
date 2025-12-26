@@ -1,0 +1,1 @@
+{:lint-as {murmeli.core/with-session clojure.core/with-open}}
