@@ -42,10 +42,6 @@
     conn
     (assoc conn ::db (.withCodecRegistry db registry))))
 
-(defn with-default-registry
-  [conn]
-  (with-registry conn c/default-registry))
-
 (defn drop-db!
   [{::client/keys [^ClientSession session]
     :as           conn}

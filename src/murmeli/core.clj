@@ -95,18 +95,6 @@
   {:pre [database-name]}
   (db/with-db conn database-name))
 
-(defn get-registry
-  [conn]
-  (db/get-registry conn))
-
-(defn with-registry
-  [conn registry]
-  (db/with-registry conn registry))
-
-(defn with-default-registry
-  [conn]
-  (db/with-default-registry conn))
-
 (defn list-db-names-reducible
   "Query all the database names."
   {:arglists '([conn & {:keys [batch-size]}])}
@@ -154,6 +142,41 @@
   [conn database-name]
   (db/drop-db! conn database-name)
   (log/debugf "Dropped database '%s'." database-name))
+
+;; Registry
+
+(defn registry
+  "Construct a `CodecRegistry` for converting between Java classes and BSON
+
+  Options:
+  * `allow-qualified?`: Accept qualified idents (keywords or symbols), even though we discard the namespace.
+                        Default: `false`.
+  * `keywords?`: Decode map keys as keywords instead of strings. Default: `true`.
+  * `sanitize-strings?`: Remove NULL characters from strings. Default: `false`.
+  * `retain-order?`: If true, always decodes documents into an array-map. Retains original key order,
+                     but slower lookup (vs. hashmap). If false, decodes into array-map or hash-map.
+                     Default: `false`."
+  {:arglists '([{:keys [allow-qualified?
+                        keywords?
+                        retain-order?
+                        sanitize-strings?]}])}
+  [& {:as options}]
+  (c/registry options))
+
+(defn get-registry
+  "Get the current `CodecRegistry` from the current `MongoDatabase`"
+  [conn]
+  (db/get-registry conn))
+
+(defn with-registry
+  "Returns a `conn` with the given `CodecRegistry` assigned to the current `MongoDatabase`"
+  [conn registry]
+  (db/with-registry conn registry))
+
+(defn with-default-registry
+  "Returns a `conn` with the default registry assigned to the current `MongoDatabase`"
+  [conn]
+  (db/with-registry conn c/default-registry))
 
 ;; Collections
 

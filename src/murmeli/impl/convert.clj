@@ -296,8 +296,6 @@
                       :sanitize-strings? false
                       :retain-order?     false})
 
-(def registry-options-keys (set (keys default-options)))
-
 (defn join-registries
   "Combine multiple `CodecRegistry`s into a single `CodecRegistry`."
   ^CodecRegistry [& registries]
@@ -320,21 +318,11 @@
     (into-array CodecProvider providers)))
 
 (defn registry
-  "Construct a `CodecRegistry` for converting between Java classes and BSON
-  Options:
-  * `allow-qualified?`: Accept qualified idents (keywords or symbols), even though we discard the namespace
-  * `keywords?`: Decode map keys as keywords instead of strings
-  * `sanitize-strings?`: Remove NULL characters from strings
-  * `retain-order?`: If true, always decodes documents into an array-map. Retains original key order,
-                     but slower lookup (vs. hashmap). If false, decodes into array-map or hash-map."
-  {:arglists '([{:keys [allow-qualified?
-                        keywords?
-                        retain-order?
-                        sanitize-strings?]}])}
+  "Construct a `CodecRegistry` for converting between Java classes and BSON"
   ^CodecRegistry [opts]
   (join-registries
     (providers->registry
-      (clojure-provider opts)
+      (clojure-provider (merge default-options opts))
       (UuidCodecProvider. UuidRepresentation/STANDARD))
     (MongoClientSettings/getDefaultCodecRegistry)))
 

@@ -3,8 +3,7 @@
 
   See [MongoCollection](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoCollection.html)."
   {:no-doc true}
-  (:require [clojure.set :as set]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
             [murmeli.impl.convert :as c]
             [murmeli.impl.cursor :as cursor]
@@ -364,8 +363,7 @@
         ;; https://www.mongodb.com/docs/manual/reference/method/cursor.limit/#negative-values
         cnt       (if (or warn-on-multiple? throw-on-multiple?) -2 -1)
         options   (-> options
-                      (select-keys (set/union #{:query :projection}
-                                              c/registry-options-keys))
+                      (select-keys #{:query :projection})
                       (assoc :limit cnt :batch-size 2))
         results   (into [] (find-reducible conn collection options))
         multiple? (< 1 (count results))]

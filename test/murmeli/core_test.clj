@@ -116,9 +116,9 @@
           coll (get-coll)
           id   (:_id (m/insert-one! conn coll {:foo 123}))]
       (is (= {:_id id :foo 123} (m/find-by-id conn coll id)))
-      (let [conn (m/with-registry conn (mc/registry {:keywords? false}))]
+      (let [conn (m/with-registry conn (m/registry {:keywords? false}))]
         (is (= {"_id" id "foo" 123} (m/find-by-id conn coll id))))
-      (let [conn (m/with-registry conn (mc/registry {:keywords? true}))]
+      (let [conn (m/with-registry conn (m/registry {:keywords? true}))]
         (is (= {:_id id :foo 123} (m/find-by-id conn coll id)))))))
 
 (deftest drop-db-test
@@ -128,7 +128,7 @@
                          (->> (m/list-dbs conn)
                               (map :name)
                               (into #{})))
-          db-name  (str (gensym "new-db-"))]
+          db-name      (str (gensym "new-db-"))]
       (testing "initial state"
         (is (not (contains? (get-db-names conn) db-name))))
       (testing "dropping an unknown db does nothing"
@@ -218,7 +218,7 @@
               (is (= res "foo \0 asd"))))
           (testing "and we can choose to sanitize them"
             (let [id  (:_id (-> conn
-                                (m/with-registry (mc/registry {:sanitize-strings? true}))
+                                (m/with-registry (m/registry {:sanitize-strings? true}))
                                 (m/insert-one! coll {"bar" "foo \0 asd"})))
                   res (:bar (m/find-by-id conn coll id))]
               (is (= res "foo  asd"))))
@@ -406,7 +406,7 @@
   (test-utils/with-matrix
     (let [coll   (get-coll)
           conn   (-> (test-utils/get-conn)
-                     (m/with-registry (mc/registry {:keywords? false})))
+                     (m/with-registry (m/registry {:keywords? false})))
           id     (:_id (m/insert-one! conn coll {"foo" 123}))
           id-2   (:_id (m/insert-one! conn coll {"bar" "quuz"}))
           id-3   (:_id (m/insert-one! conn coll {"foo" 200
