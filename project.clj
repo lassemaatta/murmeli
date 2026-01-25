@@ -4,7 +4,7 @@
   :license {:name "European Union Public Licence v. 1.2"
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.12.4"]
-                 [org.clojure/tools.logging "1.3.0"]
+                 [org.clojure/tools.logging "1.3.1"]
                  [org.mongodb/mongodb-driver-sync "5.6.2"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
@@ -17,12 +17,12 @@
                                               [clj-test-containers "0.7.4"]
                                               [org.testcontainers/mongodb "1.17.6"]
                                               ;; Generative testing with spec
-                                              [org.clojure/test.check "1.1.2"]
+                                              [org.clojure/test.check "1.1.3"]
                                               ;; Matcher for tests
                                               [nubank/matcher-combinators "3.9.2"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.17"]
-                                              [ch.qos.logback/logback-classic "1.5.23"]]
+                                              [ch.qos.logback/logback-classic "1.5.25"]]
                              :plugins        [[lein-eftest "0.6.0"]]
                              :eftest         {:multithread? true}
                              :resource-paths ["test-resources"]
