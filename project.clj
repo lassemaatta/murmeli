@@ -22,7 +22,7 @@
                                               [nubank/matcher-combinators "3.10.0"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.17"]
-                                              [ch.qos.logback/logback-classic "1.5.29"]]
+                                              [ch.qos.logback/logback-classic "1.5.31"]]
                              :plugins        [[lein-eftest "0.6.0"]]
                              :eftest         {:multithread? true}
                              :resource-paths ["test-resources"]
