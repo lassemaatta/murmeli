@@ -4,7 +4,7 @@ name: murmeli
 
 services:
   mongodb:
-    image: mongo:7.0.28
+    image: mongo:8.0.19
     command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
     ports:
       - '27017:27017'
