@@ -520,6 +520,7 @@
                                                         collation-options
                                                         comment
                                                         hint
+                                                        sort
                                                         upsert?
                                                         variables]}])}
   [conn collection query replacement & {:as options}]

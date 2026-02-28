@@ -593,6 +593,7 @@
                                                ::collation-options
                                                ::comment
                                                :bson/hint
+                                               :bson/sort
                                                ::upsert?
                                                :bson/variables]))
 
