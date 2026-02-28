@@ -5,8 +5,8 @@
             [matcher-combinators.test]
             [murmeli.core :as m]
             [murmeli.impl.convert :as mc]
-            [murmeli.operators :refer [$addFields $eq $exists $group $gt $jsonSchema $lt $match $project $push $set
-                                       $sum]]
+            [murmeli.operators :refer [$addFields $eq $exists $group $gt $gte $jsonSchema $lt $match $project $push
+                                       $set $sum]]
             [murmeli.specs]
             [murmeli.test.utils :as test-utils]
             [murmeli.validators.schema :as vs]
@@ -342,6 +342,34 @@
                      :matched  0
                      :_id      m/object-id?}
                     (m/update-many! conn coll {:quuz "kukka"} {$set {:foo 10}} {:upsert? true})))))))
+
+(deftest replace-one-test
+  (test-utils/with-matrix
+    (let [coll (get-coll)
+          conn (test-utils/get-conn)
+          _    (m/insert-many! conn coll [{:foo 1}
+                                          {:foo 2}
+                                          {:foo 3}])]
+      (testing "replace one"
+        (let [result (m/replace-one! conn coll {:foo {$gte 2}} {:replaced true})]
+          (is (= {:matched  1
+                  :modified 1}
+                 result))
+          (is (match? [{:_id m/object-id? :foo 1}
+                       {:_id m/object-id? :replaced true}
+                       {:_id m/object-id? :foo 3}]
+                      (m/find-all conn coll)))))
+      (testing "with upsert"
+        (let [result (m/replace-one! conn coll {:foo 50} {:this-is-upsert true} :upsert? true)]
+          (is (match? {:_id      m/object-id?
+                       :matched  0
+                       :modified 0}
+                      result))
+          (is (match? [{:_id m/object-id? :foo 1}
+                       {:_id m/object-id? :replaced true}
+                       {:_id m/object-id? :foo 3}
+                       {:_id m/object-id? :this-is-upsert true}]
+                      (m/find-all conn coll))))))))
 
 (deftest find-test
   (test-utils/with-matrix
