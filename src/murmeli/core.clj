@@ -138,7 +138,9 @@
 (defn drop-db!
   "Drop the given database.
   Does nothing, if the database does not exist.
-  Returns `nil`."
+  Returns `nil`.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/databases-collections/#drop-a-database"
   [conn database-name]
   (db/drop-db! conn database-name)
   (log/debugf "Dropped database '%s'." database-name))
@@ -197,7 +199,9 @@
   * `time-series-options` -- Map of time series options, see [[murmeli.impl.data-interop/make-time-series-options]]
   * `validation-options` -- Map of validation options, see [[murmeli.impl.data-interop/make-validation-options]]
 
-  Returns `nil`."
+  Returns `nil`.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/databases-collections/#create-a-collection"
   {:arglists '([conn collection & {:keys [capped?
                                           change-stream-options
                                           clustered-index-options
@@ -245,7 +249,9 @@
   * `max-time-ms` -- Maximum execution time on server in milliseconds
   * `query` -- Query filter
 
-  Returns a set of collection names."
+  Returns a set of collection names.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/databases-collections/#get-a-list-of-collections"
   {:arglists '([conn & {:keys [batch-size
                                max-time-ms
                                keywords?]}])}
@@ -280,7 +286,9 @@
 (defn drop-collection!
   "Drop the given collection from the database.
 
-  Returns `nil`."
+  Returns `nil`.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/databases-collections/#drop-a-collection"
   [conn collection]
   (collection/drop-collection! conn collection)
   (log/debugf "Dropped collection '%s'." collection))
@@ -417,7 +425,9 @@
 
   Returns a map with:
   * `id` -- `_id` of the inserted document (`String` or `ObjectId`)
-  * `acknowledged?` -- True if the insertion was acknowledged"
+  * `acknowledged?` -- True if the insertion was acknowledged
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/insert/#insert-a-single-document"
   {:arglists '([conn collection doc & {:keys [bypass-validation?
                                               comment]}])}
   [conn collection doc & {:as options}]
@@ -436,7 +446,9 @@
 
   Returns a map with:
   * `_ids` -- a vector containing the `_id`s of the inserted documents (`String` or `ObjectId`) in the corresponding order
-  * `acknowledged?` -- True if the insertion was acknowledged"
+  * `acknowledged?` -- True if the insertion was acknowledged
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/insert/#insert-multiple-documents"
   {:arglists '([conn collection docs & {:keys [bypass-validation?
                                                comment
                                                ordered?]}])}
@@ -463,7 +475,9 @@
   Returns a map, where
   * `:matched` -- Number of documents matched.
   * `:modified` -- Number of documents modified.
-  * `:_id` -- Upserted `_id`, if any."
+  * `:_id` -- Upserted `_id`, if any.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/update-documents/#update-one-example"
   {:arglists '([conn collection query changes & {:keys [array-filters
                                                         bypass-validation?
                                                         collation-options
@@ -493,7 +507,9 @@
   Returns a map, where
   * `:matched` -- Number of documents matched.
   * `:modified` -- Number of documents modified.
-  * `:_id` -- Upserted `_id`, if any."
+  * `:_id` -- Upserted `_id`, if any.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/update-documents/#update-many-example"
   {:arglists '([conn collection query changes & {:keys [array-filters
                                                         bypass-validation?
                                                         collation-options
@@ -515,7 +531,9 @@
   Returns a map, where
   * `:matched` -- Number of documents matched.
   * `:modified` -- Number of documents modified.
-  * `:_id` -- Upserted `_id`, if any."
+  * `:_id` -- Upserted `_id`, if any.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/update-documents/#replace"
   {:arglists '([conn collection query changes & {:keys [bypass-validation?
                                                         collation-options
                                                         comment
@@ -535,7 +553,9 @@
 
   Returns a map, where
   * `:acknowledged?` -- True if the deletion was acknowledged.
-  * `:count` -- Number of documents deleted."
+  * `:count` -- Number of documents deleted.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/delete/#delete-a-document"
   [conn collection query]
   (let [response (collection/delete-one! conn collection query)]
     (log/debugf "Deleted document (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
@@ -546,7 +566,9 @@
 
   Returns a map, where
   * `:acknowledged?` -- True if the deletion was acknowledged.
-  * `:count` -- Number of documents deleted."
+  * `:count` -- Number of documents deleted.
+
+  https://www.mongodb.com/docs/drivers/java/sync/current/crud/delete/#delete-many-documents"
   [conn collection query]
   (let [response (collection/delete-many! conn collection query)]
     (log/debugf "Deleted document(s) (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
@@ -557,7 +579,9 @@
 (defn count-collection
   "Count the number of documents in a collection.
 
-  Returns the number of documents."
+  Returns the number of documents.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/query-documents/count/"
   {:arglists '([conn collection & {:keys [collation-options
                                           comment
                                           hint
@@ -584,7 +608,9 @@
   "Find all distinct value of a field in a collection.
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
-  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to execute the query and produce the distinct values."
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to execute the query and produce the distinct values.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/query-documents/distinct/"
   {:arglists '([conn collection field & {:keys [batch-size
                                                 max-time-ms
                                                 query]}])}
@@ -616,7 +642,9 @@
   * `sort` -- Vector of field name and sort type
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
-  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..). to execute the query and produce the matched documents."
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..). to execute the query and produce the matched documents.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/query-documents/find/"
   {:arglists '([conn collection & {:keys [batch-size
                                           limit
                                           max-time-ms
@@ -665,7 +693,9 @@
 (defn find-one-and-delete!
   "Find a document and remove it.
 
-  Returns the document, or `nil` if none found."
+  Returns the document, or `nil` if none found.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/compound-operations/#find-and-delete"
   {:arglists '([conn collection query & {:keys [collation-options
                                                 comment
                                                 hint
@@ -680,7 +710,9 @@
   "Find a document and replace it.
 
   Returns the document, or `nil` if none found. The `return` argument controls
-  whether we return the document before or after the replacement."
+  whether we return the document before or after the replacement.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/compound-operations/#find-and-replace"
   {:arglists '([conn collection query replacement & {:keys [bypass-validation?
                                                             collation-options
                                                             comment
@@ -697,7 +729,9 @@
 (defn find-one-and-update!
   "Find a document and update it.
   Returns the document, or ´nil´ if none found. The `return` argument controls
-  whether we return the document before or after the replacement."
+  whether we return the document before or after the replacement.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/crud/compound-operations/#find-and-update"
   {:arglists '([conn collection query updates & {:keys [array-filters
                                                         bypass-validation?
                                                         collation-options
@@ -719,7 +753,9 @@
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
   which can be reduced (using `reduce`, `into`, `transduce`, `run!`,...)
-  to execute the aggregation and produce the resulting documents."
+  to execute the aggregation and produce the resulting documents.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/aggregation/"
   {:arglists '([conn collection pipeline & {:keys [allow-disk-use?
                                                    batch-size
                                                    max-time-ms]}])}
@@ -754,7 +790,9 @@
   * `pipeline` -- Apply an aggregation pipeline against the stream
 
   Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
-  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to create the change steam and process the change documents as they occur."
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to create the change steam and process the change documents as they occur.
+
+  See https://www.mongodb.com/docs/drivers/java/sync/current/logging-monitoring/change-streams/"
   {:arglists '([conn collection & {:keys [batch-size
                                           collation-options
                                           ^String comment
