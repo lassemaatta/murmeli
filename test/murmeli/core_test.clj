@@ -371,6 +371,37 @@
                        {:_id m/object-id? :this-is-upsert true}]
                       (m/find-all conn coll))))))))
 
+(deftest delete-one-test
+  (test-utils/with-matrix
+    (let [coll (get-coll)
+          conn (test-utils/get-conn)
+          _    (m/insert-many! conn coll [{:foo 1}
+                                          {:foo 2}
+                                          {:foo 3}])]
+      (testing "delete one"
+        (let [result (m/delete-one! conn coll {:foo {$gte 2}})]
+          (is (= {:acknowledged? true
+                  :count         1}
+                 result))
+          (is (match? [{:_id m/object-id? :foo 1}
+                       {:_id m/object-id? :foo 3}]
+                      (m/find-all conn coll))))))))
+
+(deftest delete-many-test
+  (test-utils/with-matrix
+    (let [coll (get-coll)
+          conn (test-utils/get-conn)
+          _    (m/insert-many! conn coll [{:foo 1}
+                                          {:foo 2}
+                                          {:foo 3}])]
+      (testing "delete many"
+        (let [result (m/delete-many! conn coll {:foo {$gte 2}})]
+          (is (= {:acknowledged? true
+                  :count         2}
+                 result))
+          (is (match? [{:_id m/object-id? :foo 1}]
+                      (m/find-all conn coll))))))))
+
 (deftest find-test
   (test-utils/with-matrix
     (let [coll   (get-coll)

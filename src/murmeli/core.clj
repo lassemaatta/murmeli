@@ -558,7 +558,7 @@
   See https://www.mongodb.com/docs/drivers/java/sync/current/crud/delete/#delete-a-document"
   [conn collection query]
   (let [response (collection/delete-one! conn collection query)]
-    (log/debugf "Deleted document (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
+    (log/debugf "Deleted document (acknowledged: %s, count %d)." (:acknowledged? response) (:count response))
     response))
 
 (defn delete-many!
@@ -571,7 +571,7 @@
   https://www.mongodb.com/docs/drivers/java/sync/current/crud/delete/#delete-many-documents"
   [conn collection query]
   (let [response (collection/delete-many! conn collection query)]
-    (log/debugf "Deleted document(s) (acknowledged: %d, count %d)." (:acknowledged? response) (:count response))
+    (log/debugf "Deleted document(s) (acknowledged: %s, count %d)." (:acknowledged? response) (:count response))
     response))
 
 ;; Queries
