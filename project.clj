@@ -5,7 +5,7 @@
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/tools.logging "1.3.1"]
-                 [org.mongodb/mongodb-driver-sync "5.6.3"]
+                 [org.mongodb/mongodb-driver-sync "5.6.4"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
   :deploy-repositories [["clojars"  {:url           "https://clojars.org/repo"
