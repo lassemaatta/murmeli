@@ -189,4 +189,17 @@
                 "file in yet-another-bucket removed")))
 
         (is (= 1 (count (into [] (gfs/find conn))))
-            "original file in bucket")))))
+            "original file in bucket")))
+
+    (testing "anonymous bucket"
+      (let [conn (-> (test-utils/get-conn)
+                     gfs/with-bucket)]
+        (gfs/upload-stream! conn "dummy-4.txt" (str->stream "foo"))
+        (is (= 1 (count (into [] (gfs/find conn)))))
+        (gfs/drop-bucket! conn)))
+
+    (testing "invalid bucket name"
+      (let [conn (test-utils/get-conn)]
+        (is (thrown-with-msg? Exception
+                              #"Not a bucket nor a bucket name"
+                              (gfs/drop-bucket! conn 123)))))))

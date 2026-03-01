@@ -55,7 +55,7 @@
                                 (instance? GridFSBucket bucket-or-bucket-name)
                                 bucket-or-bucket-name
                                 :else
-                                (throw (ex-info "Not a bucker nor a bucket name"
+                                (throw (ex-info "Not a bucket nor a bucket name"
                                                 {:bucket bucket-or-bucket-name})))]
      (cond
        session (.drop bucket session)
