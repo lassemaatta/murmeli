@@ -1,4 +1,4 @@
 {:linters {:clojure-lsp/unused-public-var {:exclude #{murmeli.operators}}
            :warn-on-reflection            {:level :warning}}
- :lint-as {clojure.test.check.clojure-test/defspec clojure.core/def
+ :lint-as {clojure.test.check.clojure-test/defspec clojure.test/deftest
            clojure.test.check.properties/for-all   clojure.core/let}}
