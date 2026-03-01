@@ -766,6 +766,16 @@
                          :b :y
                          :k :v}}]
                  (mapv #(dissoc % :_id) out-plain)))))
+      (testing "consume partially"
+        (let [out-plain (reduce conj
+                                []
+                                (->> (m/find-reducible conn coll)
+                                     (eduction (take 1))))]
+          (is (match? [{:_id m/id?
+                        :set []
+                        :vec []
+                        :map {}}]
+                      out-plain))))
       (testing "example of run! with side-effect"
         (run! (fn [item]
                 (println item))
