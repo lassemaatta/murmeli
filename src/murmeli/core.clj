@@ -678,9 +678,9 @@
                                           throw-on-multiple?
                                           warn-on-multiple?]}])}
   [conn collection & {:as options}]
-  (let [documents (collection/find-one conn collection options)]
-    (log/debugf "Find-one query for collection '%s' found %d documents." collection (count documents))
-    documents))
+  (let [document (collection/find-one conn collection options)]
+    (log/debugf "Find-one query for collection '%s' found %d documents." collection (if document 1 0))
+    document))
 
 (defn find-by-id
   "Like [[find-one]], but fetches a single document by id."
