@@ -102,7 +102,8 @@
   (client/list-db-names-reducible conn options))
 
 (defn list-db-names
-  {:arglists '([conn & {:keys [batch-size]}])}
+  {:arglists '([conn & {:keys [batch-size
+                               keywords?]}])}
   [conn & {:as options}]
   (let [names (client/list-db-names conn options)]
     (log/debugf "Database names query found %d names." (count names))
