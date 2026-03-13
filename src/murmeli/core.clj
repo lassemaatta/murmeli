@@ -671,7 +671,7 @@
     documents))
 
 (defn find-one
-  "Like [[find-all]], but fetches a single document
+  "Like [[find-all]], but fetches a single document (or `nil`).
 
   By default will warn & throw if the query produces more than one document."
   {:arglists '([conn collection & {:keys [projection
@@ -684,7 +684,7 @@
     document))
 
 (defn find-by-id
-  "Like [[find-one]], but fetches a single document by id."
+  "Like [[find-one]], but fetches a single document by id (or `nil`)."
   {:arglists '([conn collection id & {:keys [projection]}])}
   [conn collection id & {:as options}]
   (collection/find-by-id conn collection id options))
