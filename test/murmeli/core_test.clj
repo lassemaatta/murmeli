@@ -16,6 +16,7 @@
            [com.mongodb MongoCommandException]
            [org.bson BsonBinarySubType BsonReader BsonWriter]
            [org.bson.codecs Codec DecoderContext EncoderContext]
+           [org.bson.codecs.configuration CodecConfigurationException]
            [org.bson.types Binary ObjectId]))
 
 (set! *warn-on-reflection* true)
@@ -125,6 +126,12 @@
         (is (= {"_id" id "foo" 123} (m/find-by-id conn coll id))))
       (let [conn (m/with-registry conn (m/registry {:keywords? true}))]
         (is (= {:_id id :foo 123} (m/find-by-id conn coll id)))))))
+
+(deftest missing-codec-test
+  (let [registry (m/registry {})]
+    (is (thrown-with-msg? CodecConfigurationException
+                          #"Can't find a codec for.*clojure.lang.Ratio.*"
+                          (.get registry Ratio)))))
 
 (deftest drop-db-test
   (test-utils/with-matrix

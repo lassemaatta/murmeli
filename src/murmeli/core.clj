@@ -5,7 +5,8 @@
             [murmeli.impl.collection :as collection]
             [murmeli.impl.convert :as c]
             [murmeli.impl.db :as db])
-  (:import [org.bson.types ObjectId]))
+  (:import [org.bson.codecs.configuration CodecRegistry]
+           [org.bson.types ObjectId]))
 
 (set! *warn-on-reflection* true)
 
@@ -178,7 +179,7 @@
                         keywords?
                         retain-order?
                         sanitize-strings?]}])}
-  [& {:as options}]
+  ^CodecRegistry [& {:as options}]
   (c/registry options))
 
 (defn get-registry
