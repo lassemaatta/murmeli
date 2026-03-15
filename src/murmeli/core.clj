@@ -253,9 +253,12 @@
   Returns a set of collection names.
 
   See https://www.mongodb.com/docs/drivers/java/sync/current/databases-collections/#get-a-list-of-collections"
-  {:arglists '([conn & {:keys [batch-size
+  {:arglists '([conn & {:keys [authorized-collections?
+                               batch-size
+                               comment
+                               keywords?
                                max-time-ms
-                               keywords?]}])}
+                               query]}])}
   [conn & {:as options}]
   (let [documents (db/list-collection-names conn options)]
     (log/debugf "Collection names query found %d collections." (count documents))
