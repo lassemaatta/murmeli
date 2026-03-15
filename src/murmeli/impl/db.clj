@@ -88,8 +88,10 @@
    & {:keys [authorized-collections?
              batch-size
              ^String comment
+             keywords?
              max-time-ms
-             query]}]
+             query]
+      :or   {keywords? true}}]
   {:pre [conn db]}
   (let [registry (.getCodecRegistry db)
         it       (cond
@@ -101,16 +103,8 @@
                    comment                 (.comment comment)
                    query                   (.filter (c/map->bson query registry))
                    max-time-ms             (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS))]
-    (cursor/->reducible it)))
-
-(defn list-collection-names
-  [conn & {:keys [keywords?]
-           :or   {keywords? true}
-           :as   options}]
-  {:pre [conn]}
-  (cond->> (list-collection-names-reducible conn options)
-    keywords? (eduction (map keyword))
-    true      (into #{})))
+    (cond->> (cursor/->reducible it)
+      keywords? (eduction (map keyword)))))
 
 (defn list-collections-reducible
   [{::keys        [^MongoDatabase db]

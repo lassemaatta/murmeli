@@ -55,9 +55,14 @@
 (deftest db-test
   (test-utils/with-matrix
     (let [conn (test-utils/get-conn)]
-      (is (reducible? (m/list-db-names-reducible conn)))
+      (testing "reducible"
+        (let [r (m/list-db-names-reducible conn)]
+          (is (reducible? r))
+          (is (every? keyword? (into [] r)))
+          (is (every? string? (into [] (m/list-db-names-reducible conn :keywords? false))))))
       (testing "list database names"
         (let [names (m/list-db-names conn)]
+          (is (set? names))
           (is (every? keyword? names)))
         (let [names (m/list-db-names conn :keywords? false)]
           (is (every? string? names))))

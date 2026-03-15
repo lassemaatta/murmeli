@@ -43,23 +43,17 @@
 
 (defn list-db-names-reducible
   [{::keys [^MongoClient client ^ClientSession session]}
-   & {:keys [batch-size]}]
+   & {:keys [batch-size
+             keywords?]
+      :or   {keywords? true}}]
   {:pre [client]}
   (let [it (cond
              session (.listDatabaseNames client session)
              :else   (.listDatabaseNames client))
         it (cond-> it
              batch-size (.batchSize it))]
-    (cursor/->reducible it)))
-
-(defn list-db-names
-  [conn & {:keys [keywords?]
-           :or   {keywords? true}
-           :as   options}]
-  {:pre [conn]}
-  (cond->> (list-db-names-reducible conn options)
-    keywords? (eduction (map keyword))
-    true      (into [])))
+    (cond->> (cursor/->reducible it)
+      keywords? (eduction (map keyword)))))
 
 (defn list-dbs-reducible
   [{::keys [^MongoClient client ^ClientSession session]}

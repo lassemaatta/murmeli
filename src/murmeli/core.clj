@@ -96,16 +96,31 @@
   (db/with-db conn database-name))
 
 (defn list-db-names-reducible
-  "Query all the database names."
-  {:arglists '([conn & {:keys [batch-size]}])}
+  "Query all the database names.
+
+  Options:
+  * `batch-size` -- Number of documents per batch
+  * `keywords?` -- If true, return collection names as keywords. Default: true.
+
+  Returns a reducible ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java)),
+  which can be reduced (using `reduce`, `into`, `transduce`, `run!`..) to execute the query and produce the database names."
+  {:arglists '([conn & {:keys [batch-size
+                               keywords?]}])}
   [conn & {:as options}]
   (client/list-db-names-reducible conn options))
 
 (defn list-db-names
+  "Query all the database names.
+
+  Options:
+  * `batch-size` -- Number of documents per batch
+  * `keywords?` -- If true, return collection names as keywords. Default: true.
+
+  Returns a set of database names.  "
   {:arglists '([conn & {:keys [batch-size
                                keywords?]}])}
   [conn & {:as options}]
-  (let [names (client/list-db-names conn options)]
+  (let [names (into #{} (client/list-db-names-reducible conn options))]
     (log/debugf "Database names query found %d names." (count names))
     names))
 
@@ -226,6 +241,7 @@
   * `authorized-collections?` -- Allows querying collections names without the `listCollections` privilege
   * `batch-size` -- Number of documents per batch
   * `comment` -- Comment for this operation
+  * `keywords?` -- If true, return collection names as keywords. Default: true.
   * `max-time-ms` -- Maximum execution time on server in milliseconds
   * `query` -- Query filter
 
@@ -234,6 +250,7 @@
   {:arglists '([conn & {:keys [authorized-collections?
                                batch-size
                                comment
+                               keywords?
                                max-time-ms
                                query]}])}
   [conn & {:as options}]
@@ -246,7 +263,7 @@
   * `authorized-collections?` -- Allows querying collections names without the `listCollections` privilege
   * `batch-size` -- Number of documents per batch
   * `comment` -- Comment for this operation
-  * `keywords?` -- If true, return collection names as keywords
+  * `keywords?` -- If true, return collection names as keywords. Default: true.
   * `max-time-ms` -- Maximum execution time on server in milliseconds
   * `query` -- Query filter
 
@@ -260,7 +277,7 @@
                                max-time-ms
                                query]}])}
   [conn & {:as options}]
-  (let [documents (db/list-collection-names conn options)]
+  (let [documents (into #{} (db/list-collection-names-reducible conn options))]
     (log/debugf "Collection names query found %d collections." (count documents))
     documents))
 
