@@ -48,12 +48,6 @@
   * `uri` -- The connection string to use, eg. \"mongodb://[username:password@]host[:port1],...\"
   * `write-concern` -- Acknowledgement of write operations, see [[murmeli.impl.data-interop/get-write-concern]]
 
-  Also, the following registry options may be specified:
-  * `allow-qualified?` -- Accept qualified idents (keywords or symbols), even though we discard the namespace
-  * `keywords?` -- If true, deserialize map keys as keywords instead of strings, see [[murmeli.impl.convert/registry]]
-  * `sanitize-strings?`: Remove NULL characters from strings
-  * `retain-order?` -- If true, always decodes documents into an array-map, see [[murmeli.impl.convert/registry]]
-
   The `cluster-settings` map:
   * `hosts` -- Sequence of maps with `host` and optionally `port`
 
@@ -64,13 +58,10 @@
   Returns a connection (map)."
   {:arglists '([{:keys [cluster-settings
                         credentials
-                        keywords?
                         read-concern
                         read-preference
-                        retain-order?
                         retry-reads?
                         retry-writes?
-                        sanitize-strings?
                         ssl-settings
                         uri
                         write-concern]
