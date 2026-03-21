@@ -15,6 +15,7 @@
                         ReadPreference
                         WriteConcern]
            [com.mongodb.client ClientSession MongoClient MongoDatabase]
+           [com.mongodb.client.cursor TimeoutMode]
            [com.mongodb.client.model ChangeStreamPreAndPostImagesOptions
                                      ClusteredIndexOptions
                                      Collation
@@ -65,6 +66,7 @@
 (defn session-options?              [object] (instance? ClientSessionOptions object))
 (defn session?                      [object] (instance? ClientSession object))
 (defn time-series-options?          [object] (instance? TimeSeriesOptions object))
+(defn timeout-mode?                 [object] (instance? TimeoutMode object))
 (defn update-options?               [object] (instance? UpdateOptions object))
 (defn validation-options?           [object] (instance? ValidationOptions object))
 (defn write-concern?                [object] (instance? WriteConcern object))
@@ -701,6 +703,10 @@
   :args (s/cat :choice ::write-concern)
   :ret (s/nilable write-concern?))
 
+(s/fdef di/get-timeout-mode
+  :args (s/cat :timeout-mode ::timeout-mode)
+  :ret timeout-mode?)
+
 (s/fdef di/make-client-settings
   :args (s/cat :options ::client-settings-options)
   :ret client-settings?)
@@ -745,6 +751,10 @@
   :args (s/cat :options ::make-count-options)
   :ret (s/nilable count-options?))
 
+;; TODO `make-gridfs-upload-options`
+
+;; TODO `make-gridfs-download-options`
+
 (s/fdef di/make-change-stream-options
   :args (s/cat :options ::change-stream-options)
   :ret (s/nilable change-stream-options?))
@@ -776,6 +786,14 @@
 (s/fdef di/make-insert-many-options
   :args (s/cat :options ::make-insert-many-options)
   :ret (s/nilable insert-many-options?))
+
+;; TODO: `update-result->map`
+
+;; TODO: `get-full-document`
+
+;; TODO: `get-full-document-before-change`
+
+;; TODO: `change-stream-document`
 
 (s/fdef di/make-sort
   :args (s/cat :kvs ::sort)

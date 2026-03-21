@@ -518,7 +518,7 @@
     (-> (IndexOptionDefaults.)
         (.storageEngine storage-engine))))
 
-(defn get-granularity
+(defn- get-granularity
   {:no-doc true}
   ^TimeSeriesGranularity [granularity]
   (case granularity
@@ -542,14 +542,14 @@
       meta-field              (.metaField meta-field)
       granularity             (.granularity (get-granularity granularity)))))
 
-(defn get-validation-action
+(defn- get-validation-action
   {:no-doc true}
   ^ValidationAction [action]
   (case action
     :error ValidationAction/ERROR
     :warn  ValidationAction/WARN))
 
-(defn get-validation-level
+(defn- get-validation-level
   {:no-doc true}
   ^ValidationLevel [level]
   (case level
