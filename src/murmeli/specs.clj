@@ -564,7 +564,7 @@
                :database-name ::database-name)
   :ret ::conn-with-db)
 
-(s/fdef m/disconnect
+(s/fdef m/disconnect!
   :args (s/cat :conn ::conn)
   :ret nil?)
 
