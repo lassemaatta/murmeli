@@ -33,7 +33,6 @@
                                      UpdateOptions
                                      ValidationOptions]
            [java.util.regex Pattern]
-           [org.bson BsonValue]
            [org.bson.codecs.configuration CodecRegistry]
            [org.bson.conversions Bson]))
 
@@ -41,7 +40,6 @@
 
 ;;; Predicates
 
-(defn bson-value?                   [object] (instance? BsonValue object))
 (defn bson?                         [object] (instance? Bson object))
 (defn change-stream-options?        [object] (instance? ChangeStreamPreAndPostImagesOptions object))
 (defn client-settings?              [object] (instance? MongoClientSettings object))
@@ -676,10 +674,6 @@
                :options ::find-by-id-options))
 
 ;; murmeli.impl.convert
-
-(s/fdef mc/to-bson
-  :args (s/cat :object ::convertable)
-  :ret bson-value?)
 
 (s/fdef mc/map->bson
   :args (s/cat :m map? :registry ::registry)
