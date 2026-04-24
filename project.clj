@@ -5,7 +5,7 @@
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.12.4"]
                  [org.clojure/tools.logging "1.3.1"]
-                 [org.mongodb/mongodb-driver-sync "5.6.4"]
+                 [org.mongodb/mongodb-driver-sync "5.6.5"]
                  [prismatic/schema "1.4.1"]]
   :target-path "target/%s"
   :deploy-repositories [["clojars"  {:url           "https://clojars.org/repo"
@@ -13,7 +13,7 @@
                                      :username      :env/clojars_username
                                      :password      :env/clojars_password}]]
   :profiles {:dev           {:dependencies   [;; Testcontainers for mongodb
-                                              [org.testcontainers/testcontainers "2.0.3"]
+                                              [org.testcontainers/testcontainers "2.0.5"]
                                               [clj-test-containers "0.7.4"]
                                               [org.testcontainers/mongodb "1.17.6"]
                                               ;; Generative testing with spec
