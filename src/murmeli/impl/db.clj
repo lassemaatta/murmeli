@@ -52,6 +52,21 @@
       (.drop db session)
       (.drop db))))
 
+(defn run-command!
+  [{::keys        [^MongoDatabase db]
+    ::client/keys [^ClientSession session]}
+   command
+   & {:keys [read-preference]}]
+  (let [registry  (.getCodecRegistry db)
+        bson      (c/map->bson command registry)
+        read-pref (some-> read-preference di/get-read-preference)]
+    (cond
+      (and session
+           read-pref) (.runCommand db session bson read-pref PersistentHashMap)
+      session         (.runCommand db session bson PersistentHashMap)
+      read-pref       (.runCommand db bson read-pref PersistentHashMap)
+      :else           (.runCommand db bson PersistentHashMap))))
+
 ;;; Collection
 
 (defn create-collection!

@@ -153,6 +153,13 @@
   (db/drop-db! conn database-name)
   (log/debugf "Dropped database '%s'." database-name))
 
+(defn run-command!
+  "Run a command against the database.
+  Returns a map of the results."
+  {:arglists '([conn command & {:keys [read-preference]}])}
+  [conn command & {:as options}]
+  (db/run-command! conn command options))
+
 ;; Registry
 
 (defn registry

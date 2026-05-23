@@ -14,7 +14,10 @@
             [schema.core :as s :refer [defschema]])
   (:import [clojure.lang IReduceInit Ratio]
            [com.mongodb MongoCommandException]
-           [org.bson BsonBinarySubType BsonReader BsonWriter]
+           [org.bson BsonBinarySubType
+                     BsonReader
+                     BsonTimestamp
+                     BsonWriter]
            [org.bson.codecs Codec DecoderContext EncoderContext]
            [org.bson.codecs.configuration CodecConfigurationException CodecRegistry]
            [org.bson.types Binary ObjectId]))
@@ -88,6 +91,48 @@
           with-foo (m/with-db conn "foo")]
       (is (not= conn with-foo))
       (is (= with-foo (m/with-db with-foo "foo"))))))
+
+(defn timestamp? [v] (instance? BsonTimestamp v))
+
+(defn binary? [v] (instance? Binary v))
+
+(deftest run-command-test
+  (test-utils/with-matrix
+    (let [conn       (test-utils/get-conn)
+          hello-resp {:$clusterTime                 {:clusterTime timestamp?
+                                                     :signature   {:hash  binary?
+                                                                   :keyId int?}}
+                      :connectionId                 int?
+                      :electionId                   m/object-id?
+                      :hosts                        [string?]
+                      :isWritablePrimary            boolean?
+                      :lastWrite                    {:lastWriteDate     inst?
+                                                     :majorityOpTime    {:t  int?
+                                                                         :ts timestamp?}
+                                                     :majorityWriteDate inst?
+                                                     :opTime            {:t  int?
+                                                                         :ts timestamp?}},
+                      :localTime                    inst?
+                      :logicalSessionTimeoutMinutes int?
+                      :maxBsonObjectSize            int?
+                      :maxMessageSizeBytes          int?
+                      :maxWireVersion               int?
+                      :maxWriteBatchSize            int?
+                      :me                           string?
+                      :minWireVersion               int?
+                      :ok                           double?
+                      :operationTime                timestamp?
+                      :primary                      string?
+                      :readOnly                     boolean?
+                      :secondary                    boolean?
+                      :setName                      string?
+                      :setVersion                   int?
+                      :topologyVersion              {:counter   int?
+                                                     :processId m/object-id?}}]
+      (is (match? hello-resp
+                  (m/run-command! conn {:hello 1})))
+      (is (match? hello-resp
+                  (m/run-command! conn {:hello 1} :read-preference :nearest))))))
 
 (def ratio-codec
   "A `Codec` for `Ratio` which encodes values as doubles."
