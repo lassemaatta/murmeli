@@ -1,7 +1,7 @@
 (ns murmeli.impl.db
   "Database implementation.
 
-  See [MongoDatabase](https://mongodb.github.io/mongo-java-driver/5.3/apidocs/mongodb-driver-sync/com/mongodb/client/MongoDatabase.html)."
+  See [MongoDatabase](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/MongoDatabase.html)."
   {:no-doc true}
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]
