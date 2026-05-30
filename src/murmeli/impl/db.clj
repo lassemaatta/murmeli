@@ -59,7 +59,7 @@
    & {:keys [read-preference]}]
   (let [registry  (.getCodecRegistry db)
         bson      (c/map->bson command registry)
-        read-pref (some-> read-preference di/get-read-preference)]
+        read-pref (some-> read-preference di/read-preference->java)]
     (cond
       (and session
            read-pref) (.runCommand db session bson read-pref PersistentHashMap)
@@ -140,5 +140,5 @@
                    comment      (.comment comment)
                    query        (.filter (c/map->bson query registry))
                    max-time-ms  (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
-                   timeout-mode (.timeoutMode (di/get-timeout-mode timeout-mode)))]
+                   timeout-mode (.timeoutMode (di/timeout-mode->java timeout-mode)))]
     (cursor/->reducible it)))

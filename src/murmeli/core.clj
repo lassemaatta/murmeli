@@ -40,13 +40,13 @@
   Options:
   * `cluster-settings` -- Map of cluster settings, see below
   * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
-  * `read-concern` -- Choose level of read isolation, see [[murmeli.impl.data-interop/get-read-concern]]
-  * `read-preference` -- Choose preferred replica set members when reading, see [[murmeli.impl.data-interop/get-read-preference]]
+  * `read-concern` -- Choose level of read isolation, see [[murmeli.impl.data-interop/read-concern->java]]
+  * `read-preference` -- Choose preferred replica set members when reading, see [[murmeli.impl.data-interop/read-preference->java]]
   * `retry-reads?` -- Retry reads if they fail due to a network error
   * `retry-writes?` -- Retry writes if they fail due to a network error
   * `ssl-settings` -- Map of SSL settings, see below
   * `uri` -- The connection string to use, eg. \"mongodb://[username:password@]host[:port1],...\"
-  * `write-concern` -- Acknowledgement of write operations, see [[murmeli.impl.data-interop/get-write-concern]]
+  * `write-concern` -- Acknowledgement of write operations, see [[murmeli.impl.data-interop/write-concern->java]]
 
   The `cluster-settings` map:
   * `hosts` -- Sequence of maps with `host` and optionally `port`

@@ -31,8 +31,8 @@
              (GridFSBuckets/create db bucket-name)
              (GridFSBuckets/create db))
      chunk-size-bytes (.withChunkSizeBytes chunk-size-bytes)
-     read-concern     (.withReadConcern (di/get-read-concern read-concern))
-     read-preference  (.withReadPreference (di/get-read-preference read-preference))
+     read-concern     (.withReadConcern (di/read-concern->java read-concern))
+     read-preference  (.withReadPreference (di/read-preference->java read-preference))
      timeout-ms       (.withTimeout timeout-ms TimeUnit/MILLISECONDS))))
 
 (defn with-bucket

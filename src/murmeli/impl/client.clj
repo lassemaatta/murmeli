@@ -75,7 +75,7 @@
                    query                 (.filter (c/map->bson query registry))
                    max-time-ms           (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
                    (some? name-only?)    (.nameOnly (boolean name-only?))
-                   timeout-mode          (.timeoutMode (di/get-timeout-mode timeout-mode)))]
+                   timeout-mode          (.timeoutMode (di/timeout-mode->java timeout-mode)))]
     (cursor/->reducible it)))
 
 ;;; Session

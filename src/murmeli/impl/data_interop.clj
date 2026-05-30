@@ -56,7 +56,7 @@
 
 (set! *warn-on-reflection* true)
 
-(defn get-read-preference
+(defn read-preference->java
   "Read preference represents the preferred replica set members to which queries and commands are sent."
   ^ReadPreference
   [choice]
@@ -72,7 +72,7 @@
     ;; Read from secondary if available, otherwise primary
     :secondary-preferred (ReadPreference/secondaryPreferred)))
 
-(defn get-read-concern
+(defn read-concern->java
   "Read concern represents the read isolation level."
   ^ReadConcern
   [choice]
@@ -84,7 +84,7 @@
     :majority     ReadConcern/MAJORITY
     :default      ReadConcern/DEFAULT))
 
-(defn get-write-concern
+(defn write-concern->java
   "Control the required level of acknowledgments when writing"
   ^WriteConcern
   [choice]
@@ -104,7 +104,7 @@
     ;; Return when message written to the socket (W0)
     :unacknowledged WriteConcern/UNACKNOWLEDGED))
 
-(defn get-timeout-mode
+(defn timeout-mode->java
   [timeout-mode]
   (case timeout-mode
     :cursor-lifetime TimeoutMode/CURSOR_LIFETIME
@@ -168,9 +168,9 @@
     uri                    (.applyConnectionString (ConnectionString. uri))
     (some? retry-reads?)   (.retryReads (boolean retry-reads?))
     (some? retry-writes?)  (.retryWrites (boolean retry-writes?))
-    read-concern           (.readConcern (get-read-concern read-concern))
-    write-concern          (.writeConcern (get-write-concern write-concern))
-    read-preference        (.readPreference (get-read-preference read-preference))
+    read-concern           (.readConcern (read-concern->java read-concern))
+    write-concern          (.writeConcern (write-concern->java write-concern))
+    read-preference        (.readPreference (read-preference->java read-preference))
     (seq credentials)      (.credential (MongoCredential/createScramSha256Credential username auth-db (.toCharArray password)))
     (seq cluster-settings) (.applyToClusterSettings (make-cluster-settings cluster-settings))
     (seq ssl-settings)     (.applyToSslSettings (make-ssl-settings ssl-settings))
@@ -196,9 +196,9 @@
         read-concern
         write-concern)           (.defaultTransactionOptions
                                    (cond-> (TransactionOptions/builder)
-                                     read-preference (.readPreference (get-read-preference read-preference))
-                                     read-concern    (.readConcern (get-read-concern read-concern))
-                                     write-concern   (.writeConcern (get-write-concern write-concern))
+                                     read-preference (.readPreference (read-preference->java read-preference))
+                                     read-concern    (.readConcern (read-concern->java read-concern))
+                                     write-concern   (.writeConcern (write-concern->java write-concern))
                                      true            .build))
     true                         (.build)))
 
@@ -518,7 +518,7 @@
     (-> (IndexOptionDefaults.)
         (.storageEngine storage-engine))))
 
-(defn- get-granularity
+(defn- granularity->java
   {:no-doc true}
   ^TimeSeriesGranularity [granularity]
   (case granularity
@@ -540,16 +540,16 @@
       bucket-max-span-seconds (.bucketMaxSpan (long bucket-max-span-seconds) TimeUnit/SECONDS)
       bucket-rounding-seconds (.bucketRounding (long bucket-rounding-seconds) TimeUnit/SECONDS)
       meta-field              (.metaField meta-field)
-      granularity             (.granularity (get-granularity granularity)))))
+      granularity             (.granularity (granularity->java granularity)))))
 
-(defn- get-validation-action
+(defn- validation-action->java
   {:no-doc true}
   ^ValidationAction [action]
   (case action
     :error ValidationAction/ERROR
     :warn  ValidationAction/WARN))
 
-(defn- get-validation-level
+(defn- validation-level->java
   {:no-doc true}
   ^ValidationLevel [level]
   (case level
@@ -564,8 +564,8 @@
            validator]}]
   (when (or validation-action validation-level validator)
     (cond-> (ValidationOptions.)
-      validation-action (.validationAction (get-validation-action validation-action))
-      validation-level  (.validationLevel (get-validation-level validation-level))
+      validation-action (.validationAction (validation-action->java validation-action))
+      validation-level  (.validationLevel (validation-level->java validation-level))
       validator         (.validator validator))))
 
 (defn make-create-collection-options

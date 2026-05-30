@@ -685,19 +685,19 @@
 
 ;; murmeli.data-interop
 
-(s/fdef di/get-read-preference
+(s/fdef di/read-preference->java
   :args (s/cat :choice ::read-preference)
   :ret (s/nilable read-preference?))
 
-(s/fdef di/get-read-concern
+(s/fdef di/read-concern->java
   :args (s/cat :choice ::read-concern)
   :ret (s/nilable read-concern?))
 
-(s/fdef di/get-write-concern
+(s/fdef di/write-concern->java
   :args (s/cat :choice ::write-concern)
   :ret (s/nilable write-concern?))
 
-(s/fdef di/get-timeout-mode
+(s/fdef di/timeout-mode->java
   :args (s/cat :timeout-mode ::timeout-mode)
   :ret timeout-mode?)
 

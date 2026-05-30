@@ -12,17 +12,17 @@
 (def passed [{:clojure.spec.test.check/ret {:pass?  true
                                             :result true}}])
 
-(deftest get-read-concern-test
+(deftest read-concern->java-test
   (is (match? passed
-              (stest/check `di/get-read-concern))))
+              (stest/check `di/read-concern->java))))
 
-(deftest get-write-concern-test
+(deftest write-concern->java-test
   (is (match? passed
-              (stest/check `di/get-write-concern))))
+              (stest/check `di/write-concern->java))))
 
-(deftest get-read-preference-test
+(deftest read-preference->java-test
   (is (match? passed
-              (stest/check `di/get-read-preference))))
+              (stest/check `di/read-preference->java))))
 
 (deftest make-client-settings-test
   (is (match? passed
