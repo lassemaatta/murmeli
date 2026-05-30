@@ -466,13 +466,8 @@
 (defn watch
   [{::client/keys [^ClientSession session] :as conn}
    collection
-   & {:keys [batch-size
-             collation-options
-             ^String comment
-             full-document
-             full-document-before-change
-             max-time-ms
-             pipeline]}]
+   & {:keys [pipeline]
+      :as   options}]
   {:pre [conn collection]}
   (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
@@ -482,15 +477,5 @@
                    (and session pipeline) (.watch coll session pipeline PersistentHashMap)
                    session                (.watch coll PersistentHashMap)
                    pipeline               (.watch coll pipeline PersistentHashMap)
-                   :else                  (.watch coll PersistentHashMap))
-        it       (cond-> it
-                   collation-options           (.collation (di/make-collation collation-options))
-                   comment                     (.comment comment)
-                   batch-size                  (.batchSize (int batch-size))
-                   full-document               (.fullDocument (di/get-full-document full-document))
-                   full-document-before-change (.fullDocumentBeforeChange (di/get-full-document-before-change full-document-before-change))
-                   max-time-ms                 (.maxAwaitTime (long max-time-ms) TimeUnit/MILLISECONDS))
-        csd->clj (map (fn [csd]
-                        (di/change-stream-document csd (fn [b] (c/bson-document->map b registry)))))]
-    (->> (cursor/->reducible-cs it)
-         (eduction csd->clj))))
+                   :else                  (.watch coll PersistentHashMap))]
+    (di/change-stream-iterable->reducible it registry options)))

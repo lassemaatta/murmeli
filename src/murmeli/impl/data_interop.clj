@@ -1,6 +1,7 @@
 (ns murmeli.impl.data-interop
   "Collection of helper functions to convert clojure data to various Mongo API Java objects"
-  (:require [murmeli.impl.convert :as c])
+  (:require [murmeli.impl.convert :as c]
+            [murmeli.impl.cursor :as cursor])
   (:import [com.mongodb Block
                         ClientSessionOptions
                         ConnectionString
@@ -13,6 +14,7 @@
                         ServerApiVersion
                         TransactionOptions
                         WriteConcern]
+           [com.mongodb.client ChangeStreamIterable]
            [com.mongodb.client.cursor TimeoutMode]
            [com.mongodb.client.gridfs.model GridFSDownloadOptions GridFSUploadOptions]
            [com.mongodb.client.model ChangeStreamPreAndPostImagesOptions
@@ -52,6 +54,7 @@
            [java.util List]
            [java.util.concurrent TimeUnit]
            [org.bson BsonDocument BsonInt32 Document]
+           [org.bson.codecs.configuration CodecRegistry]
            [org.bson.conversions Bson]))
 
 (set! *warn-on-reflection* true)
@@ -748,3 +751,24 @@
             (.append doc (name k) (BsonInt32. v)))
           kvs)
     doc))
+
+(defn change-stream-iterable->reducible
+  "Helper for transforming `ChangeStreamIterable` to a reducible."
+  [^ChangeStreamIterable it
+   ^CodecRegistry registry
+   {:keys [batch-size
+           collation-options
+           ^String comment
+           full-document
+           full-document-before-change
+           max-time-ms]}]
+  (->> (cond-> it
+         collation-options           (.collation (make-collation collation-options))
+         comment                     (.comment comment)
+         batch-size                  (.batchSize (int batch-size))
+         full-document               (.fullDocument (get-full-document full-document))
+         full-document-before-change (.fullDocumentBeforeChange (get-full-document-before-change full-document-before-change))
+         max-time-ms                 (.maxAwaitTime (long max-time-ms) TimeUnit/MILLISECONDS))
+       cursor/->reducible-cs
+       (eduction (map (fn [csd]
+                        (change-stream-document csd (fn [b] (c/bson-document->map b registry))))))))

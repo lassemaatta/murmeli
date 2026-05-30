@@ -837,3 +837,15 @@
                                           pipeline]}])}
   [conn collection & {:as options}]
   (collection/watch conn collection options))
+
+(defn watch-db
+  "Like [[watch-collection]] but for the whole database."
+  {:arglists '([conn & {:keys [batch-size
+                               collation-options
+                               ^String comment
+                               full-document
+                               full-document-before-change
+                               max-time-ms
+                               pipeline]}])}
+  [conn & {:as options}]
+  (db/watch conn options))

@@ -11,6 +11,7 @@
   (:import [clojure.lang PersistentHashMap]
            [com.mongodb.client ClientSession MongoCollection MongoDatabase]
            [com.mongodb.client.model CreateCollectionOptions]
+           [java.util List]
            [java.util.concurrent TimeUnit]
            [org.bson.codecs.configuration CodecRegistry]))
 
@@ -157,3 +158,20 @@
   [{::keys [^MongoDatabase db]}]
   {:pre [db]}
   (-> db .getWriteConcern di/write-concern->clj))
+
+(defn watch
+  [{::client/keys [^ClientSession session]
+    ::keys        [^MongoDatabase db]
+    :as           conn}
+   & {:keys [pipeline]
+      :as   options}]
+  {:pre [conn db]}
+  (let [registry (.getCodecRegistry db)
+        pipeline (when (seq pipeline)
+                   ^List (mapv (fn [m] (c/map->bson m registry)) pipeline))
+        it       (cond
+                   (and session pipeline) (.watch db session pipeline PersistentHashMap)
+                   session                (.watch db PersistentHashMap)
+                   pipeline               (.watch db pipeline PersistentHashMap)
+                   :else                  (.watch db PersistentHashMap))]
+    (di/change-stream-iterable->reducible it registry options)))
