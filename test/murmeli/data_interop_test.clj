@@ -1,7 +1,10 @@
 (ns murmeli.data-interop-test
-  (:require [clojure.spec.test.alpha :as stest]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.test.alpha :as stest]
             [clojure.spec.test.check :as-alias stc]
             [clojure.test :refer [deftest is]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.properties :as properties]
             [matcher-combinators.test]
             [murmeli.impl.data-interop :as di]
             [murmeli.specs :as ms]
@@ -16,13 +19,28 @@
   (is (match? passed
               (stest/check `di/read-concern->java))))
 
+(defspec read-concern-roundtrip-test
+  (properties/for-all [rc (s/gen ::ms/read-concern)]
+    (= (-> rc di/read-concern->java di/read-concern->clj)
+       rc)))
+
 (deftest write-concern->java-test
   (is (match? passed
               (stest/check `di/write-concern->java))))
 
+(defspec write-concern-roundtrip-test
+  (properties/for-all [wc (s/gen ::ms/write-concern)]
+    (= (-> wc di/write-concern->java di/write-concern->clj)
+       wc)))
+
 (deftest read-preference->java-test
   (is (match? passed
               (stest/check `di/read-preference->java))))
+
+(defspec read-preference-roundtrip-test
+  (properties/for-all [rp (s/gen ::ms/read-preference)]
+    (= (-> rp di/read-preference->java di/read-preference->clj)
+       rp)))
 
 (deftest make-client-settings-test
   (is (match? passed

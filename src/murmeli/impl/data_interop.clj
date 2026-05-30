@@ -72,6 +72,15 @@
     ;; Read from secondary if available, otherwise primary
     :secondary-preferred (ReadPreference/secondaryPreferred)))
 
+(defn read-preference->clj
+  [^ReadPreference choice]
+  (case (.getName choice)
+    "nearest"            :nearest
+    "primary"            :primary
+    "secondary"          :secondary
+    "primaryPreferred"   :primary-preferred
+    "secondaryPreferred" :secondary-preferred))
+
 (defn read-concern->java
   "Read concern represents the read isolation level."
   ^ReadConcern
@@ -83,6 +92,16 @@
     :snapshot     ReadConcern/SNAPSHOT
     :majority     ReadConcern/MAJORITY
     :default      ReadConcern/DEFAULT))
+
+(defn read-concern->clj
+  [^ReadConcern choice]
+  (condp = choice
+    ReadConcern/AVAILABLE    :available
+    ReadConcern/LOCAL        :local
+    ReadConcern/LINEARIZABLE :linearizable
+    ReadConcern/SNAPSHOT     :snapshot
+    ReadConcern/MAJORITY     :majority
+    ReadConcern/DEFAULT      :default))
 
 (defn write-concern->java
   "Control the required level of acknowledgments when writing"
@@ -103,6 +122,18 @@
     :acknowledged   WriteConcern/ACKNOWLEDGED
     ;; Return when message written to the socket (W0)
     :unacknowledged WriteConcern/UNACKNOWLEDGED))
+
+(defn write-concern->clj
+  "Control the required level of acknowledgments when writing"
+  [choice]
+  (condp = choice
+    WriteConcern/W1             :w1
+    WriteConcern/W2             :w2
+    WriteConcern/W3             :w3
+    WriteConcern/MAJORITY       :majority
+    WriteConcern/JOURNALED      :journaled
+    WriteConcern/ACKNOWLEDGED   :acknowledged
+    WriteConcern/UNACKNOWLEDGED :unacknowledged))
 
 (defn timeout-mode->java
   [timeout-mode]

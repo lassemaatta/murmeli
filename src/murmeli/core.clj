@@ -160,6 +160,21 @@
   [conn command & {:as options}]
   (db/run-command! conn command options))
 
+(defn get-db-read-preference
+  "Return the current read preference of the database."
+  [conn]
+  (db/get-read-preference conn))
+
+(defn get-db-read-concern
+  "Return the current read concern of the database."
+  [conn]
+  (db/get-read-concern conn))
+
+(defn get-db-write-concern
+  "Return the current write concern of the database."
+  [conn]
+  (db/get-write-concern conn))
+
 ;; Registry
 
 (defn registry

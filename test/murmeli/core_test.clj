@@ -83,7 +83,11 @@
           (is (match? [{:name       :admin
                         :sizeOnDisk int?
                         :empty      false}]
-                      data)))))))
+                      data))))
+      (testing "properties"
+        (is (= :primary (m/get-db-read-preference conn)))
+        (is (= :default (m/get-db-read-concern conn)))
+        (is (= :acknowledged (m/get-db-write-concern conn)))))))
 
 (deftest with-db-test
   (test-utils/with-matrix

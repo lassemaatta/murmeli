@@ -142,3 +142,18 @@
                    max-time-ms  (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
                    timeout-mode (.timeoutMode (di/timeout-mode->java timeout-mode)))]
     (cursor/->reducible it)))
+
+(defn get-read-preference
+  [{::keys [^MongoDatabase db]}]
+  {:pre [db]}
+  (-> db .getReadPreference di/read-preference->clj))
+
+(defn get-read-concern
+  [{::keys [^MongoDatabase db]}]
+  {:pre [db]}
+  (-> db .getReadConcern di/read-concern->clj))
+
+(defn get-write-concern
+  [{::keys [^MongoDatabase db]}]
+  {:pre [db]}
+  (-> db .getWriteConcern di/write-concern->clj))
