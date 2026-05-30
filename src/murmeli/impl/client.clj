@@ -1,8 +1,8 @@
 (ns murmeli.impl.client
   "Client implementation.
 
-  See [MongoClient](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/MongoClient.html)
-  and [MongoCluster](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/MongoClient.html)."
+  See [MongoClient](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/com/mongodb/client/MongoClient.html)
+  and [MongoCluster](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/com/mongodb/client/MongoClient.html)."
   {:no-doc true}
   (:require [murmeli.impl.convert :as c]
             [murmeli.impl.cursor :as cursor]

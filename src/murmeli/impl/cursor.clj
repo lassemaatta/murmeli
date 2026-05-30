@@ -6,7 +6,7 @@
 
 (defn ->reducible
   "Produce a _reducible_ ([IReduceInit](https://github.com/clojure/clojure/blob/master/src/jvm/clojure/lang/IReduceInit.java))
-  from a [MongoIterable](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/MongoIterable.html).
+  from a [MongoIterable](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/com/mongodb/client/MongoIterable.html).
 
   Guarantees that any cursors are closed after reducing."
   [^MongoIterable iterable]

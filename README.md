@@ -16,7 +16,7 @@ Download from https://github.com/lassemaatta/murmeli.
 
 ## Features
 
-Supports the majority of the [modern API](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/index.html).
+Supports the majority of the [modern API](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/index.html).
 
 (Proof-of-Concept) Supports transactions.
 
@@ -26,9 +26,9 @@ Supports the majority of the [modern API](https://mongodb.github.io/mongo-java-d
 
 The [reactive streams API](https://www.mongodb.com/docs/languages/java/reactive-streams-driver/current/) is not supported.
 
-The [legacy API](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-legacy/index.html) is not supported.
+The [legacy API](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-legacy/index.html) is not supported.
 
-Deprecated constructs of the modern API (e.g., [MapReduce](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/MongoCollection.html#mapReduce(com.mongodb.client.ClientSession,java.lang.String,java.lang.String))) are not supported.
+Deprecated constructs of the modern API (e.g., [MapReduce](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/com/mongodb/client/MongoCollection.html#mapReduce(com.mongodb.client.ClientSession,java.lang.String,java.lang.String))) are not supported.
 
 ## Some Design/Implementation Decisions
 

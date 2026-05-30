@@ -1,7 +1,7 @@
 (ns murmeli.impl.collection
   "Collection implementation.
 
-  See [MongoCollection](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/MongoCollection.html)."
+  See [MongoCollection](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/com/mongodb/client/MongoCollection.html)."
   {:no-doc true}
   (:require [clojure.tools.logging :as log]
             [murmeli.impl.client :as client]

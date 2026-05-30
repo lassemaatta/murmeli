@@ -1,8 +1,8 @@
 (ns murmeli.impl.gridfs
   "GridFS implementation.
 
-  See [GridFSBuckets](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/gridfs/GridFSBuckets.html)
-  and [GridFSBucket](https://mongodb.github.io/mongo-java-driver/5.7/apidocs/driver-sync/com/mongodb/client/gridfs/GridFSBucket.html)"
+  See [GridFSBuckets](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/com/mongodb/client/gridfs/GridFSBuckets.html)
+  and [GridFSBucket](https://mongodb.github.io/mongo-java-driver/5.8/apidocs/driver-sync/com/mongodb/client/gridfs/GridFSBucket.html)"
   {:no-doc true}
   (:refer-clojure :exclude [find])
   (:require [murmeli.impl.client :as client]
