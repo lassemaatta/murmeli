@@ -165,15 +165,30 @@
   [conn]
   (db/get-read-preference conn))
 
+(defn with-read-preference
+  "Apply the given `read-preference` to the current database"
+  [conn read-preference]
+  (db/with-read-preference conn read-preference))
+
 (defn get-db-read-concern
   "Return the current read concern of the database."
   [conn]
   (db/get-read-concern conn))
 
+(defn with-read-concern
+  "Apply the given `read-concern` to the current database"
+  [conn read-concern]
+  (db/with-read-concern conn read-concern))
+
 (defn get-db-write-concern
   "Return the current write concern of the database."
   [conn]
   (db/get-write-concern conn))
+
+(defn with-write-concern
+  "Apply the given `write-concern` to the current database"
+  [conn write-concern]
+  (db/with-write-concern conn write-concern))
 
 ;; Registry
 

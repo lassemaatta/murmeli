@@ -87,7 +87,21 @@
       (testing "properties"
         (is (= :primary (m/get-db-read-preference conn)))
         (is (= :default (m/get-db-read-concern conn)))
-        (is (= :acknowledged (m/get-db-write-concern conn)))))))
+        (is (= :acknowledged (m/get-db-write-concern conn)))
+
+        (testing "alter properties"
+          (is (= :secondary
+                 (-> conn
+                     (m/with-read-preference :secondary)
+                     (m/get-db-read-preference))))
+          (is (= :majority
+                 (-> conn
+                     (m/with-read-concern :majority)
+                     (m/get-db-read-concern))))
+          (is (= :majority
+                 (-> conn
+                     (m/with-write-concern :majority)
+                     (m/get-db-write-concern)))))))))
 
 (deftest with-db-test
   (test-utils/with-matrix

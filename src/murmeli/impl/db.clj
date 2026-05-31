@@ -149,15 +149,33 @@
   {:pre [db]}
   (-> db .getReadPreference di/read-preference->clj))
 
+(defn with-read-preference
+  [conn
+   read-preference]
+  {:pre [conn (::db conn) read-preference]}
+  (update conn ::db (fn [^MongoDatabase db] (.withReadPreference db (di/read-preference->java read-preference)))))
+
 (defn get-read-concern
   [{::keys [^MongoDatabase db]}]
   {:pre [db]}
   (-> db .getReadConcern di/read-concern->clj))
 
+(defn with-read-concern
+  [conn
+   read-concern]
+  {:pre [conn (::db conn) read-concern]}
+  (update conn ::db (fn [^MongoDatabase db] (.withReadConcern db (di/read-concern->java read-concern)))))
+
 (defn get-write-concern
   [{::keys [^MongoDatabase db]}]
   {:pre [db]}
   (-> db .getWriteConcern di/write-concern->clj))
+
+(defn with-write-concern
+  [conn
+   write-concern]
+  {:pre [conn (::db conn) write-concern]}
+  (update conn ::db (fn [^MongoDatabase db] (.withWriteConcern db (di/write-concern->java write-concern)))))
 
 (defn watch
   [{::client/keys [^ClientSession session]
