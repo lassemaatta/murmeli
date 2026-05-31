@@ -193,3 +193,23 @@
                    pipeline               (.watch db pipeline PersistentHashMap)
                    :else                  (.watch db PersistentHashMap))]
     (di/change-stream-iterable->reducible it registry options)))
+
+(defn aggregate-reducible!
+  [{::client/keys [^ClientSession session]
+    ::keys        [^MongoDatabase db]
+    :as           conn}
+   pipeline
+   & {:keys [allow-disk-use?
+             batch-size
+             max-time-ms]}]
+  {:pre [conn db (sequential? pipeline)]}
+  (let [registry (.getCodecRegistry db)
+        pipeline ^List (mapv (fn [m] (c/map->bson m registry)) pipeline)
+        it       (cond
+                   session (.aggregate db session pipeline)
+                   :else   (.aggregate db pipeline))
+        it       (cond-> it
+                   batch-size      (.batchSize (int batch-size))
+                   max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
+                   allow-disk-use? (.allowDiskUse (boolean allow-disk-use?)))]
+    (cursor/->reducible it)))

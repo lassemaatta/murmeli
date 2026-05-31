@@ -822,6 +822,24 @@
     (log/debugf "Aggregation query for collection '%s' produced %d documents." collection (count documents))
     documents))
 
+(defn aggregate-reducible-db!
+  "Like [[aggregate-reducible!]], but executes the aggregation pipeline on the current database."
+  {:arglists '([conn pipeline & {:keys [allow-disk-use?
+                                        batch-size
+                                        max-time-ms]}])}
+  [conn pipeline & {:as options}]
+  (db/aggregate-reducible! conn pipeline options))
+
+(defn aggregate-db!
+  "Like [[aggregate-reducible-db]], but eagerly executes the aggregation and returns a vector of documents."
+  {:arglists '([conn pipeline & {:keys [allow-disk-use?
+                                        batch-size
+                                        max-time-ms]}])}
+  [conn pipeline & {:as options}]
+  (let [documents (into [] (db/aggregate-reducible! conn  pipeline options))]
+    (log/debugf "Aggregation query for db produced %d documents." (count documents))
+    documents))
+
 ;; Change streams
 
 (defn watch-collection
