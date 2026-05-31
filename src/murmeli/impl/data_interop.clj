@@ -26,6 +26,7 @@
                                      CollationStrength
                                      CountOptions
                                      CreateCollectionOptions
+                                     CreateViewOptions
                                      FindOneAndDeleteOptions
                                      FindOneAndReplaceOptions
                                      FindOneAndUpdateOptions
@@ -772,3 +773,14 @@
        cursor/->reducible-cs
        (eduction (map (fn [csd]
                         (change-stream-document csd (fn [b] (c/bson-document->map b registry))))))))
+
+(defn make-create-view-options
+  {:no-doc true}
+  ^CreateViewOptions
+  [{:keys [collation-options]
+    :as   options}]
+  (when (seq options)
+    (let [collation (when (seq collation-options)
+                      (make-collation collation-options))]
+      (cond-> (CreateViewOptions.)
+        collation (.collation collation)))))

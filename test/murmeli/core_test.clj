@@ -218,6 +218,23 @@
           (is (nil? (m/drop-db! conn db-name)))
           (is (not (contains? (get-db-names conn) db-name))))))))
 
+(deftest create-view-test
+  (test-utils/with-matrix
+    (let [conn      (test-utils/get-conn)
+          coll      (get-coll)
+          view-name (get-coll)]
+      (m/insert-many! conn coll [{:name "a" :year 1}
+                                 {:name "b" :year 2}
+                                 {:name "c" :year 1}
+                                 {:name "d" :year 3}])
+      (m/create-view! conn view-name coll [{$match {:year 1}}
+                                           {$project {:name 1}}])
+      (is (match? [{:_id  m/object-id?
+                    :name "a"}
+                   {:_id  m/object-id?
+                    :name "c"}]
+                  (m/find-all conn view-name))))))
+
 (deftest list-collection-names-test
   (test-utils/with-matrix
     (let [conn   (test-utils/get-conn)

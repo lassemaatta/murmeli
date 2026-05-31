@@ -225,6 +225,26 @@
   [conn]
   (db/with-registry conn c/default-registry))
 
+;; Views
+
+(defn create-view!
+  "Create a view.
+
+  Arguments:
+  * `conn` -- The database connection
+  * `view-name` -- Name of the view to create
+  * `view-on` -- The backing collection (or view)
+  * `pipeline` -- The pipeline that calculates the view
+
+  Options:
+  * `collation-options` -- Map of collation options, see [[murmeli.impl.data-interop/make-collation]]
+
+  See https://www.mongodb.com/docs/manual/core/views/create-view/"
+  {:arglists '([conn view-name view-on pipeline & {:keys [collation-options]}])}
+  [conn view-name view-on pipeline & {:as options}]
+  (db/create-view! conn view-name view-on pipeline options))
+
+
 ;; Collections
 
 (defn create-collection!

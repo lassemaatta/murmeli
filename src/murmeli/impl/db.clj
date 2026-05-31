@@ -213,3 +213,25 @@
                    max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
                    allow-disk-use? (.allowDiskUse (boolean allow-disk-use?)))]
     (cursor/->reducible it)))
+
+(defn create-view!
+  [{::client/keys [^ClientSession session]
+    ::keys        [^MongoDatabase db]
+    :as           conn}
+   view-name
+   view-on
+   pipeline
+   & {:as options}]
+  {:pre [conn db (sequential? pipeline)]}
+  (let [registry       (.getCodecRegistry db)
+        pipeline       ^List (mapv (fn [m] (c/map->bson m registry)) pipeline)
+        create-options (when (seq options)
+                         (di/make-create-view-options options))
+        vn             (name view-name)
+        vo             (name view-on)]
+    (cond
+      (and session
+           create-options) (.createView db session vn vo pipeline create-options)
+      session              (.createView db session vn vo pipeline)
+      create-options       (.createView db vn vo pipeline create-options)
+      :else                (.createView db vn vo pipeline))))
