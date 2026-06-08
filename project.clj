@@ -15,14 +15,14 @@
   :profiles {:dev           {:dependencies   [;; Testcontainers for mongodb
                                               [org.testcontainers/testcontainers "2.0.5"]
                                               [clj-test-containers "0.7.4"]
-                                              [org.testcontainers/mongodb "1.17.6"]
+                                              [org.testcontainers/mongodb "1.21.4"]
                                               ;; Generative testing with spec
                                               [org.clojure/test.check "1.1.3"]
                                               ;; Matcher for tests
                                               [nubank/matcher-combinators "3.10.0"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.18"]
-                                              [ch.qos.logback/logback-classic "1.5.33"]]
+                                              [ch.qos.logback/logback-classic "1.5.34"]]
                              :plugins        [[lein-eftest "0.6.0"]]
                              :eftest         {:multithread? true}
                              :resource-paths ["test-resources"]
