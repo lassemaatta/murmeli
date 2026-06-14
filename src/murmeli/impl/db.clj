@@ -206,8 +206,8 @@
   (let [registry (.getCodecRegistry db)
         pipeline ^List (mapv (fn [m] (c/map->bson m registry)) pipeline)
         it       (cond
-                   session (.aggregate db session pipeline)
-                   :else   (.aggregate db pipeline))
+                   session (.aggregate db session pipeline PersistentHashMap)
+                   :else   (.aggregate db pipeline PersistentHashMap))
         it       (cond-> it
                    batch-size      (.batchSize (int batch-size))
                    max-time-ms     (.maxTime (long max-time-ms) TimeUnit/MILLISECONDS)
