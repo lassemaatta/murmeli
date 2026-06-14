@@ -51,7 +51,7 @@
                                                chunk-size-bytes]}])}
   [conn filename source & {:as options}]
   (let [id (gfs/upload-stream! conn filename source options)]
-    (log/debugf "Uploaded '%s' with id '%s" filename id)
+    (log/debugf "Uploaded '%s' with id '%s'" filename id)
     id))
 
 (defn download-stream

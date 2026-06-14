@@ -798,7 +798,7 @@
 
 (defn find-one-and-update!
   "Find a document and update it.
-  Returns the document, or ´nil´ if none found. The `return` argument controls
+  Returns the document, or `nil` if none found. The `return` argument controls
   whether we return the document before or after the replacement.
 
   See https://www.mongodb.com/docs/drivers/java/sync/current/crud/compound-operations/#find-and-update"
