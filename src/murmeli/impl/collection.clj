@@ -203,8 +203,8 @@
   {:pre [conn collection (map? query) (map? changes)]}
   (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
-        filter   (c/map->bson query (.getCodecRegistry coll))
-        updates  (c/map->bson changes (.getCodecRegistry coll))
+        filter   (c/map->bson query registry)
+        updates  (c/map->bson changes registry)
         options  (some-> options
                          (preprocess-options registry)
                          di/make-update-options)
@@ -226,7 +226,7 @@
   {:pre [conn collection (map? query) (map? replacement)]}
   (let [coll     (db/get-collection conn collection)
         registry (.getCodecRegistry coll)
-        filter   (c/map->bson query (.getCodecRegistry coll))
+        filter   (c/map->bson query registry)
         options  (some-> options
                          (preprocess-options registry)
                          di/make-replace-options)
