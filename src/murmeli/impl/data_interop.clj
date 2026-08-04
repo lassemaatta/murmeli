@@ -6,6 +6,7 @@
                         ClientSessionOptions
                         ConnectionString
                         MongoClientSettings
+                        MongoCompressor
                         MongoCredential
                         ReadConcern
                         ReadPreference
@@ -185,6 +186,7 @@
   ^MongoClientSettings
   [{:keys                      [application-name
                                 cluster-settings
+                                compressors
                                 credentials
                                 read-concern
                                 read-preference
@@ -202,6 +204,13 @@
                                            (.version api-version)
                                            .build))
     application-name       (.applicationName application-name)
+    (seq compressors)      (.compressorList (->> compressors
+                                                 distinct
+                                                 (mapv (fn [compressor]
+                                                         (case compressor
+                                                           :snappy (MongoCompressor/createSnappyCompressor)
+                                                           :zlib   (MongoCompressor/createZlibCompressor)
+                                                           :zstd   (MongoCompressor/createZstdCompressor))))))
     uri                    (.applyConnectionString (ConnectionString. uri))
     (some? retry-reads?)   (.retryReads (boolean retry-reads?))
     (some? retry-writes?)  (.retryWrites (boolean retry-writes?))

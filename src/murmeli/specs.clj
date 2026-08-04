@@ -406,6 +406,10 @@
 (s/def ::application-name (s/and string?
                                  (complement str/blank?)
                                  (fn [s] (<= (count s) 128))))
+(s/def ::compressor #{:snappy :zlib :zstd})
+(s/def ::compressors (s/coll-of ::compressor
+                                :kind vector?
+                                :distinct true))
 (s/def ::cluster-settings (s/keys :opt-un [::hosts]))
 
 (s/def ::credentials (s/keys :req-un [::username
@@ -413,6 +417,7 @@
                                       ::auth-db]))
 
 (s/def ::client-settings-options (s/keys :opt-un [::application-name
+                                                  ::compressors
                                                   ::cluster-settings
                                                   ::credentials
                                                   ::read-concern

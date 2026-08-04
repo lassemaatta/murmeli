@@ -39,6 +39,7 @@
 
   Options:
   * `application-name` -- Application name for logging
+  * `compressors` -- List of network traffic compressor candidates (`:snappy`, `:zlib`, `:zstd`)
   * `cluster-settings` -- Map of cluster settings, see below
   * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
   * `read-concern` -- Choose level of read isolation, see [[murmeli.impl.data-interop/read-concern->java]]
@@ -58,6 +59,7 @@
 
   Returns a connection (map)."
   {:arglists '([{:keys [application-name
+                        compressors
                         cluster-settings
                         credentials
                         read-concern
