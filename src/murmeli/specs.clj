@@ -416,6 +416,8 @@
                                       ::password
                                       ::auth-db]))
 
+(s/def ::uuid-representation #{:c-sharp-legacy :java-legacy :python-legacy :standard :unspecified})
+
 (s/def ::client-settings-options (s/keys :opt-un [::application-name
                                                   ::compressors
                                                   ::cluster-settings
@@ -426,6 +428,7 @@
                                                   ::retry-writes?
                                                   ::ssl-settings
                                                   ::uri
+                                                  ::uuid-representation
                                                   ::write-concern]))
 
 (s/def ::client-session-options (s/and (s/keys :opt-un [::causally-consistent?

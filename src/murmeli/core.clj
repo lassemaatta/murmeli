@@ -48,6 +48,7 @@
   * `retry-writes?` -- Retry writes if they fail due to a network error
   * `ssl-settings` -- Map of SSL settings, see below
   * `uri` -- The connection string to use, eg. \"mongodb://[username:password@]host[:port1],...\"
+  * `uuid-representation` -- UUID representation mode, see [[murmeli.impl.data-interop/uuid-representation->java]]
   * `write-concern` -- Acknowledgement of write operations, see [[murmeli.impl.data-interop/write-concern->java]]
 
   The `cluster-settings` map:
@@ -68,6 +69,7 @@
                         retry-writes?
                         ssl-settings
                         uri
+                        uuid-representation
                         write-concern]
                  :as   db-spec}])}
   [db-spec]

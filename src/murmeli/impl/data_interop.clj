@@ -55,7 +55,10 @@
            [java.time Instant]
            [java.util List]
            [java.util.concurrent TimeUnit]
-           [org.bson BsonDocument BsonInt32 Document]
+           [org.bson BsonDocument
+                     BsonInt32
+                     Document
+                     UuidRepresentation]
            [org.bson.codecs.configuration CodecRegistry]
            [org.bson.conversions Bson]))
 
@@ -181,6 +184,16 @@
           (some? enabled?)                  (.enabled (boolean enabled?))
           (some? invalid-hostname-allowed?) (.invalidHostNameAllowed (boolean invalid-hostname-allowed?)))))))
 
+(defn- uuid-representation->java
+  ^UuidRepresentation
+  [choice]
+  (case choice
+    :c-sharp-legacy UuidRepresentation/C_SHARP_LEGACY
+    :java-legacy    UuidRepresentation/JAVA_LEGACY
+    :python-legacy  UuidRepresentation/PYTHON_LEGACY
+    :standard       UuidRepresentation/STANDARD
+    :unspecified    UuidRepresentation/UNSPECIFIED))
+
 (defn make-client-settings
   {:no-doc true}
   ^MongoClientSettings
@@ -194,6 +207,7 @@
                                 retry-writes?
                                 ssl-settings
                                 ^String uri
+                                uuid-representation
                                 write-concern]
     {:keys [username
             auth-db
@@ -220,6 +234,7 @@
     (seq credentials)      (.credential (MongoCredential/createScramSha256Credential username auth-db (.toCharArray password)))
     (seq cluster-settings) (.applyToClusterSettings (make-cluster-settings cluster-settings))
     (seq ssl-settings)     (.applyToSslSettings (make-ssl-settings ssl-settings))
+    uuid-representation    (.uuidRepresentation (uuid-representation->java uuid-representation))
     true                   (.codecRegistry (c/registry options))
     true                   (.build)))
 
