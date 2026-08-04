@@ -38,6 +38,7 @@
   "Connects to a Mongo instance as described by the `db-spec` by constructing a client connection.
 
   Options:
+  * `application-name` -- Application name for logging
   * `cluster-settings` -- Map of cluster settings, see below
   * `credentials` -- Credentials to use, map of `auth-db`, `username`, and `password`
   * `read-concern` -- Choose level of read isolation, see [[murmeli.impl.data-interop/read-concern->java]]
@@ -56,7 +57,8 @@
   * `invalid-hostname-allowed?` -- Allow invalid hostnames
 
   Returns a connection (map)."
-  {:arglists '([{:keys [cluster-settings
+  {:arglists '([{:keys [application-name
+                        cluster-settings
                         credentials
                         read-concern
                         read-preference

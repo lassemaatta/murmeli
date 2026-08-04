@@ -403,13 +403,17 @@
 (s/def ::hosts (s/coll-of ::host-entry
                           :kind vector?
                           :min-count 1))
+(s/def ::application-name (s/and string?
+                                 (complement str/blank?)
+                                 (fn [s] (<= (count s) 128))))
 (s/def ::cluster-settings (s/keys :opt-un [::hosts]))
 
 (s/def ::credentials (s/keys :req-un [::username
                                       ::password
                                       ::auth-db]))
 
-(s/def ::client-settings-options (s/keys :opt-un [::cluster-settings
+(s/def ::client-settings-options (s/keys :opt-un [::application-name
+                                                  ::cluster-settings
                                                   ::credentials
                                                   ::read-concern
                                                   ::read-preference

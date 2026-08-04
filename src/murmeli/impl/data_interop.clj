@@ -183,7 +183,8 @@
 (defn make-client-settings
   {:no-doc true}
   ^MongoClientSettings
-  [{:keys                      [cluster-settings
+  [{:keys                      [application-name
+                                cluster-settings
                                 credentials
                                 read-concern
                                 read-preference
@@ -200,6 +201,7 @@
     true                   (.serverApi (-> (ServerApi/builder)
                                            (.version api-version)
                                            .build))
+    application-name       (.applicationName application-name)
     uri                    (.applyConnectionString (ConnectionString. uri))
     (some? retry-reads?)   (.retryReads (boolean retry-reads?))
     (some? retry-writes?)  (.retryWrites (boolean retry-writes?))
