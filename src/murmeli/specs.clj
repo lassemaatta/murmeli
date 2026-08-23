@@ -306,11 +306,12 @@
                                             ::query
                                             ::timeout-mode]))
 
-(s/def ::session-options (s/keys* :opt-un [::read-preference
+(s/def ::session-options (s/keys* :opt-un [::causally-consistent?
+                                           ::default-timeout-ms
                                            ::read-concern
-                                           ::write-concern
-                                           ::causally-consistent?
-                                           ::snapshot?]))
+                                           ::read-preference
+                                           ::snapshot?
+                                           ::write-concern]))
 
 (s/def ::create-index-options (s/keys* :opt-un [::background?
                                                 ::bits
