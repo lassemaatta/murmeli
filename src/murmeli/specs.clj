@@ -147,8 +147,10 @@
 (s/def ::hidden? boolean?)
 (s/def ::invalid-hostname-allowed? boolean?)
 (s/def ::keywords? boolean?)
+(s/def ::max-boundary double?)
 (s/def ::max-documents pos-int?)
 (s/def ::max-time-ms int?)
+(s/def ::min-boundary double?)
 (s/def ::name-only? boolean)
 (s/def ::normalize? boolean?)
 (s/def ::numeric-ordering? boolean?)
@@ -211,6 +213,7 @@
 (s/def ::username ::non-blank-str)
 (s/def ::validator ::bson)
 (s/def ::version ::integer)
+(s/def ::wildcard-projection ::document)
 (s/def :bson/hint ::bson)
 (s/def :bson/partial-filter-expression ::bson)
 (s/def :bson/projection ::bson)
@@ -315,13 +318,23 @@
 
 (s/def ::create-index-options (s/keys* :opt-un [::background?
                                                 ::bits
+                                                ::collation-options
                                                 ::default-language
                                                 ::expire-after-seconds
+                                                ::hidden?
                                                 ::index-name
+                                                ::language-override
+                                                ::max-boundary
+                                                ::min-boundary
                                                 ::partial-filter-expression
                                                 ::sparse?
+                                                ::sphere-version
+                                                ::storage-engine
+                                                ::text-version
                                                 ::unique?
-                                                ::version]))
+                                                ::version
+                                                ::weights
+                                                ::wildcard-projection]))
 
 (s/def ::list-indexes-options (s/keys* :opt-un [::batch-size
                                                 ::max-time-ms]))
@@ -371,6 +384,9 @@
                               ;; "A single collection can have no more than 64 indexes."
                               :min-count 1
                               :max-count 64))
+
+(s/def ::weight (s/int-in 1 99999))
+(s/def ::weights (s/map-of ::key ::weight))
 
 (s/def ::projection-map (s/map-of ::key ::projection-val))
 
@@ -460,15 +476,17 @@
                                              ::default-language
                                              ::expire-after-seconds
                                              ::hidden?
-                                             ::language-override
                                              ::index-name
-                                             :bson/partial-filter-expression
+                                             ::language-override
+                                             ::max-boundary
+                                             ::min-boundary
                                              ::sparse?
                                              ::sphere-version
-                                             :bson/storage-engine
                                              ::text-version
                                              ::unique?
                                              ::version
+                                             :bson/partial-filter-expression
+                                             :bson/storage-engine
                                              :bson/weights
                                              :bson/wildcard-projection]))
 
