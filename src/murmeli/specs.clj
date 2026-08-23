@@ -328,6 +328,10 @@
 (s/def ::insert-one-options (s/keys* :opt-un [::bypass-validation?
                                               ::comment]))
 
+(s/def ::insert-many-options (s/keys* :opt-un [::bypass-validation?
+                                               ::comment
+                                               ::ordered?]))
+
 (s/def ::update-options (s/keys* :opt-un [::upsert?]))
 
 (s/def ::count-options (s/keys* :opt-un [::query
@@ -644,7 +648,8 @@
 (s/fdef m/insert-many!
   :args (s/cat :conn ::conn-with-db
                :collection ::collection
-               :docs ::documents))
+               :docs ::documents
+               :options ::insert-many-options))
 
 (s/fdef m/update-one!
   :args (s/cat :conn ::conn-with-db
