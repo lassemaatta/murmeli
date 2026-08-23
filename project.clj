@@ -5,8 +5,8 @@
             :url  "https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12"}
   :dependencies [[org.clojure/clojure "1.12.5"]
                  [org.clojure/tools.logging "1.3.1"]
-                 [org.mongodb/mongodb-driver-sync "5.9.1"]
-                 [prismatic/schema "1.4.1"]]
+                 [org.mongodb/mongodb-driver-sync "5.10.0"]
+                 [prismatic/schema "1.4.2"]]
   :target-path "target/%s"
   :deploy-repositories [["clojars"  {:url           "https://clojars.org/repo"
                                      :sign-releases false
@@ -22,7 +22,7 @@
                                               [nubank/matcher-combinators "3.11.0"]
                                               ;; Logging
                                               [org.slf4j/slf4j-api "2.0.18"]
-                                              [ch.qos.logback/logback-classic "1.6.1"]]
+                                              [ch.qos.logback/logback-classic "1.6.3"]]
                              :plugins        [[lein-eftest "0.6.0"]]
                              :eftest         {:multithread? true}
                              :resource-paths ["test-resources"]
