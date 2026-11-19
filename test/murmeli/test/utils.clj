@@ -23,7 +23,8 @@
 
 (def version-matrix [{:major 6 :minor 0 :patch 28}
                      {:major 7 :minor 0 :patch 48}
-                     {:major 8 :minor 0 :patch 38}])
+                     {:major 8 :minor 0 :patch 38}
+                     {:major 9 :minor 0 :patch 8}])
 
 (defn version->image
   [{:keys [major minor patch]}]

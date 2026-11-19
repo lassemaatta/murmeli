@@ -697,11 +697,13 @@
                  :v         2}]
                (m/list-indexes conn coll))))
       (testing "removing index"
-        (testing "removing with wrong name fails"
-          ;; NOTE: MongoDB 9.x does not throw this error, it happily removes a non-existing index.
-          (let [^MongoCommandException e (is (thrown? MongoCommandException
-                                                      (m/drop-index-by-name! conn coll "missing")))]
-            (is (= 27 (.getErrorCode e)))))
+        ;; Dropping an index is idempotent in MongoDB 8.3+,
+        ;; see https://jira.mongodb.org/browse/SERVER-90152
+        (when (< (:major test-utils/*version*) 9)
+          (testing "removing with wrong name fails"
+            (let [^MongoCommandException e (is (thrown? MongoCommandException
+                                                        (m/drop-index-by-name! conn coll "missing")))]
+              (is (= 27 (.getErrorCode e))))))
         (testing "removing with correct name works"
           (m/drop-index-by-name! conn coll "my-index")
           (m/drop-index-by-name! conn coll "my-index-4")
