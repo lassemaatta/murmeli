@@ -13,15 +13,21 @@
 
 (def ^:dynamic *container* "Currently active container" nil)
 
+(def ^:dynamic *version* "Currently active version" nil)
+
 (def retain-containers?
   "Cache containers between tests when running in a REPL"
   (= "true" (System/getProperty "murmeli.repl")))
 
 (stest/instrument `tc/init)
 
-(def version-matrix ["mongo:6.0.28"
-                     "mongo:7.0.48"
-                     "mongo:8.0.38"])
+(def version-matrix [{:major 6 :minor 0 :patch 28}
+                     {:major 7 :minor 0 :patch 48}
+                     {:major 8 :minor 0 :patch 38}])
+
+(defn version->image
+  [{:keys [major minor patch]}]
+  (format "mongo:%s.%s.%s" major minor patch))
 
 (defn config
   [^String image]
@@ -82,22 +88,24 @@
   Also, use a macro instead of a fixture; `eftest` gets confused if a fixture calls `test-fn`
   multiple times."
   [& body]
-  `(doseq [image# version-matrix]
-     (testing (str "With image " image#)
-       (log/infof "Selecting image: %s" image#)
-       (let [containers# (swap! *containers register-image-client image#)
-             container#  (get-in containers# [image# :container])
-             db-name#    (str (gensym "test-db"))]
-         (binding [*container* (force container#)
-                   *conn*      (-> (connect! (force container#))
-                                   (m/with-db db-name#)
-                                   (m/with-default-registry))]
-           (try
-             (do ~@body)
-             (finally
-               (m/disconnect! *conn*))))
-         (swap! *containers unregister-image image#)
-         (log/infof "Finished with %s" image#)))))
+  `(doseq [version# version-matrix]
+     (let [image# (version->image version#)]
+       (testing (str "With image " image#)
+         (log/infof "Selecting image: %s" image#)
+         (let [containers# (swap! *containers register-image-client image#)
+               container#  (get-in containers# [image# :container])
+               db-name#    (str (gensym "test-db"))]
+           (binding [*version*   version#
+                     *container* (force container#)
+                     *conn*      (-> (connect! (force container#))
+                                     (m/with-db db-name#)
+                                     (m/with-default-registry))]
+             (try
+               (do ~@body)
+               (finally
+                 (m/disconnect! *conn*))))
+           (swap! *containers unregister-image image#)
+           (log/infof "Finished with %s" image#))))))
 
 (defn remove-unused-container
   [containers image]
@@ -116,9 +124,10 @@
     (test-fn)
     (finally
       (when (not retain-containers?)
-        (doseq [image version-matrix]
+        (doseq [version version-matrix]
           ;; Note: We might be executing tests in multiple threads
-          (let [[old-cs new-cs]     (swap-vals! *containers remove-unused-container image)
+          (let [image               (version->image version)
+                [old-cs new-cs]     (swap-vals! *containers remove-unused-container image)
                 {:keys [container]} (get old-cs image)]
             ;; _We_ just removed a container -> we must/can clean it up
             (when (and container
